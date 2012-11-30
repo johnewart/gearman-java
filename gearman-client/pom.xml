@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>JavaGearman</artifactId>
+        <artifactId>gearman-java</artifactId>
         <groupId>org.gearman</groupId>
         <version>0.4</version>
     </parent>
@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.gearman</groupId>
             <artifactId>gearman-common</artifactId>
-            <version>1.0</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>

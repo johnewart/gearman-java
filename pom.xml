@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.gearman</groupId>
-    <artifactId>JavaGearman</artifactId>
+    <artifactId>gearman-java</artifactId>
     <packaging>pom</packaging>
     <version>0.4</version>
     <modules>
@@ -91,24 +91,6 @@
                     <tagNameFormat>v@{project.version}</tagNameFormat>
                     <preparationGoals>clean test</preparationGoals>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>findbugs-maven-plugin</artifactId>
-                <version>2.4.0</version>
-                <configuration>
-                    <effort>Max</effort>
-                    <threshold>Default</threshold>
-                    <xmlOutput>true</xmlOutput>
-                    <excludeFilterFile>${basedir}/../findbugs-exclude.xml</excludeFilterFile>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <!--  use mvn versions:display-dependency-updates versions:display-plugin-updates -->
             <plugin>

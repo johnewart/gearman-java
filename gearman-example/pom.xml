@@ -15,7 +15,7 @@
         <dependency>
             <groupId>org.gearman</groupId>
             <artifactId>gearman-client</artifactId>
-            <version>1.0</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>
