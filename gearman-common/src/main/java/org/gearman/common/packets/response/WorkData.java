@@ -25,7 +25,7 @@ public class WorkData extends ResponsePacket {
     public WorkData(String jobhandle, byte[] data)
     {
         this.jobHandle = new AtomicReference<String>(jobhandle);
-        this.data = data;
+        this.data = data.clone();
         this.type = PacketType.WORK_DATA;
     }
 

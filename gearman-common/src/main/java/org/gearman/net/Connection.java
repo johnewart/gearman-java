@@ -23,8 +23,6 @@ public class Connection {
     private Socket socket;
     private String hostname;
     private int port;
-    private InetAddress ipa;
-
 
     public Connection()
     {	}
@@ -50,7 +48,8 @@ public class Connection {
         try {
             socket.getOutputStream().write(p.toByteArray());
         } catch (IOException e) {
-            System.err.printf("Unable to send packet: %s\n", e.getStackTrace().toString());
+            System.err.printf("Unable to send packet: %s\n");
+            e.printStackTrace();
         }
     }
 
@@ -73,91 +72,94 @@ public class Connection {
         PacketType packetType;
         InputStream is = socket.getInputStream();
         try {
-            is.read(header, 0, 12);
 
-            // Check byte count
-            byte[] sizebytes = Arrays.copyOfRange(header, 8, 12);
-            byte[] typebytes = Arrays.copyOfRange(header, 4, 8);
+            int numbytes = is.read(header, 0, 12);
 
-            messagesize = Ints.fromByteArray(sizebytes);
-            messagetype = Ints.fromByteArray(typebytes);
-
-            if (messagesize > 0)
+            if(numbytes == 12)
             {
-                // Grow packet buffer to fit data
-                packetBytes = Arrays.copyOf(header, 12 + messagesize);
+                // Check byte count
+                byte[] sizebytes = Arrays.copyOfRange(header, 8, 12);
+                byte[] typebytes = Arrays.copyOfRange(header, 4, 8);
 
-                // Receive the remainder of the message
-                is.read(packetBytes, 12, messagesize);
-            } else {
-                packetBytes = header;
+                messagesize = Ints.fromByteArray(sizebytes);
+                messagetype = Ints.fromByteArray(typebytes);
+
+                if (messagesize > 0)
+                {
+                    // Grow packet buffer to fit data
+                    packetBytes = Arrays.copyOf(header, 12 + messagesize);
+
+                    // Receive the remainder of the message
+                    numbytes = is.read(packetBytes, 12, messagesize);
+                } else {
+                    packetBytes = header;
+                }
+
+                packetType = PacketType.fromPacketMagicNumber(messagetype);
+                switch(packetType)
+                {
+                    case JOB_CREATED:
+                        return new JobCreated(packetBytes);
+                    case WORK_DATA:
+                        break;
+                    case WORK_WARNING:
+                        break;
+                    case WORK_STATUS:
+                        break;
+                    case WORK_COMPLETE:
+                        break;
+                    case WORK_FAIL:
+                        break;
+                    case WORK_EXCEPTION:
+                        break;
+
+                    case STATUS_RES:
+                        return new StatusRes(packetBytes);
+
+                    case OPTION_RES:
+                        // TODO Implement option response
+                        break;
+
+                    /* Client and worker response packets */
+                    case ECHO_RES:
+                        // TODO Implement the echo response
+                        break;
+                    case ERROR:
+                        // TODO Implement the error packet
+                        break;
+
+                    /* Worker response packets */
+                    case NOOP:
+                        break;
+                    case NO_JOB:
+                        break;
+                    case JOB_ASSIGN:
+                        break;
+                    case JOB_ASSIGN_UNIQ:
+                        break;
+
+                    /* Worker request packets */
+                    case CAN_DO:
+                        break;
+                    case SET_CLIENT_ID:
+                        break;
+                    case GRAB_JOB:
+                        break;
+                    case PRE_SLEEP:
+                        break;
+
+                    /* Client request packets */
+                    case SUBMIT_JOB:
+                        break;
+                    case SUBMIT_JOB_BG:
+                        break;
+                    case SUBMIT_JOB_EPOCH:
+                        break;
+                    default:
+                        System.err.printf("Unhandled type: %s\n", messagetype);
+                        return null;
+                }
             }
-
-            packetType = PacketType.fromPacketMagicNumber(messagetype);
-            switch(packetType)
-            {
-                case JOB_CREATED:
-                    return new JobCreated(packetBytes);
-                case WORK_DATA:
-                    break;
-                case WORK_WARNING:
-                    break;
-                case WORK_STATUS:
-                    break;
-                case WORK_COMPLETE:
-                    break;
-                case WORK_FAIL:
-                    break;
-                case WORK_EXCEPTION:
-                    break;
-
-                case STATUS_RES:
-                    return new StatusRes(packetBytes);
-
-                case OPTION_RES:
-                    // TODO Implement option response
-                    break;
-
-                /* Client and worker response packets */
-                case ECHO_RES:
-                    // TODO Implement the echo response
-                    break;
-                case ERROR:
-                    // TODO Implement the error packet
-                    break;
-
-                /* Worker response packets */
-                case NOOP:
-                    break;
-                case NO_JOB:
-                    break;
-                case JOB_ASSIGN:
-                    break;
-                case JOB_ASSIGN_UNIQ:
-                    break;
-
-                /* Worker request packets */
-                case CAN_DO:
-                    break;
-                case SET_CLIENT_ID:
-                    break;
-                case GRAB_JOB:
-                    break;
-                case PRE_SLEEP:
-                    break;
-
-                /* Client request packets */
-                case SUBMIT_JOB:
-                    break;
-                case SUBMIT_JOB_BG:
-                    break;
-                case SUBMIT_JOB_EPOCH:
-                    break;
-                default:
-                    System.err.printf("Unhandled type: %s\n", messagetype);
-                    return null;
-            }
-
         } catch (Exception e) {
             System.err.printf("Exception reading data: %s\n", e);
             e.printStackTrace();

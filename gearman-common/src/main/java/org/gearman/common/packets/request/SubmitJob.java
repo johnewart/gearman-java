@@ -54,7 +54,7 @@ public class SubmitJob extends RequestPacket {
     {
         this.taskName = new AtomicReference<String>(function);
         this.uniqueId = new AtomicReference<String>(unique_id);
-        this.data = data;
+        this.data = data.clone();
 
         if(background)
         {

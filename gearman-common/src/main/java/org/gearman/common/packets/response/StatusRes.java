@@ -73,9 +73,9 @@ public class StatusRes extends ResponsePacket {
     {
         if(denominator != 0)
         {
-            return new Float(numerator) / new Float(denominator);
+            return  (float)numerator / (float)denominator;
         } else {
-            return new Float(0.0);
+            return 0.0F;
         }
     }
 

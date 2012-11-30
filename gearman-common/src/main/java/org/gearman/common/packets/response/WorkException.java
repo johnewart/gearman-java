@@ -21,7 +21,7 @@ public class WorkException extends RequestPacket
     public WorkException(String jobhandle, byte[] exception)
     {
         this.jobHandle = new AtomicReference<String>(jobhandle);
-        this.exception = exception;
+        this.exception = exception.clone();
         this.type = PacketType.WORK_EXCEPTION;
     }
 

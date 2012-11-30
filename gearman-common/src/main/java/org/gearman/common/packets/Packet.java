@@ -42,7 +42,7 @@ public abstract class Packet {
             header = concatByteArrays(getMagic(), typebytes, sizebytes);
         }
 
-        return header;
+        return header.clone();
     }
 
     public PacketType getType()

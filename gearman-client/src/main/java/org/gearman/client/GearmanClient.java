@@ -167,7 +167,7 @@ public class GearmanClient {
                 {
                     StatusRes statusResult = (StatusRes)result;
 
-                    if(statusResult.getJobHandle() == jobHandle) {
+                    if(statusResult.getJobHandle().equals(jobHandle)) {
                         return statusResult;
                     }
                 }
