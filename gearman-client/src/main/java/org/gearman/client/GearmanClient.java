@@ -159,8 +159,8 @@ public class GearmanClient {
         for (Connection conn : managers)
         {
             System.err.printf("Checking for status on %s on %s\n", jobHandle, conn);
-            conn.sendPacket(statusPkt);
             try {
+                conn.sendPacket(statusPkt);
                 result = conn.getNextPacket();
 
                 if(result.getType() == PacketType.STATUS_RES)

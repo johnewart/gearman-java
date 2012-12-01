@@ -2,9 +2,14 @@ package org.gearman.net;
 
 import com.google.common.primitives.Ints;
 import org.gearman.common.packets.Packet;
+import org.gearman.common.packets.PacketFactory;
+import org.gearman.common.packets.request.CanDo;
+import org.gearman.common.packets.request.SubmitJob;
+import org.gearman.common.packets.response.*;
 import org.gearman.constants.PacketType;
-import org.gearman.common.packets.response.JobCreated;
-import org.gearman.common.packets.response.StatusRes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import sun.util.LocaleServiceProviderPool;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,9 +25,10 @@ import java.util.Arrays;
  * To change this template use File | Settings | File Templates.
  */
 public class Connection {
-    private Socket socket;
-    private String hostname;
-    private int port;
+    protected Socket socket;
+    protected String hostname;
+    protected int port;
+    private Logger LOG = LoggerFactory.getLogger(Connection.class);
 
     public Connection()
     {	}
@@ -43,14 +49,9 @@ public class Connection {
     }
 
 
-    public void sendPacket(Packet p)
+    public void sendPacket(Packet p) throws IOException
     {
-        try {
-            socket.getOutputStream().write(p.toByteArray());
-        } catch (IOException e) {
-            System.err.printf("Unable to send packet: %s\n");
-            e.printStackTrace();
-        }
+        socket.getOutputStream().write(p.toByteArray());
     }
 
 
@@ -95,73 +96,13 @@ public class Connection {
                     packetBytes = header;
                 }
 
-                packetType = PacketType.fromPacketMagicNumber(messagetype);
-                switch(packetType)
-                {
-                    case JOB_CREATED:
-                        return new JobCreated(packetBytes);
-                    case WORK_DATA:
-                        break;
-                    case WORK_WARNING:
-                        break;
-                    case WORK_STATUS:
-                        break;
-                    case WORK_COMPLETE:
-                        break;
-                    case WORK_FAIL:
-                        break;
-                    case WORK_EXCEPTION:
-                        break;
+                return PacketFactory.packetFromBytes(packetBytes);
 
-                    case STATUS_RES:
-                        return new StatusRes(packetBytes);
+            } else if(numbytes == -1) {
 
-                    case OPTION_RES:
-                        // TODO Implement option response
-                        break;
-
-                    /* Client and worker response packets */
-                    case ECHO_RES:
-                        // TODO Implement the echo response
-                        break;
-                    case ERROR:
-                        // TODO Implement the error packet
-                        break;
-
-                    /* Worker response packets */
-                    case NOOP:
-                        break;
-                    case NO_JOB:
-                        break;
-                    case JOB_ASSIGN:
-                        break;
-                    case JOB_ASSIGN_UNIQ:
-                        break;
-
-                    /* Worker request packets */
-                    case CAN_DO:
-                        break;
-                    case SET_CLIENT_ID:
-                        break;
-                    case GRAB_JOB:
-                        break;
-                    case PRE_SLEEP:
-                        break;
-
-                    /* Client request packets */
-                    case SUBMIT_JOB:
-                        break;
-                    case SUBMIT_JOB_BG:
-                        break;
-                    case SUBMIT_JOB_EPOCH:
-                        break;
-                    default:
-                        System.err.printf("Unhandled type: %s\n", messagetype);
-                        return null;
-                }
             }
         } catch (Exception e) {
-            System.err.printf("Exception reading data: %s\n", e);
+            LOG.error("Exception reading data: ", e);
             e.printStackTrace();
             return null;
         }

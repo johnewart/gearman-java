@@ -92,6 +92,42 @@ public class SubmitJob extends RequestPacket {
         return new Date(Long.parseLong(epochString.get()));
     }
 
+    public JobPriority getPriority() {
+        switch(this.type)
+        {
+            case SUBMIT_JOB:
+            case SUBMIT_JOB_BG:
+            case SUBMIT_JOB_EPOCH:
+            case SUBMIT_JOB_SCHED:
+                return JobPriority.NORMAL;
+            case SUBMIT_JOB_HIGH:
+            case SUBMIT_JOB_HIGH_BG:
+                return JobPriority.HIGH;
+            case SUBMIT_JOB_LOW:
+            case SUBMIT_JOB_LOW_BG:
+                return JobPriority.LOW;
+        }
+
+        return null;
+    }
+
+    public String getFunctionName()
+    {
+        return this.taskName.get();
+    }
+
+    public String getUniqueId()
+    {
+        return uniqueId.get();
+    }
+
+    public boolean isBackground() {
+        return background;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
 
     @Override
     public byte[] toByteArray()

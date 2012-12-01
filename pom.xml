@@ -93,11 +93,6 @@
                 </configuration>
             </plugin>
             <!--  use mvn versions:display-dependency-updates versions:display-plugin-updates -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>versions-maven-plugin</artifactId>
-                <version>1.3.1</version>
-            </plugin>
         </plugins>
         <extensions>
             <extension>
