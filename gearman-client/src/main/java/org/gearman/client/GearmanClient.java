@@ -9,6 +9,8 @@ import org.gearman.common.packets.response.WorkComplete;
 import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
 import org.gearman.net.Connection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class GearmanClient {
     // A list of managers to cycle through
     private List<Connection> managers, bogusManagers;
+    private final Logger LOG = LoggerFactory.getLogger(GearmanClient.class);
 
     // Which connection
     private int connectionIndex;
@@ -55,6 +58,18 @@ public class GearmanClient {
     public void addHostToList(String host) throws IOException
     {
         this.addHostToList(host, 4730);
+    }
+
+    public void close()
+    {
+        for(Connection c : managers)
+        {
+            try {
+                c.close();
+            } catch (IOException ioe) {
+                LOG.error("Unable to close connection to: " + c.toString(), ioe);
+            }
+        }
     }
 
     public ServerResponse sendJobPacket(SubmitJob jobPacket)

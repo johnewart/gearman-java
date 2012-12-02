@@ -1,14 +1,17 @@
 package org.gearman.server;
 
+import org.gearman.server.codec.Decoder;
+import org.gearman.server.codec.Encoder;
 import org.gearman.server.persistence.RedisQueue;
+import org.jboss.netty.bootstrap.ServerBootstrap;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
+import java.util.concurrent.Executors;
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,14 +20,19 @@ import java.net.UnknownHostException;
  * Time: 12:26 AM
  * To change this template use File | Settings | File Templates.
  */
-public class ServerListener implements Runnable {
+public class ServerListener {
     private final int port;
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
     private final JobStore jobStore;
     private final String hostName;
+    private final DefaultChannelGroup channelGroup;
+    private final ServerChannelFactory serverFactory;
 
     public ServerListener(int port)
     {
+        this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
+        this.serverFactory =  new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
+                                                                Executors.newCachedThreadPool());
         this.port = port;
         this.jobStore = new JobStore(new RedisQueue());
 
@@ -44,42 +52,47 @@ public class ServerListener implements Runnable {
         this.hostName = host;
     }
 
-    public void run()
-    {
-        try {
-            ServerSocket socket = new ServerSocket(this.port);
-            long connectionCount = 0L;
 
-            while (true)
-            {
-                Socket clientConn = socket.accept();
-                LOG.info("Accepted connection #" + connectionCount + " on " + port);
-                connectionCount += 1;
-                new ServerThread(clientConn, connectionCount, jobStore, hostName).run();
+    public boolean start()
+    {
+        ServerBootstrap bootstrap = new ServerBootstrap(serverFactory);
+
+        // Set up the pipeline factory.
+        ChannelPipelineFactory pipelineFactory = new ChannelPipelineFactory() {
+            @Override
+            public ChannelPipeline getPipeline() throws Exception {
+                ChannelPipeline pipeline = Channels.pipeline();
+                pipeline.addLast("encoder", Encoder.getInstance());
+                pipeline.addLast("decoder", new Decoder());
+                pipeline.addLast("handler", new PacketHandler(jobStore, hostName, channelGroup));
+                return pipeline;
             }
-        } catch (IOException ioe) {
-            LOG.error("Problem reading from client: ", ioe);
+        };
+
+        // Bind and start to accept incoming connections.
+        bootstrap.setOption("reuseAddress", true);
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
+        bootstrap.setPipelineFactory(pipelineFactory);
+
+        Channel channel = bootstrap.bind(new InetSocketAddress(this.port));
+        if (!channel.isBound()) {
+            this.stop();
+            return false;
+        }
+
+        this.channelGroup.add(channel);
+        return true;
+
+    }
+
+    public void stop() {
+        if (this.channelGroup != null) {
+            this.channelGroup.close();
+        }
+        if (this.serverFactory != null) {
+            this.serverFactory.releaseExternalResources();
         }
     }
 
-
-    /*
-     public void run()
-    {
-        ServerBootstrap bootstrap = new ServerBootstrap(
-                new NioServerSocketChannelFactory(
-                        Executors.newCachedThreadPool(),
-                        Executors.newCachedThreadPool()));
-
-        // Set up the pipeline factory.
-        bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() throws Exception {
-                return Channels.pipeline(new GearmanHandler(jobStore, hostName));
-            }
-        });
-
-        // Bind and start to accept incoming connections.
-        bootstrap.bind(new InetSocketAddress(port));
-    }
-     */
 }

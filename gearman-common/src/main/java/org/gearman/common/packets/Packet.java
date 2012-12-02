@@ -38,7 +38,7 @@ public abstract class Packet {
         if (header == null)
         {
             byte[] typebytes = Ints.toByteArray(this.type.getIndex());
-            byte[] sizebytes = Ints.toByteArray(this.getSize());
+            byte[] sizebytes = Ints.toByteArray(this.getPayloadSize());
             header = concatByteArrays(getMagic(), typebytes, sizebytes);
         }
 
@@ -51,13 +51,18 @@ public abstract class Packet {
     }
 
     public abstract byte[] toByteArray();
-    public abstract int getSize();
+    public abstract int getPayloadSize();
     public abstract byte[] getMagic();
+
+    public int getSize()
+    {
+        return 12 + this.getPayloadSize();
+    }
 
     public String toString()
     {
         //return String.Format("{0} packet. Data: {1} bytes", type.ToString("g"), rawdata.Length);
-        return "NARF";
+        return this.type.toString();
     }
 
     protected int parseString(int offset, AtomicReference<String> storage)

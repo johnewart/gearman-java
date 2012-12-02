@@ -54,7 +54,7 @@ public class JobAssignUniq extends ResponsePacket {
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.get().length();
     }

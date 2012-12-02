@@ -54,6 +54,10 @@ public class Connection {
         socket.getOutputStream().write(p.toByteArray());
     }
 
+    public void close() throws IOException
+    {
+        socket.close();
+    }
 
     public String toString()
     {

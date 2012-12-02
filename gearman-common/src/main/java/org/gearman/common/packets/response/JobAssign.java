@@ -48,12 +48,15 @@ public class JobAssign extends ResponsePacket {
     @Override
     public byte[] toByteArray()
     {
-        return concatByteArrays(getHeader(), jobHandle.get().getBytes());
+        byte[] metadata = stringsToTerminatedByteArray(jobHandle.get(), functionName.get());
+        return concatByteArrays(getHeader(), metadata, this.data);
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
-        return this.jobHandle.get().length();
+        return this.jobHandle.get().length() + 1 +
+               this.functionName.get().length() + 1 +
+               this.data.length;
     }
 }

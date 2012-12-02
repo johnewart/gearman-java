@@ -34,6 +34,8 @@ import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.NoOp;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.util.ByteArray;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +71,7 @@ public final class JobQueue {
 
     private final String name;
     /** The list of workers waiting for jobs to be placed in the queue */
-    private final Set<Client> workers = new CopyOnWriteArraySet<>();
+    private final Set<Channel> workers = new CopyOnWriteArraySet<>();
 
     /** The set of jobs created by this function. ByteArray is equal to the uID */
     private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
@@ -216,10 +218,10 @@ public final class JobQueue {
         return allJobs.containsKey(job.getUniqueID());
 	}
 
-    public final void addWorker(final Client worker) {
+    public final void addWorker(final Channel worker) {
         workers.add(worker);
     }
-    public final void removeWorker(final Client worker) {
+    public final void removeWorker(final Channel worker) {
         workers.remove(worker);
     }
 
@@ -239,12 +241,8 @@ public final class JobQueue {
 
     public void notifyWorkers()
     {
-        for(Client worker : workers) {
-            try {
-                worker.sendPacket(new NoOp());
-            } catch (IOException ioe) {
-                LOG.error("Problem sending worker NoOp.", ioe);
-            }
+        for(Channel worker : workers) {
+            worker.write(new NoOp());
         }
     }
 

@@ -1,6 +1,8 @@
-package org.gearman.common.packets.response;
+package org.gearman.common.packets.request;
 
 import org.gearman.constants.PacketType;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created with IntelliJ IDEA.
@@ -9,12 +11,24 @@ import org.gearman.constants.PacketType;
  * Time: 8:43 AM
  * To change this template use File | Settings | File Templates.
  */
-public class NoOp extends ResponsePacket {
+public class GrabJob extends RequestPacket {
 
-    public NoOp()
+    public GrabJob()
     {
-        this.type = PacketType.NOOP;
+        this.type = PacketType.GRAB_JOB;
     }
+
+
+    public GrabJob(String function)
+    {
+        this.type = PacketType.GRAB_JOB;
+    }
+
+    public GrabJob(byte[] pktdata)
+    {
+        super(pktdata);
+    }
+
 
     @Override
     public byte[] toByteArray()

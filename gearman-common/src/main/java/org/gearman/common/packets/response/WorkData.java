@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Time: 10:06 AM
  * To change this template use File | Settings | File Templates.
  */
-public class WorkData extends ResponsePacket {
+public class WorkData extends ResponsePacket implements WorkResponse {
 
     public AtomicReference<String> jobHandle;
     public byte[] data;
@@ -51,7 +51,7 @@ public class WorkData extends ResponsePacket {
         return jobHandle.get();
     }
 
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.get().length() + 1 +
                this.data.length;

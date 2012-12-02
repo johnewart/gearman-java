@@ -1,6 +1,5 @@
 package org.gearman.common.packets.request;
 
-import org.gearman.common.packets.response.ResponsePacket;
 import org.gearman.constants.PacketType;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -12,22 +11,22 @@ import java.util.concurrent.atomic.AtomicReference;
  * Time: 8:43 AM
  * To change this template use File | Settings | File Templates.
  */
-public class CanDo extends RequestPacket {
+public class CantDo extends RequestPacket {
     private AtomicReference<String> functionName;
 
-    public CanDo()
+    public CantDo()
     {
-        this.type = PacketType.CAN_DO;
+        this.type = PacketType.CANT_DO;
     }
 
 
-    public CanDo(String function)
+    public CantDo(String function)
     {
         this.type = PacketType.CAN_DO;
         this.functionName = new AtomicReference<>(function);
     }
 
-    public CanDo(byte[] pktdata)
+    public CantDo(byte[] pktdata)
     {
         super(pktdata);
         this.functionName = new AtomicReference<>();

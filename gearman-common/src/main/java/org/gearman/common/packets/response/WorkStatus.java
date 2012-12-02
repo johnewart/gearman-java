@@ -53,7 +53,7 @@ public class WorkStatus extends RequestPacket
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.get().length() + 1 +
                String.valueOf(completenumerator).length() + 1 +

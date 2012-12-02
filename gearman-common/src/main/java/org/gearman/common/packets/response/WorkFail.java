@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Time: 10:18 AM
  * To change this template use File | Settings | File Templates.
  */
-public class WorkFail extends RequestPacket {
+public class WorkFail extends RequestPacket implements WorkResponse {
     public AtomicReference<String> jobHandle;
 
     public WorkFail(String jobhandle)
@@ -36,8 +36,14 @@ public class WorkFail extends RequestPacket {
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.get().length();
+    }
+
+    @Override
+    public String getJobHandle()
+    {
+        return this.jobHandle.get();
     }
 }

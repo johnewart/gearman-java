@@ -1,4 +1,4 @@
-package org.gearman.common.packets.response;
+package org.gearman.common.packets.request;
 
 import org.gearman.constants.PacketType;
 
@@ -9,12 +9,24 @@ import org.gearman.constants.PacketType;
  * Time: 8:43 AM
  * To change this template use File | Settings | File Templates.
  */
-public class NoOp extends ResponsePacket {
+public class PreSleep extends RequestPacket {
 
-    public NoOp()
+    public PreSleep()
     {
-        this.type = PacketType.NOOP;
+        this.type = PacketType.PRE_SLEEP;
     }
+
+
+    public PreSleep(String function)
+    {
+        this.type = PacketType.PRE_SLEEP;
+    }
+
+    public PreSleep(byte[] pktdata)
+    {
+        super(pktdata);
+    }
+
 
     @Override
     public byte[] toByteArray()

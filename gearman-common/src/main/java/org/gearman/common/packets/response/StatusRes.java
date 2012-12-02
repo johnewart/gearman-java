@@ -80,7 +80,7 @@ public class StatusRes extends ResponsePacket {
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return jobHandle.get().length() + 1 + 4 + 4 + String.valueOf(numerator).length() + 1 + String.valueOf(denominator).length();
     }

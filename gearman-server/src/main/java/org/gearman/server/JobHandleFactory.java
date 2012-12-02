@@ -1,16 +1,8 @@
 package org.gearman.server;
 
 import org.gearman.constants.GearmanConstants;
-
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/13/12
- * Time: 2:35 PM
- * To change this template use File | Settings | File Templates.
- */
 public class JobHandleFactory {
 
     /** The prefix for the job handle */

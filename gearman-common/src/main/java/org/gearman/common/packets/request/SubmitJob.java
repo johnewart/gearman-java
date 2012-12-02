@@ -138,7 +138,7 @@ public class SubmitJob extends RequestPacket {
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
       return size;
     }

@@ -8,6 +8,7 @@ import org.gearman.common.packets.response.JobCreated;
 import org.gearman.common.packets.response.WorkStatus;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
+import org.jboss.netty.channel.Channel;
 
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -53,9 +54,9 @@ public class Job {
     //--- Listening Clients and Worker --- //
 
     /** The set of all listing clients */
-    private final Set<Client> clients = new CopyOnWriteArraySet<>();
+    private final Set<Channel> clients = new CopyOnWriteArraySet<>();
     /** The worker assigned to work on this job */
-    private Client worker;
+    private Channel worker;
 
     public Job()
     {
@@ -67,11 +68,11 @@ public class Job {
         priority     = JobPriority.NORMAL;
     }
 
-    public Job(final String functionName, final String uniqueID, final byte[] data, final JobPriority priority, boolean isBackground, final Client creator) {
+    public Job(final String functionName, final String uniqueID, final byte[] data, final JobPriority priority, boolean isBackground, final Channel creator) {
         this(functionName, uniqueID, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, creator);
     }
 
-    public Job(final String functionName, final String uniqueID, final byte[] data, final byte[] jobHandle, final JobPriority priority, boolean isBackground, final Client creator) {
+    public Job(final String functionName, final String uniqueID, final byte[] data, final byte[] jobHandle, final JobPriority priority, boolean isBackground, final Channel creator) {
         this.functionName = functionName;
         this.uniqueID = uniqueID;
         this.data = data;
@@ -88,12 +89,12 @@ public class Job {
         return functionName;
     }
 
-    public final Set<Client> getClients()
+    public final Set<Channel> getClients()
     {
         return clients;
     }
 
-    protected final boolean addClient(final Client client) {
+    protected final boolean addClient(final Channel client) {
         return this.clients.add(client);
     }
 
@@ -155,7 +156,7 @@ public class Job {
     }
 
 
-    public final JobAction disconnectClient(final Client client) {
+    public final JobAction disconnectClient(final Channel client) {
         JobAction result = JobAction.DONOTHING;
 
         switch (this.state) {
@@ -172,6 +173,7 @@ public class Job {
                     this.worker = null;
 
                     if(this.clients.isEmpty() && !this.background) {
+                        // Nobody to send it to and it's not a background job, not much we can do here..
                         result = JobAction.MARKCOMPLETE;
                     } else {
                         // (!this.clients.isEmpty() || this.background)==true
@@ -209,6 +211,21 @@ public class Job {
             this.worker = null;
         }
 
+    }
+
+    public void setWorker(Channel worker)
+    {
+        this.worker = worker;
+    }
+
+    public Channel getWorker()
+    {
+        return worker;
+    }
+
+    public String toString()
+    {
+        return this.getJobHandle();
     }
 
 

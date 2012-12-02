@@ -1,8 +1,7 @@
 package org.gearman.common.packets;
 
 import com.google.common.primitives.Ints;
-import org.gearman.common.packets.request.CanDo;
-import org.gearman.common.packets.request.SubmitJob;
+import org.gearman.common.packets.request.*;
 import org.gearman.common.packets.response.*;
 import org.gearman.constants.PacketType;
 import org.slf4j.Logger;
@@ -60,8 +59,16 @@ public class PacketFactory {
                 return new JobAssignUniq(packetBytes);
 
             /* Worker request packets */
+            case CANT_DO:
+                return new CantDo(packetBytes);
             case CAN_DO:
                 return new CanDo(packetBytes);
+            case GRAB_JOB:
+                return new GrabJob(packetBytes);
+            case PRE_SLEEP:
+                return new PreSleep(packetBytes);
+            case SET_CLIENT_ID:
+                return new SetClientId(packetBytes);
 
             /* Client request packets */
             case SUBMIT_JOB:
@@ -75,9 +82,6 @@ public class PacketFactory {
                 return new SubmitJob(packetBytes);
 
             /* TODO: Handle these. */
-            case SET_CLIENT_ID:
-            case GRAB_JOB:
-            case PRE_SLEEP:
             case OPTION_RES:
             case ECHO_RES:
             case ERROR:

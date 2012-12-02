@@ -33,7 +33,7 @@ public class GetStatus extends RequestPacket
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.length();
     }

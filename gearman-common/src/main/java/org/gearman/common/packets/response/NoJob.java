@@ -25,7 +25,7 @@ public class NoJob extends ResponsePacket {
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return 0;
     }

@@ -18,7 +18,8 @@ public class GearmanDaemon {
 	public GearmanDaemon(int port) {
 
         System.err.println("Starting ServerListener...");
-        new Thread(new ServerListener(port)).start();
+        ServerListener sl = new ServerListener(port);
+        sl.start();
 
         System.err.println("Starting Metrics...");
         // Metrics, yo.

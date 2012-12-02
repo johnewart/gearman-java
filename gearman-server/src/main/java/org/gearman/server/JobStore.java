@@ -7,43 +7,46 @@ import com.yammer.metrics.core.Counter;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.NoJob;
+import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.util.EqualsLock;
 import org.gearman.util.ByteArray;
+import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-// UG...LEEE.
 
 public class JobStore {
-    /**
-     * Global Job Map
-     * key = job handle
-     * value = job
-     */
-
     private static Logger LOG = LoggerFactory.getLogger(JobStore.class);
 
+    // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues = new ConcurrentHashMap<>();
-    //
-    private final ConcurrentHashMap<String, Job > allJobs = new ConcurrentHashMap<>();
-    // Jobs associated with a given client
-    private final ConcurrentHashMap<Client, Set<Job>> clientJobs = new ConcurrentHashMap<>();
-    // Those who are able to do work
-    private final ConcurrentHashMap<Client, Set<String>> workers = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Client> activeJobs = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, Counter> pendingCounters = new ConcurrentHashMap<>();
+
+    // All jobs: UniqueID <--> Job
+    private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
+
+    // Jobs associated with a given client: Client <--> Jobs
+    private final ConcurrentHashMap<Channel, Set<Job>> clientJobs = new ConcurrentHashMap<>();
+
+    // Workers: Worker <--> Abilities
+    private final ConcurrentHashMap<Channel, Set<String>> workers = new ConcurrentHashMap<>();
+
+    // Active jobs Worker <--> Job
+    private final ConcurrentHashMap<Channel, Job> activeJobs = new ConcurrentHashMap<>();
+
 
     private final EqualsLock lock = new EqualsLock();
     private final PersistenceEngine persistenceStore;
 
+    // Metrics counters, FunctionName <--> Counter
+    private final ConcurrentHashMap<String, Counter> pendingCounters = new ConcurrentHashMap<>();
     private final Counter pendingJobs = Metrics.newCounter(JobStore.class, "pending-jobs");
+
 
     public JobStore()
     {
@@ -60,7 +63,7 @@ public class JobStore {
         return allJobs.get(jobHandle);
     }
 
-    public void registerWorker(String funcName, Client worker)
+    public void registerWorker(String funcName, Channel worker)
     {
         if(!this.workers.containsKey(worker))
         {
@@ -68,24 +71,22 @@ public class JobStore {
         }
         this.workers.get(worker).add(funcName);
 
-        // Mark this as someone to wakeup when the function has work
         getJobQueue(funcName).addWorker(worker);
     }
 
-    public void unregisterWorker(String funcName, Client worker)
+    public void unregisterWorker(String funcName, Channel worker)
     {
         if(this.workers.containsKey(worker))
         {
             this.workers.get(worker).remove(funcName);
         }
 
-        // Remove this as something to wakeup when we have work
         getJobQueue(funcName).removeWorker(worker);
     }
 
     @Timed
     @Metered
-    public void nextJobForWorker(Client worker, boolean uniqueID)
+    public void nextJobForWorker(Channel worker, boolean uniqueID)
     {
         boolean foundJob = false;
         for(String functionName : workers.get(worker))
@@ -96,11 +97,10 @@ public class JobStore {
 
             if (job != null)
             {
-                activeJobs.put(job.getUniqueID(), worker);
+                activeJobs.put(worker, job);
                 job.setState(Job.JobState.WORKING);
-                job.addClient(worker);
+                job.setWorker(worker);
 
-                //worker.addDisconnectListener(this);
                 Packet packet;
 
                 if(uniqueID)
@@ -113,24 +113,20 @@ public class JobStore {
                 foundJob = true;
 
                 try {
-                    worker.sendPacket(packet);
-                } catch (IOException ioe) {
-
+                    worker.write(packet);
+                } catch (Exception e) {
+                        LOG.error("Unable to write to worker. Re-enqueing job.");
                         try {
                             enqueueJob(job);
-                        } catch (Exception e) {
-                            LOG.error("Error re-enqueing after failed transmission: " + e.toString());
+                        } catch (IllegalJobStateTransitionException ee) {
+                            LOG.error("Error re-enqueing after failed transmission: ", ee);
                         }
                 }
             }
         }
 
         if(!foundJob) {
-            try {
-                worker.sendPacket(new NoJob());
-            } catch (IOException ioe) {
-                LOG.error("Problem sending packet", ioe);
-            }
+             worker.write(new NoJob());
         }
     }
 
@@ -154,7 +150,7 @@ public class JobStore {
 
     @Timed
     @Metered
-    public final void createJob(SubmitJob packet, Client creator) {
+    public final void createJob(SubmitJob packet, Channel creator) {
         //creator.addDisconnectListener(this);
         String funcName = packet.getFunctionName();
         String uniqueID = packet.getUniqueId();
@@ -184,11 +180,7 @@ public class JobStore {
                     synchronized(job) {
                         // If the job is not background, add creator to listener set and send JOB_CREATED packet
                         if(!isBackground) job.addClient(creator);
-                        try{
-                            creator.sendPacket(job.createJobCreatedPacket());
-                        } catch (IOException ioe) {
-                            LOG.error("Problem sending job created packet: ", ioe);
-                        }
+                        creator.write(job.createJobCreatedPacket());
                         return;
                     }
                 }
@@ -196,11 +188,9 @@ public class JobStore {
 
             final Job job = new Job(funcName, uniqueID, data, priority, isBackground, creator);
 
-            // New job, add it to the job list
             if(!jobQueue.add(job))
             {
-                // Oops, full!
-                //creator.sendPacket(StaticPackets.ERROR_QUEUE_FULL,null);
+                // Hmmm...
 
             } else {
 
@@ -214,27 +204,10 @@ public class JobStore {
                     LOG.debug("Exception: " + e.toString());
                 }
 
-                /*
-                    * The JOB_CREATED packet must sent before the job is added to the queue.
-                    * Queuing the job before sending the packet may result in another thread
-                    * grabbing, completing and sending a WORK_COMPLETE packet before the
-                    * JOB_CREATED is sent
-                    */
-
-                try {
-                    creator.sendPacket(job.createJobCreatedPacket());
-                } catch (IOException ioe) {
-                    LOG.error("Unable to send JOB_CREATED packet: ", ioe);
-                }
-
-                /*
-                    * The job must be queued before sending the NOOP packets. Sending the noops
-                    * first may result in a worker failing to grab the job
-                    */
+                creator.write(job.createJobCreatedPacket());
 
                 if(jobQueue.enqueue(job))
                 {
-                    // Assuming
                     jobQueue.notifyWorkers();
                     allJobs.put(job.getJobHandle(), job);
                 }
@@ -247,7 +220,6 @@ public class JobStore {
 
     public final void enqueueJob(Job job) throws IllegalJobStateTransitionException
     {
-        pendingJobs.inc();
         Job.JobState previousState = job.getState();
         job.setState(Job.JobState.QUEUED);
         final JobQueue jobQueue = getJobQueue(job.getFunctionName());
@@ -257,6 +229,7 @@ public class JobStore {
                 break;
             case WORKING:
                 // Requeue
+                LOG.debug("Re-enqueing job " + job.toString());
                 final boolean value = jobQueue.enqueue(job);
                 assert value;
                 break;
@@ -269,17 +242,19 @@ public class JobStore {
 
     @Timed
     @Metered
-    public synchronized void workComplete(Job job, Packet packet)
+    public synchronized void workComplete(WorkResponse packet)
     {
+        Job job = allJobs.get(packet.getJobHandle());
 
-        Set<Client> clients = job.getClients();
+        Set<Channel> clients = job.getClients();
 
-        for(Client client : clients) {
-            try {
-                client.sendPacket(packet);
-            } catch (IOException ioe) {
-                LOG.error("Problem notifying client that the work is complete.", ioe);
-            }
+        for(Channel client : clients) {
+            client.write(packet);
+        }
+
+        if(activeJobs.containsValue(job))
+        {
+            activeJobs.remove(job.getWorker());
         }
 
         job.complete();
@@ -287,6 +262,41 @@ public class JobStore {
     }
 
 
+    public synchronized void channelDisconnected(Channel channel)
+    {
+        // Remove from any worker lists
+        if(workers.containsKey(channel))
+        {
+            for(String jobQueueName : workers.get(channel))
+            {
+                getJobQueue(jobQueueName).removeWorker(channel);
+            }
+
+            if(activeJobs.containsKey(channel))
+            {
+                Job job = activeJobs.remove(channel);
+                JobQueue jobQueue = getJobQueue(job.getFunctionName());
+                Job.JobAction action = job.disconnectClient(channel);
+                switch (action)
+                {
+                    case REENQUEUE:
+                        try {
+                            enqueueJob(job);
+                        } catch (IllegalJobStateTransitionException e) {
+                            LOG.error("Unable to re-enqueue job: " + e.toString());
+                        }
+                        break;
+                    case MARKCOMPLETE:
+                        jobQueue.remove(job);
+                        break;
+                    case DONOTHING:
+                    default:
+                        break;
+                }
+            }
+        }
+
+    }
 
 
     public void loadAllJobs()
@@ -341,48 +351,16 @@ public class JobStore {
         }
     }
 
-    public final void sendStatus(Client client) {
+    public final void sendStatus(Channel client) {
 
         for(JobQueue jobQueue : jobQueues.values()) {
             if(jobQueue!=null)
             {
-                try {
-                    client.sendPacket(jobQueue.getStatus());
-                } catch (IOException ioe) {
-                    LOG.error("Can't send status: ", ioe);
-                }
+                client.write(jobQueue.getStatus());
             }
         }
 
         //client.sendPacket(StaticPackets.TEXT_DONE, null /*TODO*/);
-    }
-
-    public final void onDisconnect(final Client client) {
-        if(clientJobs.containsKey(client))
-        {
-            for(Job job : clientJobs.get(client))
-            {
-                JobQueue jobQueue = getJobQueue(job.getFunctionName());
-                Job.JobAction action = job.disconnectClient(client);
-                switch (action)
-                {
-                    case REENQUEUE:
-                        try {
-                            enqueueJob(job);
-                        } catch (Exception e) {
-                            LOG.error("Unable to re-enqueue job: " + e.toString());
-                        }
-                        break;
-                    case MARKCOMPLETE:
-                        jobQueue.remove(job);
-                        break;
-                    case DONOTHING:
-                    default:
-                        break;
-                }
-
-            }
-        }
     }
 
 

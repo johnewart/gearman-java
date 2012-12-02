@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Time: 10:27 AM
  * To change this template use File | Settings | File Templates.
  */
-public class WorkException extends RequestPacket
+public class WorkException extends RequestPacket implements WorkResponse
 {
     public AtomicReference<String> jobHandle;
     public byte[] exception;
@@ -40,9 +40,15 @@ public class WorkException extends RequestPacket
     }
 
     @Override
-    public int getSize()
+    public int getPayloadSize()
     {
         return this.jobHandle.get().length() + 1 +
                this.exception.length;
+    }
+
+    @Override
+    public String getJobHandle()
+    {
+        return this.jobHandle.get();
     }
 }
