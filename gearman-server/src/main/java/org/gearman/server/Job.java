@@ -50,6 +50,8 @@ public class Job {
     private byte[] numerator;
     /** The status denominator */
     private byte[] denominator;
+    // Time-stmap of when to run
+    private long timeToRun;
 
     //--- Listening Clients and Worker --- //
 
@@ -66,17 +68,34 @@ public class Job {
         jobHandle    = null;
         data         = null;
         priority     = JobPriority.NORMAL;
+        timeToRun    = -1;
     }
 
-    public Job(final String functionName, final String uniqueID, final byte[] data, final JobPriority priority, boolean isBackground, final Channel creator) {
-        this(functionName, uniqueID, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, creator);
+    public Job(final String functionName,
+               final String uniqueID,
+               final byte[] data,
+               final JobPriority priority,
+               boolean isBackground,
+               long timeToRun,
+               final Channel creator)
+    {
+        this(functionName, uniqueID, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, timeToRun, creator);
     }
 
-    public Job(final String functionName, final String uniqueID, final byte[] data, final byte[] jobHandle, final JobPriority priority, boolean isBackground, final Channel creator) {
+    public Job(final String functionName,
+               final String uniqueID,
+               final byte[] data,
+               final byte[] jobHandle,
+               final JobPriority priority,
+               boolean isBackground,
+               long timeToRun,
+               final Channel creator)
+    {
         this.functionName = functionName;
         this.uniqueID = uniqueID;
         this.data = data;
         this.priority = priority;
+        this.timeToRun = timeToRun;
 
         if(!(this.background = isBackground)) {
             this.clients.add(creator);
@@ -114,13 +133,6 @@ public class Job {
         return new WorkStatus(this.jobHandle, Ints.fromByteArray(numerator), Ints.fromByteArray(denominator));
     }
 
-    public final Packet createStatusResPacket() {
-        //final byte[] isRunning = this.state.equals(JobState.WORKING)? STATUS_TRUE: STATUS_FALSE;
-        //return new Packet(Packet.Magic.RES, Packet.Type.STATUS_RES,this.jobHandle.getBytes(),STATUS_TRUE,isRunning,numerator==null?STATUS_FALSE:numerator, denominator==null?STATUS_FALSE:denominator);
-        return new JobCreated();
-    }
-
-
     public byte[] getData() {
         return this.data;
     }
@@ -140,6 +152,10 @@ public class Job {
     public void setState(JobState state)
     {
         this.state = state;
+    }
+
+    public long getTimeToRun() {
+        return timeToRun;
     }
 
     public String getUniqueID() {

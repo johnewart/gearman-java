@@ -42,7 +42,10 @@ public class SubmitJob extends RequestPacket {
             pOff = parseString(pOff, epochString);
         }
 
-        if (this.type == PacketType.SUBMIT_JOB_HIGH_BG || this.type == PacketType.SUBMIT_JOB_LOW_BG || this.type == PacketType.SUBMIT_JOB_BG)
+        if (this.type == PacketType.SUBMIT_JOB_HIGH_BG ||
+            this.type == PacketType.SUBMIT_JOB_LOW_BG ||
+            this.type == PacketType.SUBMIT_JOB_BG ||
+            this.type == PacketType.SUBMIT_JOB_EPOCH)
         {
             this.background = true;
         }
@@ -127,6 +130,11 @@ public class SubmitJob extends RequestPacket {
 
     public byte[] getData() {
         return data;
+    }
+
+    public long getEpoch()
+    {
+        return Long.parseLong(epochString.get());
     }
 
     @Override

@@ -80,6 +80,9 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case SUBMIT_JOB_LOW_BG:
                 jobStore.createJob((SubmitJob)packet, channel);
                 return;
+            case SUBMIT_JOB_EPOCH:
+                jobStore.createJob((SubmitJob)packet, channel);
+                break;
             case WORK_COMPLETE:
             case WORK_DATA:
             case WORK_WARNING:
@@ -101,7 +104,6 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case PRE_SLEEP:
             case RESET_ABILITIES:
             case ALL_YOURS:
-            case SUBMIT_JOB_EPOCH:
             case SUBMIT_JOB_SCHED:
                 //client.sendPacket(StaticPackets.ERROR_BAD_COMMAND, null);
                 return;

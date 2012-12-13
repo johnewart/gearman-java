@@ -10,6 +10,7 @@ import org.gearman.common.packets.response.NoJob;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
+import org.gearman.constants.PacketType;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.util.EqualsLock;
 import org.gearman.util.ByteArray;
@@ -186,11 +187,18 @@ public class JobStore {
                 }
             }
 
-            final Job job = new Job(funcName, uniqueID, data, priority, isBackground, creator);
+            long timeToRun = -1;
+
+            if(packet.getType() == PacketType.SUBMIT_JOB_EPOCH)
+            {
+                timeToRun = packet.getEpoch();
+            }
+
+            final Job job = new Job(funcName, uniqueID, data, priority, isBackground, timeToRun, creator);
 
             if(!jobQueue.add(job))
             {
-                // Hmmm...
+                LOG.error("Unable to enqueue job");
 
             } else {
 
@@ -301,32 +309,36 @@ public class JobStore {
 
     public void loadAllJobs()
     {
-        Collection<Job> jobs = null;
-        try {
-            jobs = persistenceStore.readAll();
-        } catch (Exception ex) {
-            // TODO LOG
-            LOG.debug("Error loading persistent data: " + ex.toString());
-        }
+        if(persistenceStore != null)
+        {
+            Collection<Job> jobs = null;
 
-        if(jobs==null) return;
-        for(Job job : jobs) {
-            String functionName = job.getFunctionName();
-            if(functionName == null) {
-                // TODO log
-                LOG.debug("Error queueing job: functionName is null");
-            } else {
-                LOG.debug("Loading job for " + functionName);
-                JobQueue jobQueue = getJobQueue(functionName);
-                try {
-                    jobQueue.add(job);
-                    jobQueue.enqueue(job);
-                    allJobs.put(job.getJobHandle(), job);
-                    pendingJobs.inc();
-                } catch (Exception e) {
-                    LOG.error(e.toString());
+            try {
+                jobs = persistenceStore.readAll();
+            } catch (Exception ex) {
+                // TODO LOG
+                LOG.debug("Error loading persistent data: " + ex.toString());
+            }
+
+            if(jobs==null) return;
+            for(Job job : jobs) {
+                String functionName = job.getFunctionName();
+                if(functionName == null) {
+                    // TODO log
+                    LOG.debug("Error queueing job: functionName is null");
+                } else {
+                    LOG.debug("Loading job for " + functionName);
+                    JobQueue jobQueue = getJobQueue(functionName);
+                    try {
+                        jobQueue.add(job);
+                        jobQueue.enqueue(job);
+                        allJobs.put(job.getJobHandle(), job);
+                        pendingJobs.inc();
+                    } catch (Exception e) {
+                        LOG.error(e.toString());
+                    }
+
                 }
-
             }
         }
     }

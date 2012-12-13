@@ -85,12 +85,11 @@ public enum PacketType {
             case 29: return WORK_WARNING;
             case 30: return GRAB_JOB_UNIQ;
             case 31: return JOB_ASSIGN_UNIQ;
-            case 32: return SUBMIT_JOB_HIGH;
-            case 33: return SUBMIT_JOB_HIGH_BG;
-            case 34: return SUBMIT_JOB_LOW;
-            case 35: return SUBMIT_JOB_LOW_BG;
-            case 36: return SUBMIT_JOB_SCHED;
-            case 37: return SUBMIT_JOB_EPOCH;
+            case 32: return SUBMIT_JOB_HIGH_BG;
+            case 33: return SUBMIT_JOB_LOW;
+            case 34: return SUBMIT_JOB_LOW_BG;
+            case 35: return SUBMIT_JOB_SCHED;
+            case 36: return SUBMIT_JOB_EPOCH;
         }
         return null;
     }

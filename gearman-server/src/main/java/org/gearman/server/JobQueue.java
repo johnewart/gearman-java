@@ -41,6 +41,8 @@ import org.slf4j.LoggerFactory;
 
 import java.awt.image.LookupTable;
 import java.io.IOException;
+import java.sql.Time;
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -90,7 +92,6 @@ public final class JobQueue {
                 return jobsInQueue.longValue();
             }
         });
-        MetricsRegistry r = Metrics.defaultRegistry();
     }
 
 
@@ -146,15 +147,26 @@ public final class JobQueue {
 	 * 		The next job if one is available. null is returned if no job is available
 	 */
 	public final Job poll() {
-		Job job = high.poll();
-		if(job!=null)
-			return job;
+        long currentTime = new Date().getTime() / 1000;
 
-		job = mid.poll();
-		if(job!=null)
-			return job;
+        // High has no epoch jobs
+        Job job = high.poll();
+        if (job != null)
+            return job;
 
-		return low.poll();
+        // Check to see which, if any, need to be run now
+        for(Job j : mid)
+        {
+            if(j.getTimeToRun() < currentTime)
+            {
+                if(mid.remove(j))
+                {
+                    return j;
+                }
+            }
+        }
+
+        return low.poll();
 	}
 
 	/**
@@ -234,7 +246,6 @@ public final class JobQueue {
         return allJobs.get(uniqueId);
     }
 
-    //------
     public final void setMaxQueue(final int size) {
         synchronized(this.allJobs) { this.maxQueueSize = size; }
     }
