@@ -2,10 +2,7 @@ package org.gearman.server;
 
 import com.google.common.primitives.Ints;
 import org.gearman.common.packets.Packet;
-import org.gearman.common.packets.response.JobAssign;
-import org.gearman.common.packets.response.JobAssignUniq;
-import org.gearman.common.packets.response.JobCreated;
-import org.gearman.common.packets.response.WorkStatus;
+import org.gearman.common.packets.response.*;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.jboss.netty.channel.Channel;
@@ -47,9 +44,9 @@ public class Job {
     /** The opaque data that is given as an argument in the SUBMIT_JOB packet*/
     private final byte[] data;
     /** The status numerator */
-    private byte[] numerator;
+    private int numerator;
     /** The status denominator */
-    private byte[] denominator;
+    private int denominator;
     // Time-stmap of when to run
     private long timeToRun;
 
@@ -130,7 +127,19 @@ public class Job {
     }
 
     public final Packet createWorkStatusPacket() {
-        return new WorkStatus(this.jobHandle, Ints.fromByteArray(numerator), Ints.fromByteArray(denominator));
+        return new WorkStatus(this.jobHandle, numerator, denominator);
+    }
+
+    public final Packet createStatusResponsePacket() {
+        boolean isRunning = this.state == JobState.WORKING;
+        boolean knownState = true;
+
+        if(numerator == 0 && denominator == 0)
+        {
+            knownState = false;
+        }
+
+        return new StatusRes(this.jobHandle, isRunning, knownState, numerator, denominator);
     }
 
     public byte[] getData() {
@@ -166,7 +175,7 @@ public class Job {
         return this.background;
     }
 
-    public void setStatus(byte[] numerator, byte[] denominator) {
+    public void setStatus(int numerator, int denominator) {
         this.numerator = numerator;
         this.denominator = denominator;
     }
