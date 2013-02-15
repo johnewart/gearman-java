@@ -1,5 +1,7 @@
 package org.gearman.common.packets.response;
 
+import org.gearman.constants.PacketType;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -18,6 +20,16 @@ public class StatusRes extends ResponsePacket {
 
     public StatusRes()
     {}
+
+    public StatusRes(String jobHandle, boolean running, boolean statusKnown, int numerator, int denominator)
+    {
+        this.jobHandle = new AtomicReference<>(jobHandle);
+        this.running = running;
+        this.statusKnown = statusKnown;
+        this.numerator = numerator;
+        this.denominator = denominator;
+        this.type = PacketType.STATUS_RES;
+    }
 
     public StatusRes(byte[] pktdata)
     {
@@ -45,7 +57,17 @@ public class StatusRes extends ResponsePacket {
 
     public byte[] toByteArray()
     {
-        return "foo".getBytes();
+        int knownStatus = statusKnown ? 1 : 0;
+        int runningStatus = running ? 1 : 0;
+        byte[] metadata = stringsToTerminatedByteArray(
+                jobHandle.get(),
+                String.valueOf(knownStatus),
+                String.valueOf(runningStatus),
+                String.valueOf(numerator),
+                String.valueOf(denominator)
+        );
+
+        return concatByteArrays(getHeader(), metadata);
     }
 
     public String getJobHandle()
@@ -83,5 +105,10 @@ public class StatusRes extends ResponsePacket {
     public int getPayloadSize()
     {
         return jobHandle.get().length() + 1 + 4 + 4 + String.valueOf(numerator).length() + 1 + String.valueOf(denominator).length();
+    }
+
+    public String toString()
+    {
+        return jobHandle.get() + ":" + statusKnown + ":" + running + ":" + numerator + ":" + denominator;
     }
 }
