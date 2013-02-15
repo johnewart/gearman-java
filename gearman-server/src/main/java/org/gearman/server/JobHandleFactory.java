@@ -1,6 +1,8 @@
 package org.gearman.server;
 
 import org.gearman.constants.GearmanConstants;
+
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class JobHandleFactory {
@@ -31,12 +33,6 @@ public class JobHandleFactory {
      * 		the next available job handle
      */
     public static final byte[] getNextJobHandle() {
-        final byte[] jobNumber = Long.toString(jobHandleNumber.incrementAndGet()).getBytes(GearmanConstants.CHARSET);
-
-        final byte[] jobHandle = new byte[jobHandlePrefix.length+jobNumber.length];
-        System.arraycopy(jobHandlePrefix, 0, jobHandle, 0, jobHandlePrefix.length);
-        System.arraycopy(jobNumber, 0, jobHandle, jobHandlePrefix.length, jobNumber.length);
-
-        return jobHandle;
+        return UUID.randomUUID().toString().getBytes();
     }
 }
