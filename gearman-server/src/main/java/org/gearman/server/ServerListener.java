@@ -2,6 +2,8 @@ package org.gearman.server;
 
 import org.gearman.server.codec.Decoder;
 import org.gearman.server.codec.Encoder;
+import org.gearman.server.persistence.PersistenceEngine;
+import org.gearman.server.persistence.PostgresQueue;
 import org.gearman.server.persistence.RedisQueue;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
@@ -28,13 +30,14 @@ public class ServerListener {
     private final DefaultChannelGroup channelGroup;
     private final ServerChannelFactory serverFactory;
 
-    public ServerListener(int port)
+    public ServerListener(int port, PersistenceEngine storageEngine)
     {
         this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
         this.serverFactory =  new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
                                                                 Executors.newCachedThreadPool());
         this.port = port;
-        this.jobStore = new JobStore(new RedisQueue());
+
+        this.jobStore = new JobStore(storageEngine);
 
         if(jobStore != null)
         {
@@ -50,6 +53,8 @@ public class ServerListener {
         }
 
         this.hostName = host;
+
+        LOG.info("Listening on " + host + ":" + port);
     }
 
 
@@ -95,4 +100,7 @@ public class ServerListener {
         }
     }
 
+    public JobStore getJobStore() {
+        return jobStore;
+    }
 }
