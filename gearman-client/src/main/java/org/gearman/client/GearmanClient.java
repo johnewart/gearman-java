@@ -153,7 +153,7 @@ public class GearmanClient {
             if (response.getPacket().getType() == PacketType.JOB_CREATED)
             {
                 String jobHandle =  ((JobCreated)response.getPacket()).getJobHandle();
-                System.err.printf("Created background job %s, with priority %s", jobHandle, priority.toString());
+                System.err.printf("Created background job %s, with priority %s\n", jobHandle, priority.toString());
                 return jobHandle;
             }
         }
