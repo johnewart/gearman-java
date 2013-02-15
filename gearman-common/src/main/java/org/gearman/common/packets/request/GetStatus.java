@@ -2,6 +2,8 @@ package org.gearman.common.packets.request;
 
 import org.gearman.constants.PacketType;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * Created with IntelliJ IDEA.
  * User: jewart
@@ -12,22 +14,33 @@ import org.gearman.constants.PacketType;
 
 public class GetStatus extends RequestPacket
 {
-    public String jobHandle;
+    public AtomicReference<String> jobHandle;
 
     public GetStatus()
     { }
 
     public GetStatus(String jobHandle)
     {
-        this.jobHandle = jobHandle;
+        this.jobHandle = new AtomicReference<>(jobHandle);
         this.type = PacketType.GET_STATUS;
         this.size = jobHandle.length();
+    }
+
+    public GetStatus(byte[] pktdata)
+    {
+        super(pktdata);
+        this.type = PacketType.GET_STATUS;
+
+        jobHandle = new AtomicReference<String>();
+
+        int pOff = 0;
+        pOff = parseString(pOff, jobHandle);
     }
 
     @Override
     public byte[] toByteArray()
     {
-        byte[] jhbytes = jobHandle.getBytes();
+        byte[] jhbytes = jobHandle.get().getBytes();
         byte[] result = this.concatByteArrays(getHeader(), jhbytes);
         return result;
     }
@@ -35,7 +48,7 @@ public class GetStatus extends RequestPacket
     @Override
     public int getPayloadSize()
     {
-        return this.jobHandle.length();
+        return this.jobHandle.get().length();
     }
 
 
