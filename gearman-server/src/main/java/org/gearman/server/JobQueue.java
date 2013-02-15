@@ -304,4 +304,8 @@ public final class JobQueue {
     {
         return this.name.toString().replaceAll(":", ".");
     }
+
+    public ConcurrentHashMap<String, Job> getAllJobs() {
+        return allJobs;
+    }
 }

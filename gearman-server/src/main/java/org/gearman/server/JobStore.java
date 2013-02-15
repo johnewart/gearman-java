@@ -5,9 +5,12 @@ import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
 import com.yammer.metrics.core.Counter;
 import org.gearman.common.packets.Packet;
+import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.NoJob;
+import org.gearman.common.packets.response.StatusRes;
 import org.gearman.common.packets.response.WorkResponse;
+import org.gearman.common.packets.response.WorkStatus;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
@@ -51,7 +54,6 @@ public class JobStore {
 
     public JobStore()
     {
-
         persistenceStore = null;
     }
 
@@ -101,38 +103,42 @@ public class JobStore {
     public void nextJobForWorker(Channel worker, boolean uniqueID)
     {
         boolean foundJob = false;
-        for(String functionName : workers.get(worker))
+
+        if(workers.containsKey(worker))
         {
-            LOG.debug("Checking in queue " + functionName);
-            final JobQueue jobQueue = getJobQueue(functionName);
-            final Job job = jobQueue.nextJob();
-
-            if (job != null)
+            for(String functionName : workers.get(worker))
             {
-                activeJobs.put(worker, job);
-                job.setState(Job.JobState.WORKING);
-                job.setWorker(worker);
+                final JobQueue jobQueue = getJobQueue(functionName);
+                final Job job = jobQueue.nextJob();
+                jobQueue.setWorkerAwake(worker);
 
-                Packet packet;
-
-                if(uniqueID)
+                if (job != null)
                 {
-                    packet = job.createJobAssignUniqPacket();
-                } else {
-                    packet = job.createJobAssignPacket();
-                }
+                    activeJobs.put(worker, job);
+                    job.setState(Job.JobState.WORKING);
+                    job.setWorker(worker);
 
-                foundJob = true;
+                    Packet packet;
 
-                try {
-                    worker.write(packet);
-                } catch (Exception e) {
-                        LOG.error("Unable to write to worker. Re-enqueing job.");
-                        try {
-                            enqueueJob(job);
-                        } catch (IllegalJobStateTransitionException ee) {
-                            LOG.error("Error re-enqueing after failed transmission: ", ee);
-                        }
+                    if(uniqueID)
+                    {
+                        packet = job.createJobAssignUniqPacket();
+                    } else {
+                        packet = job.createJobAssignPacket();
+                    }
+
+                    foundJob = true;
+
+                    try {
+                        worker.write(packet);
+                    } catch (Exception e) {
+                            LOG.error("Unable to write to worker. Re-enqueing job.");
+                            try {
+                                enqueueJob(job);
+                            } catch (IllegalJobStateTransitionException ee) {
+                                LOG.error("Error re-enqueing after failed transmission: ", ee);
+                            }
+                    }
                 }
             }
         }
@@ -140,6 +146,7 @@ public class JobStore {
         if(!foundJob) {
              worker.write(new NoJob());
         }
+
     }
 
     public synchronized void removeJob(Job job)
@@ -265,21 +272,47 @@ public class JobStore {
     {
         Job job = allJobs.get(packet.getJobHandle());
 
-        Set<Channel> clients = job.getClients();
-
-        for(Channel client : clients) {
-            client.write(packet);
-        }
-
-        if(activeJobs.containsValue(job))
+        if(job != null)
         {
-            activeJobs.remove(job.getWorker());
-        }
+            Set<Channel> clients = job.getClients();
 
-        job.complete();
-        removeJob(job);
+            for(Channel client : clients) {
+                client.write(packet);
+            }
+
+            if(activeJobs.containsValue(job))
+            {
+                activeJobs.remove(job.getWorker());
+            }
+
+            job.complete();
+            removeJob(job);
+        }
     }
 
+
+    public void checkJobStatus(GetStatus getStatus, Channel channel)
+    {
+        String jobHandle = getStatus.jobHandle.get();
+        Job job = allJobs.get(jobHandle);
+        StatusRes response;
+
+        if(job != null)
+        {
+           response = (StatusRes)job.createStatusResponsePacket();
+        } else {
+           response = new StatusRes(jobHandle, false, false, 0, 0);
+        }
+
+        channel.write(response);
+
+    }
+
+    public void updateJobStatus(WorkStatus workStatus)
+    {
+        Job job = allJobs.get(workStatus.jobHandle.get());
+        job.setStatus(workStatus.completenumerator, workStatus.completedenominator);
+    }
 
     public synchronized void channelDisconnected(Channel channel)
     {
@@ -338,7 +371,6 @@ public class JobStore {
                     // TODO log
                     LOG.debug("Error queueing job: functionName is null");
                 } else {
-                    LOG.debug("Loading job for " + functionName);
                     JobQueue jobQueue = getJobQueue(functionName);
                     try {
                         jobQueue.add(job);
@@ -348,9 +380,10 @@ public class JobStore {
                     } catch (Exception e) {
                         LOG.error(e.toString());
                     }
-
                 }
             }
+
+            LOG.info("Loaded " + jobs.size() + " jobs from persistent storage.");
         }
     }
 
@@ -386,5 +419,7 @@ public class JobStore {
         //client.sendPacket(StaticPackets.TEXT_DONE, null /*TODO*/);
     }
 
-
+    public ConcurrentHashMap<String, JobQueue> getJobQueues() {
+        return jobQueues;
+    }
 }
