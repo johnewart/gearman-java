@@ -47,6 +47,8 @@ public class PacketFactory {
                 return new WorkException(packetBytes);
             case STATUS_RES:
                 return new StatusRes(packetBytes);
+            case GET_STATUS:
+                return new GetStatus(packetBytes);
 
             /* Worker response packets */
             case NOOP:
