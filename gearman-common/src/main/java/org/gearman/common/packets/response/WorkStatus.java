@@ -41,8 +41,17 @@ public class WorkStatus extends RequestPacket
         pOff = parseString(pOff, numerator);
         pOff = parseString(pOff, denominator);
 
-        completedenominator = Integer.valueOf(denominator.get());
-        completenumerator = Integer.valueOf(numerator.get());
+        try {
+            completedenominator = Integer.valueOf(denominator.get());
+        } catch (NumberFormatException nfe) {
+            completedenominator = -1;
+        }
+
+        try {
+            completenumerator = Integer.valueOf(numerator.get());
+        } catch (NumberFormatException nfe) {
+            completenumerator = -1;
+        }
     }
 
     @Override
