@@ -39,7 +39,7 @@ public class RedisQueue implements PersistenceEngine {
         String bucket = "gm:" + job.getFunctionName();
         String key = job.getUniqueID().toString();
         redisClient.hset(bucket, key, json);
-        LOG.debug("Storing in redis " + bucket + "-" + key + ": " + json);
+        LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
         jedisPool.returnResource(redisClient);
     }
 
