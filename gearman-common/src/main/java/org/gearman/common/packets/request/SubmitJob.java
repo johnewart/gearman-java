@@ -50,7 +50,7 @@ public class SubmitJob extends RequestPacket {
             this.background = true;
         }
 
-        data = Arrays.copyOfRange(pktdata, pOff, pktdata.length);
+        data = Arrays.copyOfRange(rawdata, pOff, rawdata.length);
     }
 
     public SubmitJob(String function, String unique_id, byte[] data, boolean background)
