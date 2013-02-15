@@ -97,11 +97,14 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case SET_CLIENT_ID:
                 return;
 
+            case PRE_SLEEP:
+                jobStore.sleepingWorker(channel);
+                return;
+
             // Packets Not Yet Implemented
             case ECHO_REQ:
             case GET_STATUS:
             case OPTION_REQ:
-            case PRE_SLEEP:
             case RESET_ABILITIES:
             case ALL_YOURS:
             case SUBMIT_JOB_SCHED:

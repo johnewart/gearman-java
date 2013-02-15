@@ -74,6 +74,7 @@ public final class JobQueue {
     private final String name;
     /** The list of workers waiting for jobs to be placed in the queue */
     private final Set<Channel> workers = new CopyOnWriteArraySet<>();
+    private final Set<Channel> sleepingWorkers = new CopyOnWriteArraySet<>();
 
     /** The set of jobs created by this function. ByteArray is equal to the uID */
     private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
@@ -230,11 +231,22 @@ public final class JobQueue {
         return allJobs.containsKey(job.getUniqueID());
 	}
 
+    public final void setWorkerAsleep(final Channel worker)
+    {
+        this.sleepingWorkers.add(worker);
+    }
+
+    public final void setWorkerAwake(final Channel worker)
+    {
+        this.sleepingWorkers.remove(worker);
+    }
+
     public final void addWorker(final Channel worker) {
         workers.add(worker);
     }
     public final void removeWorker(final Channel worker) {
         workers.remove(worker);
+        sleepingWorkers.remove(worker);
     }
 
 	public final boolean isEmpty() {
@@ -252,8 +264,12 @@ public final class JobQueue {
 
     public void notifyWorkers()
     {
-        for(Channel worker : workers) {
-            worker.write(new NoOp());
+        for(Channel worker : sleepingWorkers) {
+            try {
+                worker.write(new NoOp());
+            } catch (Exception e) {
+                LOG.error("Unable to wake up worker...");
+            }
         }
     }
 

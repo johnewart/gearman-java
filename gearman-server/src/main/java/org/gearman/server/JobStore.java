@@ -28,7 +28,7 @@ public class JobStore {
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues = new ConcurrentHashMap<>();
 
-    // All jobs: UniqueID <--> Job
+    // All jobs: jobHandle <--> Job
     private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
 
     // Jobs associated with a given client: Client <--> Jobs
@@ -83,6 +83,17 @@ public class JobStore {
         }
 
         getJobQueue(funcName).removeWorker(worker);
+    }
+
+    public void sleepingWorker(Channel worker)
+    {
+        if(workers.containsKey(worker))
+        {
+            for(String funcName : workers.get(worker))
+            {
+                getJobQueue(funcName).setWorkerAsleep(worker);
+            }
+        }
     }
 
     @Timed
