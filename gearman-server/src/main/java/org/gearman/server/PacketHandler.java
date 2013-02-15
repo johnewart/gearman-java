@@ -3,6 +3,7 @@ package org.gearman.server;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.request.CanDo;
 import org.gearman.common.packets.request.CantDo;
+import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.packets.response.WorkStatus;
@@ -92,6 +93,11 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
                 return;
 
             case WORK_STATUS:
+                jobStore.updateJobStatus((WorkStatus)packet);
+                return;
+
+            case GET_STATUS:
+                jobStore.checkJobStatus((GetStatus)packet, channel);
                 return;
 
             case SET_CLIENT_ID:
@@ -103,7 +109,6 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
 
             // Packets Not Yet Implemented
             case ECHO_REQ:
-            case GET_STATUS:
             case OPTION_REQ:
             case RESET_ABILITIES:
             case ALL_YOURS:
