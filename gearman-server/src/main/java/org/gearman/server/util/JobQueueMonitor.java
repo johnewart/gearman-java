@@ -1,6 +1,9 @@
 package org.gearman.server.util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Gauge;
 import org.gearman.server.Job;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
@@ -15,13 +18,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/23/12
- * Time: 10:22 PM
- * To change this template use File | Settings | File Templates.
- */
 public class JobQueueMonitor {
     private JobStore jobStore;
     private HashMap<String, List<JobQueueSnapshot>> snapshots;
@@ -43,21 +39,62 @@ public class JobQueueMonitor {
         };
 
         executor.scheduleAtFixedRate(periodicTask, 0, 30, TimeUnit.SECONDS);
+
     }
 
     private void snapshotJobQueues()
     {
         LOG.debug("Snapshotting job queues.");
+        // Time in seconds
+        long currentTime = new Date().getTime() / 1000;
         for(String jobQueueName : jobStore.getJobQueues().keySet())
         {
             JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
             if(!snapshots.containsKey(jobQueueName))
             {
                 snapshots.put(jobQueueName, new ArrayList<JobQueueSnapshot>());
-            } else {
-                JobQueueSnapshot snapshot = new JobQueueSnapshot(new Date(), jobQueue.size());
-                snapshots.get(jobQueueName).add(snapshot);
             }
+
+            HashMap<String, ImmutableList<Job>> copyOfQueues = jobQueue.getCopyOfJobQueues();
+            HashMap<Integer, Long> hourCounts = new HashMap<>();
+            HashMap<String, Long> priorityCounts = new HashMap<>();
+
+            Long future = 0L;
+            Long immediate = 0L;
+
+            for(String priority : copyOfQueues.keySet())
+            {
+                ImmutableList<Job> queue = copyOfQueues.get(priority);
+                priorityCounts.put(priority, new Long(queue.size()));
+
+                for(Job job : queue)
+                {
+                    if(job.getTimeToRun() > 0)
+                    {
+                        Integer hoursFromNow = (int)((job.getTimeToRun() - currentTime) / 3600);
+
+                        // Things in the past are present jobs
+                        if(hoursFromNow < 0)
+                        {
+                            hoursFromNow = 0;
+                        }
+
+                        if(!hourCounts.containsKey(hoursFromNow))
+                        {
+                            hourCounts.put(hoursFromNow, 0L);
+                        }
+
+                        hourCounts.put(hoursFromNow, hourCounts.get(hoursFromNow) + 1);
+                        future += 1;
+                    } else {
+                        immediate += 1;
+                    }
+                }
+            }
+
+            JobQueueSnapshot snapshot = new JobQueueSnapshot(new Date(), immediate, future, hourCounts, priorityCounts);
+
+            snapshots.get(jobQueueName).add(snapshot);
         }
     }
 

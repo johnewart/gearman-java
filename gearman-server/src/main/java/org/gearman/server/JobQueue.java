@@ -27,6 +27,7 @@
 
 package org.gearman.server;
 
+import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.MetricsRegistry;
@@ -43,6 +44,7 @@ import java.awt.image.LookupTable;
 import java.io.IOException;
 import java.sql.Time;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -93,6 +95,7 @@ public final class JobQueue {
                 return jobsInQueue.longValue();
             }
         });
+
     }
 
 
@@ -307,5 +310,14 @@ public final class JobQueue {
 
     public ConcurrentHashMap<String, Job> getAllJobs() {
         return allJobs;
+    }
+
+    public HashMap<String, ImmutableList<Job>> getCopyOfJobQueues()
+    {
+        HashMap<String, ImmutableList<Job>> queues = new HashMap<>();
+        queues.put("high", ImmutableList.copyOf(high));
+        queues.put("mid",  ImmutableList.copyOf(mid));
+        queues.put("low",  ImmutableList.copyOf(low));
+        return queues;
     }
 }

@@ -101,7 +101,20 @@ public class GearmanServlet extends HttpServlet {
                 json.writeStartObject();
                 {
                     json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                    json.writeNumberField("count", snapshot.getCount());
+                    json.writeNumberField("count", snapshot.getImmediate());
+                    if(snapshot.getFutureJobCounts().keySet().size() > 0)
+                    {
+                        json.writeFieldName("futureJobs");
+                        json.writeStartObject();
+                        {
+                            for(Integer hour : snapshot.getFutureJobCounts().keySet())
+                            {
+                                json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
+                            }
+                        }
+                        json.writeEndObject();
+                    }
+
                 }
                 json.writeEndObject();
             }
