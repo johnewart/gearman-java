@@ -45,7 +45,7 @@ public class JobStore {
 
 
     private final EqualsLock lock = new EqualsLock();
-    private final PersistenceEngine persistenceStore;
+    private final PersistenceEngine persistenceEngine;
 
     // Metrics counters, FunctionName <--> Counter
     private final ConcurrentHashMap<String, Counter> pendingCounters = new ConcurrentHashMap<>();
@@ -54,12 +54,12 @@ public class JobStore {
 
     public JobStore()
     {
-        persistenceStore = null;
+        persistenceEngine = null;
     }
 
-    public JobStore(PersistenceEngine persistenceStore)
+    public JobStore(PersistenceEngine persistenceEngine)
     {
-        this.persistenceStore = persistenceStore;
+        this.persistenceEngine = persistenceEngine;
     }
 
     public synchronized Job getByJobHandle(String jobHandle){
@@ -134,7 +134,7 @@ public class JobStore {
                     } catch (Exception e) {
                             LOG.error("Unable to write to worker. Re-enqueing job.");
                             try {
-                                enqueueJob(job);
+                                reEnqueueJob(job);
                             } catch (IllegalJobStateTransitionException ee) {
                                 LOG.error("Error re-enqueing after failed transmission: ", ee);
                             }
@@ -155,10 +155,10 @@ public class JobStore {
         pendingJobs.dec();
         getJobQueue(job.getFunctionName()).remove(job);
 
-        if(job.isBackground() && persistenceStore != null)
+        if(job.isBackground() && persistenceEngine != null)
         {
             try {
-                persistenceStore.delete(job);
+                persistenceEngine.delete(job);
             } catch (Exception e) {
                 // TODO: be more specific
                 LOG.debug("Can't remove job from persistence engine: " + e.toString());
@@ -184,7 +184,7 @@ public class JobStore {
         if(uniqueID.isEmpty()) {
             do {
                 uniqueID = new String(UUID.randomUUID().toString().getBytes(GearmanConstants.CHARSET));
-            } while(jobQueue.uniqueIdInUse(new ByteArray(uniqueID)));
+            } while(jobQueue.uniqueIdInUse(uniqueID));
         }
 
         final Integer key = uniqueID.hashCode();
@@ -192,9 +192,9 @@ public class JobStore {
         try {
 
             // Make sure only one thread attempts to add a job with this uID at once
-            if(jobQueue.uniqueIdInUse(new ByteArray(uniqueID))) {
+            if(jobQueue.uniqueIdInUse(uniqueID)) {
 
-                final Job job = jobQueue.getJobByUniqueId(new ByteArray(uniqueID));
+                final Job job = jobQueue.getJobByUniqueId(uniqueID);
                 if(job!=null) {
                     synchronized(job) {
                         // If the job is not background, add creator to listener set and send JOB_CREATED packet
@@ -214,29 +214,16 @@ public class JobStore {
 
             final Job job = new Job(funcName, uniqueID, data, priority, isBackground, timeToRun, creator);
 
-            if(!jobQueue.add(job))
+            if(!jobQueue.enqueue(job, true))
             {
                 LOG.error("Unable to enqueue job");
-
             } else {
-
-                try {
-                    // If it's backgrounded and there's a persistence engine being used, store it
-                    if(isBackground && persistenceStore!=null) {
-                        persistenceStore.write(job);
-                    }
-                } catch(Exception e) {
-                    // TODO log exception
-                    LOG.debug("Exception: " + e.toString());
-                }
-
                 creator.write(job.createJobCreatedPacket());
-
-                if(jobQueue.enqueue(job))
-                {
+                // Notify any workers if this job is ready to run so it gets picked up quickly
+                if(job.isReady())
                     jobQueue.notifyWorkers();
-                    allJobs.put(job.getJobHandle(), job);
-                }
+
+                allJobs.put(job.getJobHandle(), job);
             }
         } finally {
             // Always unlock lock
@@ -244,7 +231,7 @@ public class JobStore {
         }
     }
 
-    public final void enqueueJob(Job job) throws IllegalJobStateTransitionException
+    public final void reEnqueueJob(Job job) throws IllegalJobStateTransitionException
     {
         Job.JobState previousState = job.getState();
         job.setState(Job.JobState.QUEUED);
@@ -256,7 +243,7 @@ public class JobStore {
             case WORKING:
                 // Requeue
                 LOG.debug("Re-enqueing job " + job.toString());
-                final boolean value = jobQueue.enqueue(job);
+                final boolean value = jobQueue.enqueue(job, false);
                 assert value;
                 break;
             case COMPLETE:
@@ -333,7 +320,7 @@ public class JobStore {
                 {
                     case REENQUEUE:
                         try {
-                            enqueueJob(job);
+                            reEnqueueJob(job);
                         } catch (IllegalJobStateTransitionException e) {
                             LOG.error("Unable to re-enqueue job: " + e.toString());
                         }
@@ -353,12 +340,12 @@ public class JobStore {
 
     public void loadAllJobs()
     {
-        if(persistenceStore != null)
+        if(persistenceEngine != null)
         {
             Collection<Job> jobs = null;
 
             try {
-                jobs = persistenceStore.readAll();
+                jobs = persistenceEngine.readAll();
             } catch (Exception ex) {
                 // TODO LOG
                 LOG.debug("Error loading persistent data: " + ex.toString());
@@ -373,8 +360,7 @@ public class JobStore {
                 } else {
                     JobQueue jobQueue = getJobQueue(functionName);
                     try {
-                        jobQueue.add(job);
-                        jobQueue.enqueue(job);
+                        jobQueue.enqueue(job, false);
                         allJobs.put(job.getJobHandle(), job);
                         pendingJobs.inc();
                     } catch (Exception e) {
@@ -397,7 +383,7 @@ public class JobStore {
 
             if(jobQueue==null)
             {
-                jobQueue = new JobQueue(name);
+                jobQueue = new JobQueue(name, persistenceEngine);
                 this.jobQueues.put(name, jobQueue);
             }
 

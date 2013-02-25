@@ -25,13 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/23/12
- * Time: 10:16 AM
- * To change this template use File | Settings | File Templates.
- */
 public class GearmanServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json";
     private JobQueueMonitor jobQueueMonitor;
@@ -101,7 +94,7 @@ public class GearmanServlet extends HttpServlet {
                 json.writeStartObject();
                 {
                     json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                    json.writeNumberField("count", snapshot.getImmediate());
+                    json.writeNumberField("currentJobs", snapshot.getImmediate());
                     if(snapshot.getFutureJobCounts().keySet().size() > 0)
                     {
                         json.writeFieldName("futureJobs");
@@ -127,7 +120,7 @@ public class GearmanServlet extends HttpServlet {
         if(jobStore.getJobQueues().containsKey(jobQueueName))
         {
             JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
-            ImmutableSet<Job> jobs = ImmutableSet.copyOf(jobQueue.getAllJobs().values());
+            ImmutableSet<Job> jobs = ImmutableSet.copyOf(jobQueue.getAllJobs());
             json.writeFieldName("jobs");
             json.writeStartArray();
             for(Job job : jobs)

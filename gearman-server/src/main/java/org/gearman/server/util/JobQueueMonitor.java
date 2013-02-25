@@ -1,12 +1,14 @@
 package org.gearman.server.util;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.annotation.Timed;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.gearman.server.Job;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
+import org.gearman.server.core.RunnableJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +35,15 @@ public class JobQueueMonitor {
 
         Runnable periodicTask = new Runnable() {
             public void run() {
-                // Invoke method(s) to do the work
-                snapshotJobQueues();
+                final Timer timer = Metrics.newTimer(JobQueueMonitor.class, "snapshots", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+
+                final TimerContext context = timer.time();
+
+                try {
+                    snapshotJobQueues();
+                } finally {
+                    context.stop();
+                }
             }
         };
 
@@ -55,7 +64,7 @@ public class JobQueueMonitor {
                 snapshots.put(jobQueueName, new ArrayList<JobQueueSnapshot>());
             }
 
-            HashMap<String, ImmutableList<Job>> copyOfQueues = jobQueue.getCopyOfJobQueues();
+            HashMap<String, ImmutableList<RunnableJob>> copyOfQueues = jobQueue.getCopyOfJobQueues();
             HashMap<Integer, Long> hourCounts = new HashMap<>();
             HashMap<String, Long> priorityCounts = new HashMap<>();
 
@@ -64,20 +73,16 @@ public class JobQueueMonitor {
 
             for(String priority : copyOfQueues.keySet())
             {
-                ImmutableList<Job> queue = copyOfQueues.get(priority);
+                ImmutableList<RunnableJob> queue = copyOfQueues.get(priority);
                 priorityCounts.put(priority, new Long(queue.size()));
 
-                for(Job job : queue)
+                for(RunnableJob job : queue)
                 {
-                    if(job.getTimeToRun() > 0)
-                    {
-                        Integer hoursFromNow = (int)((job.getTimeToRun() - currentTime) / 3600);
+                    long timeDiff = job.whenToRun - currentTime;
 
-                        // Things in the past are present jobs
-                        if(hoursFromNow < 0)
-                        {
-                            hoursFromNow = 0;
-                        }
+                    if(timeDiff > 0)
+                    {
+                        Integer hoursFromNow = (int)(timeDiff / 3600);
 
                         if(!hourCounts.containsKey(hoursFromNow))
                         {

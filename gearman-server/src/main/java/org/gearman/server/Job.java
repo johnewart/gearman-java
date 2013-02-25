@@ -1,5 +1,6 @@
 package org.gearman.server;
 
+import org.codehaus.jackson.annotate.JsonIgnore;
 import com.google.common.primitives.Ints;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.*;
@@ -7,6 +8,7 @@ import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.jboss.netty.channel.Channel;
 
+import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -251,6 +253,12 @@ public class Job {
     public String toString()
     {
         return this.getJobHandle();
+    }
+
+    @JsonIgnore
+    public boolean isReady()
+    {
+        return this.timeToRun < (new Date().getTime() / 1000);
     }
 
 

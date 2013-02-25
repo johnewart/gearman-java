@@ -8,6 +8,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -32,18 +33,23 @@ public class RedisQueue implements PersistenceEngine {
         mapper = new ObjectMapper();
     }
 
-    public void write(Job job) throws Exception
+    public void write(Job job)
     {
         Jedis redisClient = jedisPool.getResource();
-        String json = mapper.writeValueAsString(job);
-        String bucket = "gm:" + job.getFunctionName();
-        String key = job.getUniqueID().toString();
-        redisClient.hset(bucket, key, json);
-        LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
+        String json = null;
+        try {
+            json = mapper.writeValueAsString(job);
+            String bucket = "gm:" + job.getFunctionName();
+            String key = job.getUniqueID().toString();
+            redisClient.hset(bucket, key, json);
+            LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         jedisPool.returnResource(redisClient);
     }
 
-    public void delete(Job job) throws Exception
+    public void delete(Job job)
     {
         Jedis redisClient = jedisPool.getResource();
         String bucket = "gm:" + job.getFunctionName();
@@ -53,7 +59,7 @@ public class RedisQueue implements PersistenceEngine {
         jedisPool.returnResource(redisClient);
     }
 
-    public void deleteAll() throws Exception
+    public void deleteAll()
     {
         Jedis redisClient = jedisPool.getResource();
         for(String key : redisClient.keys("gm:*"))
@@ -63,7 +69,25 @@ public class RedisQueue implements PersistenceEngine {
         jedisPool.returnResource(redisClient);
     }
 
-    public Collection<Job> readAll() throws Exception
+    @Override
+    public Job findJob(String functionName, String uniqueID)
+    {
+        Jedis redisClient = jedisPool.getResource();
+        Job job = null;
+        try {
+            String bucket = "gm:" + functionName;
+            String key = uniqueID;
+            String jobJSON = redisClient.hgetAll(bucket).get(key);
+            job = mapper.readValue(jobJSON, Job.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        jedisPool.returnResource(redisClient);
+
+        return job;
+    }
+
+    public Collection<Job> readAll()
     {
         Jedis redisClient = jedisPool.getResource();
         ArrayList<Job> jobs = new ArrayList<Job>();
@@ -78,12 +102,34 @@ public class RedisQueue implements PersistenceEngine {
                     LOG.debug("JSON: " + jobJSON);
                     Job job = mapper.readValue(jobJSON, Job.class);
                     jobs.add(job);
-                } catch (Exception e) {
+                } catch (IOException e) {
                     LOG.debug("Error deserializing job: " + e.toString());
                 }
             }
         }
         LOG.debug("Loaded " + jobs.size() + " jobs from Redis!");
+        jedisPool.returnResource(redisClient);
+
+        return jobs;
+    }
+
+    @Override
+    public Collection<Job> getAllForFunction(String functionName) {
+        Jedis redisClient = jedisPool.getResource();
+        ArrayList<Job> jobs = new ArrayList<Job>();
+        Map<String, String> redisJobs = redisClient.hgetAll("gm:" + functionName);
+
+        for(String uniqueID : redisJobs.keySet())
+        {
+            try {
+                String jobJSON = redisJobs.get(uniqueID);
+                Job job = mapper.readValue(jobJSON, Job.class);
+                jobs.add(job);
+            } catch (IOException e) {
+                LOG.debug("Error deserializing job: " + e.toString());
+            }
+        }
+
         jedisPool.returnResource(redisClient);
 
         return jobs;

@@ -30,19 +30,17 @@ package org.gearman.server;
 import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.MetricsRegistry;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.NoOp;
-import org.gearman.constants.GearmanConstants;
+import org.gearman.server.core.RunnableJob;
+import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.util.ByteArray;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.image.LookupTable;
-import java.io.IOException;
-import java.sql.Time;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Set;
@@ -64,12 +62,9 @@ import static com.yammer.metrics.Metrics.newGauge;
  *
  */
 public final class JobQueue {
-	/** Low priority queue */
-	private final BlockingDeque<Job> low		= new LinkedBlockingDeque<Job>();
-	/** Medium priority queue */
-	private final BlockingDeque<Job> mid		= new LinkedBlockingDeque<Job>();
-	/** High priority queue */
-	private final BlockingDeque<Job> high		= new LinkedBlockingDeque<Job>();
+	private final BlockingDeque<RunnableJob> low		= new LinkedBlockingDeque<RunnableJob>();
+	private final BlockingDeque<RunnableJob> mid		= new LinkedBlockingDeque<RunnableJob>();
+	private final BlockingDeque<RunnableJob> high		= new LinkedBlockingDeque<RunnableJob>();
 
     private final Logger LOG = LoggerFactory.getLogger(JobQueue.class);
 
@@ -79,15 +74,18 @@ public final class JobQueue {
     private final Set<Channel> sleepingWorkers = new CopyOnWriteArraySet<>();
 
     /** The set of jobs created by this function. ByteArray is equal to the uID */
-    private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
+    private final ConcurrentHashSet<String> allJobs = new ConcurrentHashSet<>();
+
     /** The maximum number of jobs this function can have at any one time */
     private int maxQueueSize = 0;
     private final AtomicLong jobsInQueue;
+    private final PersistenceEngine persistenceEngine;
 
-    public JobQueue(String name)
+    public JobQueue(String name, PersistenceEngine persistenceEngine)
     {
         this.jobsInQueue = new AtomicLong(0);
         this.name = name;
+        this.persistenceEngine = persistenceEngine;
 
         Metrics.newGauge(JobQueue.class, "pending-" + this.metricName(), new Gauge<Long>() {
             @Override
@@ -99,50 +97,39 @@ public final class JobQueue {
     }
 
 
-    /**
-	 * Adds a *new* job to the back of queue with the corresponding priority
-	 * @param job
-	 * 		The job to add
-	 * @return
-	 * 		True if the job was added successful, false otherwise
-	 */
-	public final boolean add(Job job) {
-		if(job == null)
-			throw new IllegalArgumentException("Null Value");
-
-        /*
-        * Note: with this maxQueueSize variable not being synchronized, it is
-        * possible for a few threads to slip in and add jobs after the
-        * maxQueueSize variable is set, but I've decided that is it not
-        * worth the cost to guarantee this minute feature, especially since
-        * it's possible to have more then maxQueueSize jobs if the jobs were
-        * added prior to the variable being set.
-        */
-        synchronized (this.allJobs) {
-            if(this.maxQueueSize>0 && maxQueueSize<=jobsInQueue.longValue()) {
-                return false;
-            }
-
-            jobsInQueue.incrementAndGet();
-            allJobs.put(job.getUniqueID(), job);
-            return true;
-        }
-    }
-
     // Enqueue a job in the correct job queue
     // used when re-enqueuing
-    public final boolean enqueue(Job job)
+    public final boolean enqueue(Job job, boolean persist)
     {
-		switch (job.getPriority()) {
-		case LOW:
-			return low.add(job);
-		case NORMAL:
-			return mid.add(job);
-		case HIGH:
-			return high.add(job);
-		}
+        if(job != null)
+        {
+            synchronized (this.allJobs) {
+                if(this.maxQueueSize>0 && maxQueueSize<=jobsInQueue.longValue()) {
+                    return false;
+                }
 
-		return false;
+                jobsInQueue.incrementAndGet();
+                allJobs.add(job.getUniqueID());
+            }
+
+            RunnableJob runnableJob = new RunnableJob(job.getUniqueID(), job.getTimeToRun());
+
+            if(persist)
+                persistenceEngine.write(job);
+
+            switch (job.getPriority()) {
+                case LOW:
+                    return low.add(runnableJob);
+                case NORMAL:
+                    return mid.add(runnableJob);
+                case HIGH:
+                    return high.add(runnableJob);
+                default:
+                    return false;
+            }
+        } else {
+            return false;
+        }
 	}
 
 	/**
@@ -154,24 +141,36 @@ public final class JobQueue {
         long currentTime = new Date().getTime() / 1000;
 
         // High has no epoch jobs
-        Job job = high.poll();
-        if (job != null)
-            return job;
+        RunnableJob runnableJob = high.poll();
+
+        if (runnableJob != null)
+            return fetchJob(runnableJob);
 
         // Check to see which, if any, need to be run now
-        for(Job j : mid)
+        for(RunnableJob rj : mid)
         {
-            if(j.getTimeToRun() < currentTime)
+            if(rj.whenToRun < currentTime)
             {
-                if(mid.remove(j))
+                if(mid.remove(rj))
                 {
-                    return j;
+                    return fetchJob(rj);
                 }
             }
         }
 
-        return low.poll();
-	}
+        runnableJob = low.poll();
+
+        if (runnableJob != null)
+            return fetchJob(runnableJob);
+
+        return null;
+    }
+
+
+    private Job fetchJob(RunnableJob runnableJob)
+    {
+        return persistenceEngine.findJob(this.name, runnableJob.uniqueID);
+    }
 
 	/**
 	 * Returns the total number of queued jobs
@@ -181,11 +180,6 @@ public final class JobQueue {
 	public final int size() {
 		return low.size() + mid.size() + high.size();
 	}
-
-    public final boolean remove(ByteArray uniqueID)
-    {
-        return this.remove(allJobs.get(uniqueID));
-    }
 
 	/**
 	 * Removes a job from the queue
@@ -211,28 +205,13 @@ public final class JobQueue {
 			return high.remove(job);
 		}
 
-		assert false;
 		return false;
 	}
 
-    public final boolean uniqueIdInUse(ByteArray uniqueID)
+    public final boolean uniqueIdInUse(String uniqueID)
     {
-        return allJobs.containsKey(uniqueID);
+        return allJobs.contains(uniqueID);
     }
-
-	/**
-	 * Test is this queue has the specified job
-	 * @param job
-	 * 		The job that we are looking for in the queue
-	 * @return
-	 * 		true if the job is in the queue, false if not.
-	 */
-	public final boolean contains(Job job) {
-		if(job == null)
-			throw new IllegalArgumentException("Null Value");
-
-        return allJobs.containsKey(job.getUniqueID());
-	}
 
     public final void setWorkerAsleep(final Channel worker)
     {
@@ -256,9 +235,15 @@ public final class JobQueue {
 		return high.isEmpty() && mid.isEmpty() && low.isEmpty();
 	}
 
-    public final Job getJobByUniqueId(ByteArray uniqueId)
+    public final Job getJobByUniqueId(String uniqueId)
     {
-        return allJobs.get(uniqueId);
+        if(allJobs.contains(uniqueId))
+        {
+            RunnableJob runnableJob = new RunnableJob(uniqueId, 0);
+            return fetchJob(runnableJob);
+        } else {
+            return null;
+        }
     }
 
     public final void setMaxQueue(final int size) {
@@ -308,16 +293,18 @@ public final class JobQueue {
         return this.name.toString().replaceAll(":", ".");
     }
 
-    public ConcurrentHashMap<String, Job> getAllJobs() {
-        return allJobs;
+    public Collection<Job> getAllJobs() {
+        return persistenceEngine.getAllForFunction(this.name);
     }
 
-    public HashMap<String, ImmutableList<Job>> getCopyOfJobQueues()
+    public HashMap<String, ImmutableList<RunnableJob>> getCopyOfJobQueues()
     {
-        HashMap<String, ImmutableList<Job>> queues = new HashMap<>();
+        HashMap<String, ImmutableList<RunnableJob>> queues = new HashMap<>();
         queues.put("high", ImmutableList.copyOf(high));
         queues.put("mid",  ImmutableList.copyOf(mid));
         queues.put("low",  ImmutableList.copyOf(low));
         return queues;
     }
+
+
 }

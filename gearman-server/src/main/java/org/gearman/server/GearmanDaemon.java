@@ -11,6 +11,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.gearman.server.healthchecks.RedisHealthCheck;
+import org.gearman.server.persistence.MemoryQueue;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.persistence.PostgresQueue;
 import org.gearman.server.persistence.RedisQueue;
@@ -69,6 +70,8 @@ public class GearmanDaemon {
 
     public static void main(String... args)
     {
+        PersistenceEngine storageEngine;
+
         Options options = new Options();
         options.addOption("port", true, "port to listen on");
         options.addOption("storage", true, "storage engine to use (redis, postgresql)");
@@ -98,7 +101,11 @@ public class GearmanDaemon {
 
             String storageName = cmd.getOptionValue("storage");
 
-            PersistenceEngine storageEngine;
+            if(storageName == null)
+            {
+                storageName = "memory";
+            }
+
 
             switch (storageName)
             {
@@ -139,7 +146,7 @@ public class GearmanDaemon {
                     break;
 
                 default:
-                    storageEngine = null;
+                    storageEngine = new MemoryQueue();
             }
 
             new GearmanDaemon(port, storageEngine);

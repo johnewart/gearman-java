@@ -1,21 +1,18 @@
 package org.gearman.server.persistence;
 
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.gearman.server.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.Collection;
 import java.util.LinkedList;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 2/11/13
- * Time: 10:03 AM
- * To change this template use File | Settings | File Templates.
- */
 public class PostgresQueue implements PersistenceEngine {
     private static Logger LOG = LoggerFactory.getLogger(PostgresQueue.class);
 
@@ -31,7 +28,7 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
-    public void write(Job job) throws Exception {
+    public void write(Job job) {
         PreparedStatement st = null;
         ResultSet rs = null;
         Connection conn = null;
@@ -47,7 +44,9 @@ public class PostgresQueue implements PersistenceEngine {
             int inserted = st.executeUpdate();
             LOG.debug("Inserted " + inserted + " records for UUID " + job.getUniqueID());
         } catch (SQLException se) {
-
+            se.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
             try {
                 if(st != null)
@@ -63,7 +62,7 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
-    public void delete(Job job) throws Exception {
+    public void delete(Job job) {
         PreparedStatement st = null;
         ResultSet rs = null;
         Connection conn = null;
@@ -91,7 +90,7 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
-    public void deleteAll() throws Exception {
+    public void deleteAll() {
         Statement st = null;
         ResultSet rs = null;
         Connection conn = null;
@@ -114,13 +113,60 @@ public class PostgresQueue implements PersistenceEngine {
                     conn.close();
 
             } catch (SQLException innerEx) {
-
+                LOG.debug("Error cleaning up: " + innerEx);
             }
         }
     }
 
     @Override
-    public Collection<Job> readAll() throws Exception {
+    public Job findJob(String functionName, String uniqueID) {
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        Connection conn = null;
+
+        Job job = null;
+
+        try {
+            conn = DriverManager.getConnection(url, user, password);
+            st = conn.prepareStatement("SELECT * FROM jobs WHERE function_name = ? AND unique_id = ?");
+            st.setString(1, functionName);
+            st.setString(2, uniqueID);
+
+            ObjectMapper mapper = new ObjectMapper();
+            rs = st.executeQuery();
+
+            if(rs.next())
+            {
+                String jobJSON = rs.getString("json_data");
+                job = mapper.readValue(jobJSON, Job.class);
+            } else {
+                LOG.warn("No job for unique ID: " + uniqueID + " -- this could be an internal consistency problem...");
+            }
+        } catch (SQLException se) {
+            LOG.debug(se.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(rs != null)
+                    rs.close();
+
+                if(st != null)
+                    st.close();
+
+                if(conn != null)
+                    conn.close();
+
+            } catch (SQLException innerEx) {
+                LOG.debug("Error cleaning up: " + innerEx);
+            }
+        }
+
+        return job;
+    }
+
+    @Override
+    public Collection<Job> readAll() {
         LinkedList<Job> jobs = new LinkedList<>();
         Statement st = null;
         ResultSet rs = null;
@@ -141,6 +187,51 @@ public class PostgresQueue implements PersistenceEngine {
 
         } catch (SQLException se) {
             LOG.debug(se.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(rs != null)
+                    rs.close();
+
+                if(st != null)
+                    st.close();
+
+                if(conn != null)
+                    conn.close();
+
+            } catch (SQLException innerEx) {
+                LOG.debug("Error cleaning up: " + innerEx);
+            }
+        }
+
+        return jobs;
+    }
+
+    @Override
+    public Collection<Job> getAllForFunction(String functionName) {
+        LinkedList<Job> jobs = new LinkedList<>();
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        Connection conn = null;
+
+        try {
+            conn = DriverManager.getConnection(url, user, password);
+            st = conn.prepareStatement("SELECT * FROM jobs WHERE function_name = ?");
+            st.setString(1, functionName);
+            ObjectMapper mapper = new ObjectMapper();
+
+            while(rs.next())
+            {
+                String jobJSON = rs.getString("json_data");
+                Job job = mapper.readValue(jobJSON, Job.class);
+                jobs.add(job);
+            }
+
+        } catch (SQLException se) {
+            LOG.debug(se.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
             try {
                 if(rs != null)
