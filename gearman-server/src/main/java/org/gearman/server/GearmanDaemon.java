@@ -1,12 +1,12 @@
 package org.gearman.server;
 
-import com.sun.jersey.api.core.PackagesResourceConfig;
-import com.sun.jersey.api.core.ResourceConfig;
+import ch.qos.logback.classic.Level;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import com.yammer.metrics.HealthChecks;
 import com.yammer.metrics.reporting.AdminServlet;
 import com.yammer.metrics.reporting.MetricsServlet;
 import org.apache.commons.cli.*;
+import org.apache.log4j.PropertyConfigurator;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
@@ -17,16 +17,16 @@ import org.gearman.server.persistence.PostgresQueue;
 import org.gearman.server.persistence.RedisQueue;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.web.GearmanServlet;
-import org.slf4j.Logger;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.io.IOException;
 
 public class GearmanDaemon {
 
-	private final Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
+	private final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
 
 
 
@@ -148,6 +148,18 @@ public class GearmanDaemon {
                 default:
                     storageEngine = new MemoryQueue();
             }
+
+            try {
+                String current = new java.io.File( "." ).getCanonicalPath();
+                System.out.println("Current dir:"+current);
+            } catch (IOException ioe) {
+
+            }
+
+            /*
+            Logger root = (Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            root.setLevel(Level.ERROR);
+             */
 
             new GearmanDaemon(port, storageEngine);
 
