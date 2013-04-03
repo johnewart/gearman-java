@@ -232,15 +232,21 @@ public class PostgresQueue implements PersistenceEngine {
                     int totalJobs = rs.getInt("jobCount");
                     int fetchedJobs = 0;
                     LOG.debug("Reading " + totalJobs + " jobs from PostgreSQL");
+                    Job currentJob;
+                    ObjectMapper mapper = new ObjectMapper();
+                    String jobJSON;
                     do {
                         rs = st.executeQuery("SELECT * FROM jobs LIMIT " + jobsPerPage + " OFFSET " + (pageNum * jobsPerPage));
-                        ObjectMapper mapper = new ObjectMapper();
 
                         while(rs.next())
                         {
-                            String jobJSON = rs.getString("json_data");
-                            Job job = mapper.readValue(jobJSON, Job.class);
-                            jobs.add(job);
+                            try {
+                                jobJSON = rs.getString("json_data");
+                                currentJob = mapper.readValue(jobJSON, Job.class);
+                                jobs.add(currentJob);
+                            } catch (Exception e) {
+                                LOG.error("Unable to load job '" + rs.getString("unique_id") + "'");
+                            }
                             fetchedJobs += 1;
                         }
 
@@ -252,8 +258,6 @@ public class PostgresQueue implements PersistenceEngine {
 
         } catch (SQLException se) {
             LOG.debug(se.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             try {
                 if(rs != null)
