@@ -2,10 +2,8 @@ package org.gearman.server.util;
 
 import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.Metrics;
-import com.yammer.metrics.annotation.Timed;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-import org.gearman.server.Job;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
 import org.gearman.server.core.RunnableJob;

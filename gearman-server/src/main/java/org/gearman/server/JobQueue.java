@@ -35,7 +35,6 @@ import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.NoOp;
 import org.gearman.server.core.RunnableJob;
 import org.gearman.server.persistence.PersistenceEngine;
-import org.gearman.util.ByteArray;
 import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,12 +44,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static com.yammer.metrics.Metrics.newGauge;
 
 
 /**

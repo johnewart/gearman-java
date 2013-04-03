@@ -2,9 +2,6 @@ package org.gearman.server.persistence;
 
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.gearman.server.Job;
 import org.slf4j.Logger;
@@ -22,6 +19,7 @@ public class PostgresQueue implements PersistenceEngine {
     private final String user;
     private final String password;
     private BoneCP connectionPool;
+    private final int jobsPerPage = 500;
 
     public PostgresQueue(String hostname, int port, String database, String user, String password)
     {
@@ -59,13 +57,26 @@ public class PostgresQueue implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("INSERT INTO jobs (unique_id, function_name, job_handle, json_data) VALUES (?, ?, ?, ?)");
-                st.setString(1, job.getUniqueID());
-                st.setString(2, job.getFunctionName());
-                st.setString(3, job.getJobHandle());
-                st.setString(4, mapper.writeValueAsString(job));
-                int inserted = st.executeUpdate();
-                LOG.debug("Inserted " + inserted + " records for UUID " + job.getUniqueID());
+                String jobJSON = mapper.writeValueAsString(job);
+
+                // Update an existing job if one exists based on unique id
+                st = conn.prepareStatement("UPDATE jobs SET job_handle = ?, json_data = ? WHERE unique_id = ?");
+                st.setString(1, job.getJobHandle());
+                st.setString(2, jobJSON);
+                st.setString(3, job.getUniqueID());
+                int updated = st.executeUpdate();
+
+                // No updates, insert a new record.
+                if(updated == 0)
+                {
+                    st = conn.prepareStatement("INSERT INTO jobs (unique_id, function_name, job_handle, json_data) VALUES (?, ?, ?, ?)");
+                    st.setString(1, job.getUniqueID());
+                    st.setString(2, job.getFunctionName());
+                    st.setString(3, job.getJobHandle());
+                    st.setString(4, jobJSON);
+                    int inserted = st.executeUpdate();
+                    LOG.debug("Inserted " + inserted + " records for UUID " + job.getUniqueID());
+                }
             }
         } catch (SQLException se) {
             se.printStackTrace();
@@ -204,21 +215,39 @@ public class PostgresQueue implements PersistenceEngine {
         Statement st = null;
         ResultSet rs = null;
         Connection conn = null;
+        // Which page of results are we on?
+        int pageNum = 0;
 
         try {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
                 st = conn.createStatement();
-                rs = st.executeQuery("SELECT * FROM jobs");
-                ObjectMapper mapper = new ObjectMapper();
+                st.setFetchSize(jobsPerPage);
+                st.setMaxRows(jobsPerPage);
 
-                while(rs.next())
+                rs = st.executeQuery("SELECT COUNT(*) AS jobCount FROM jobs");
+                if(rs.next())
                 {
-                    String jobJSON = rs.getString("json_data");
-                    Job job = mapper.readValue(jobJSON, Job.class);
-                    jobs.add(job);
+                    int totalJobs = rs.getInt("jobCount");
+                    int fetchedJobs = 0;
+                    LOG.debug("Reading " + totalJobs + " jobs from PostgreSQL");
+                    do {
+                        rs = st.executeQuery("SELECT * FROM jobs LIMIT " + jobsPerPage + " OFFSET " + (pageNum * jobsPerPage));
+                        ObjectMapper mapper = new ObjectMapper();
+
+                        while(rs.next())
+                        {
+                            String jobJSON = rs.getString("json_data");
+                            Job job = mapper.readValue(jobJSON, Job.class);
+                            jobs.add(job);
+                            fetchedJobs += 1;
+                        }
+
+                        pageNum += 1;
+                    } while(fetchedJobs != totalJobs);
                 }
+
             }
 
         } catch (SQLException se) {
@@ -289,6 +318,54 @@ public class PostgresQueue implements PersistenceEngine {
         return jobs;
     }
 
+    @Override
+    public Job findJobByHandle(String jobHandle) {
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        Connection conn = null;
+
+        Job job = null;
+
+        try {
+            conn = connectionPool.getConnection();
+            if(conn != null)
+            {
+                st = conn.prepareStatement("SELECT * FROM jobs WHERE job_handle = ?");
+                st.setString(1, jobHandle);
+
+                ObjectMapper mapper = new ObjectMapper();
+                rs = st.executeQuery();
+
+                if(rs.next())
+                {
+                    String jobJSON = rs.getString("json_data");
+                    job = mapper.readValue(jobJSON, Job.class);
+                } else {
+                    LOG.warn("No job for job handle: " + jobHandle + " -- this could be an internal consistency problem...");
+                }
+            }
+        } catch (SQLException se) {
+            LOG.debug(se.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(rs != null)
+                    rs.close();
+
+                if(st != null)
+                    st.close();
+
+                if(conn != null)
+                    conn.close();
+
+            } catch (SQLException innerEx) {
+                LOG.debug("Error cleaning up: " + innerEx);
+            }
+        }
+
+        return job;    }
+
     private boolean validateOrCreateTable()
     {
         PreparedStatement st = null;
@@ -307,6 +384,11 @@ public class PostgresQueue implements PersistenceEngine {
                 {
                     st = conn.prepareStatement("CREATE TABLE jobs(id bigserial, unique_id varchar(255), function_name varchar(255), job_handle text, json_data text)");
                     int created = st.executeUpdate();
+                    st = conn.prepareStatement("CREATE INDEX jobs_unique_id ON jobs(unique_id)");
+                    int createdUniqueIDIndex = st.executeUpdate();
+                    st = conn.prepareStatement("CREATE INDEX jobs_job_handle ON jobs(job_handle)");
+                    int createdJobHandleIndex = st.executeUpdate();
+
                     if(created > 0)
                     {
                         LOG.debug("Created jobs table");

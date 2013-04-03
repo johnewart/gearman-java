@@ -91,7 +91,7 @@ public class GearmanClient {
 
                 // If we get back a JOB_CREATED packet, we can continue
                 // otherwise try the next job manager
-                if (result.getType() == PacketType.JOB_CREATED)
+                if (result != null && result.getType() == PacketType.JOB_CREATED)
                 {
                     System.err.println("Created job " + ((JobCreated) result).getJobHandle());
                     return new ServerResponse(connection, result);

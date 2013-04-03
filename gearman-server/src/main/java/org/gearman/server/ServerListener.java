@@ -3,8 +3,6 @@ package org.gearman.server;
 import org.gearman.server.codec.Decoder;
 import org.gearman.server.codec.Encoder;
 import org.gearman.server.persistence.PersistenceEngine;
-import org.gearman.server.persistence.PostgresQueue;
-import org.gearman.server.persistence.RedisQueue;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
@@ -12,7 +10,9 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
 
 /**

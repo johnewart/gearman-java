@@ -18,7 +18,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
@@ -32,10 +31,10 @@ public class GearmanServlet extends HttpServlet {
     private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
     private final Logger LOG = LoggerFactory.getLogger(GearmanServlet.class);
 
-    public GearmanServlet(JobQueueMonitor jobQueueMonitor)
+    public GearmanServlet(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobStore = this.jobQueueMonitor.getJobStore();
+        this.jobStore = jobStore;
     }
 
     @Override
@@ -83,35 +82,41 @@ public class GearmanServlet extends HttpServlet {
 
     public void writeJobQueueSnapshots(String jobQueueName, JsonGenerator json) throws IOException
     {
-        HashMap<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
-        if( snapshotMap != null && snapshotMap.containsKey(jobQueueName))
+        if(jobQueueMonitor != null)
         {
-            List<JobQueueSnapshot> snapshotList = ImmutableList.copyOf(jobQueueMonitor.getSnapshots().get(jobQueueName));
-            json.writeFieldName("snapshots");
-            json.writeStartArray();
-            for(JobQueueSnapshot snapshot : snapshotList)
+            HashMap<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
+            if( snapshotMap != null && snapshotMap.containsKey(jobQueueName))
             {
-                json.writeStartObject();
+                List<JobQueueSnapshot> snapshotList = ImmutableList.copyOf(jobQueueMonitor.getSnapshots().get(jobQueueName));
+                json.writeFieldName("snapshots");
+                json.writeStartArray();
+                for(JobQueueSnapshot snapshot : snapshotList)
                 {
-                    json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                    json.writeNumberField("currentJobs", snapshot.getImmediate());
-                    if(snapshot.getFutureJobCounts().keySet().size() > 0)
+                    json.writeStartObject();
                     {
-                        json.writeFieldName("futureJobs");
-                        json.writeStartObject();
+                        json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
+                        json.writeNumberField("currentJobs", snapshot.getImmediate());
+                        if(snapshot.getFutureJobCounts().keySet().size() > 0)
                         {
-                            for(Integer hour : snapshot.getFutureJobCounts().keySet())
+                            json.writeFieldName("futureJobs");
+                            json.writeStartObject();
                             {
-                                json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
+                                for(Integer hour : snapshot.getFutureJobCounts().keySet())
+                                {
+                                    json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
+                                }
                             }
+                            json.writeEndObject();
                         }
-                        json.writeEndObject();
-                    }
 
+                    }
+                    json.writeEndObject();
                 }
-                json.writeEndObject();
+                json.writeEndArray();
             }
-            json.writeEndArray();
+        } else {
+            json.writeFieldName("snapshots");
+            json.writeString("Disabled.");
         }
     }
 

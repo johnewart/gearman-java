@@ -11,4 +11,5 @@ public interface PersistenceEngine {
     public Job findJob(String functionName, String uniqueID);
 	public Collection<Job> readAll();
     public Collection<Job> getAllForFunction(String functionName);
+    public Job findJobByHandle(String jobHandle);
 }

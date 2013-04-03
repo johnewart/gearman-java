@@ -1,10 +1,8 @@
 package org.gearman.server;
 
 import org.codehaus.jackson.annotate.JsonIgnore;
-import com.google.common.primitives.Ints;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.*;
-import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.jboss.netty.channel.Channel;
 
@@ -27,36 +25,29 @@ public class Job {
     private static final byte[] STATUS_TRUE = new byte[]{'1'};
     private static final byte[] STATUS_FALSE = new byte[]{'0'};
 
-    /** Defines this job's current state */
     private JobState state = JobState.QUEUED;
-    /** Defines this job's priority. Also used as the state change lock */
+
     private final JobPriority priority;
-    /** Specifies if this is a background or not */
+
     private final boolean background;
 
-    // --- Job Data --- //
-
-    /** The name of the function */
     private final String functionName;
 
-    /** The function local ID specified by the user */
     private final String uniqueID;
-    /** The server wide ID specified by the server */
+
     private final String jobHandle;
-    /** The opaque data that is given as an argument in the SUBMIT_JOB packet*/
+
     private final byte[] data;
-    /** The status numerator */
+
     private int numerator;
-    /** The status denominator */
+
     private int denominator;
-    // Time-stmap of when to run
+
     private long timeToRun;
 
-    //--- Listening Clients and Worker --- //
+    private boolean persisted;
 
-    /** The set of all listing clients */
     private final Set<Channel> clients = new CopyOnWriteArraySet<>();
-    /** The worker assigned to work on this job */
     private Channel worker;
 
     public Job()
@@ -68,6 +59,7 @@ public class Job {
         data         = null;
         priority     = JobPriority.NORMAL;
         timeToRun    = -1;
+        persisted    = false;
     }
 
     public Job(final String functionName,
@@ -101,6 +93,7 @@ public class Job {
         }
 
         this.jobHandle = new String(jobHandle);
+        this.persisted = false;
     }
 
     public String getFunctionName() {
@@ -177,6 +170,14 @@ public class Job {
         return this.background;
     }
 
+    public boolean isPersisted() {
+        return persisted;
+    }
+
+    public void setPersisted(boolean persisted) {
+        this.persisted = persisted;
+    }
+
     public void setStatus(int numerator, int denominator) {
         this.numerator = numerator;
         this.denominator = denominator;
@@ -190,7 +191,8 @@ public class Job {
             case QUEUED:
                 assert this.worker==null;
                 this.clients.remove(client);
-                // If the job was in the QUEUED state, all attached clients have disconnected, and it is not a background job, drop the job
+                // If the job was in the QUEUED state, all attached clients have
+                // disconnected, and it is not a background job, drop the job
                 if(this.clients.isEmpty() && !this.background)
                     result = JobAction.MARKCOMPLETE;
                 break;
@@ -200,7 +202,8 @@ public class Job {
                     this.worker = null;
 
                     if(this.clients.isEmpty() && !this.background) {
-                        // Nobody to send it to and it's not a background job, not much we can do here..
+                        // Nobody to send it to and it's not a background job,
+                        // not much we can do here..
                         result = JobAction.MARKCOMPLETE;
                     } else {
                         // (!this.clients.isEmpty() || this.background)==true

@@ -1,6 +1,7 @@
 package org.gearman.server.codec;
 
 import org.gearman.common.packets.Packet;
+import org.gearman.constants.GearmanConstants;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
@@ -26,7 +27,7 @@ public class Encoder extends OneToOneEncoder {
         return InstanceHolder.INSTANCE;
     }
 
-    public static ChannelBuffer encodeMessage(Packet packet)
+    public static ChannelBuffer encodePacket(Packet packet)
             throws IllegalArgumentException {
 
         int size = packet.getSize();
@@ -38,11 +39,24 @@ public class Encoder extends OneToOneEncoder {
         return buffer;
     }
 
+    public static ChannelBuffer encodeString(String message)
+            throws IllegalArgumentException {
+        int size = message.length();
+        LOG.debug("<--- " + message);
+        ChannelBuffer buffer = ChannelBuffers.buffer(size);
+        byte[] data = message.getBytes(GearmanConstants.CHARSET);
+        buffer.writeBytes(data);
+
+        return buffer;
+    }
+
     @Override
     protected Object encode(ChannelHandlerContext channelHandlerContext,
                             Channel channel, Object msg) throws Exception {
         if (msg instanceof Packet) {
-            return encodeMessage((Packet) msg);
+            return encodePacket((Packet) msg);
+        } else if (msg instanceof String) {
+            return encodeString((String) msg);
         } else {
             return msg;
         }

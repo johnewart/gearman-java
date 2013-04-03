@@ -12,10 +12,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MemoryQueue implements PersistenceEngine {
     private final ConcurrentHashMap<String, HashMap<String, Job>> jobHash;
     private final Logger LOG = LoggerFactory.getLogger(MemoryQueue.class);
+    private final ConcurrentHashMap<String, Job> jobHandleMap;
 
     public MemoryQueue()
     {
         jobHash  = new ConcurrentHashMap<>();
+        jobHandleMap = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -30,11 +32,17 @@ public class MemoryQueue implements PersistenceEngine {
         {
             funcHash.remove(job.getUniqueID());
         }
+
+        if(jobHandleMap.containsKey(job.getJobHandle()))
+        {
+            jobHandleMap.remove(job.getJobHandle());
+        }
     }
 
     @Override
     public void deleteAll() {
         jobHash.clear();
+        jobHandleMap.clear();
     }
 
     @Override
@@ -66,6 +74,11 @@ public class MemoryQueue implements PersistenceEngine {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public Job findJobByHandle(String jobHandle) {
+        return jobHandleMap.get(jobHandle);
     }
 
     private HashMap<String, Job> getFunctionHash(String functionName)

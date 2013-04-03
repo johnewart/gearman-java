@@ -134,4 +134,9 @@ public class RedisQueue implements PersistenceEngine {
 
         return jobs;
     }
+
+    @Override
+    public Job findJobByHandle(String jobHandle) {
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
 }

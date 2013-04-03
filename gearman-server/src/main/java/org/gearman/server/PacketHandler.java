@@ -7,18 +7,14 @@ import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.packets.response.WorkStatus;
+import org.gearman.constants.GearmanConstants;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/1/12
- * Time: 1:04 AM
- * To change this template use File | Settings | File Templates.
- */
+import java.util.Set;
+
 public class PacketHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(PacketHandler.class);
@@ -44,7 +40,10 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
         LOG.debug(" ---> " + e.toString());
         if (e.getMessage() instanceof Packet) {
             handlePacket((Packet)(e.getMessage()), e.getChannel());
+        } else if (e.getMessage() instanceof String) {
+            handleTextCommand((String)e.getMessage(), e.getChannel());
         } else {
+            LOG.debug("Received un-handled message: " + e.getMessage());
             super.messageReceived(ctx, e);
         }
     }
@@ -54,6 +53,39 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
     {
         LOG.debug("Client closed channel: " + e.toString());
         jobStore.channelDisconnected(e.getChannel());
+    }
+
+    private void handleTextCommand(String message, Channel channel)
+    {
+        switch(message.toLowerCase()) {
+            case "status":
+                String header = "FUNCTION\tTOTAL\tRUNNING\tAVAILABLE_WORKERS\n";
+                Set<String> jobQueueNames = jobStore.getJobQueues().keySet();
+                channel.write(header);
+
+                for(String jobQueueName : jobQueueNames)
+                {
+                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, jobStore.getJobQueue(jobQueueName).size(), 0, 0));
+                }
+
+                channel.write(".\n");
+                break;
+
+            case "workers":
+                break;
+
+            case "maxqueue":
+                break;
+
+            case "shutdown":
+                break;
+
+            case "version":
+                break;
+
+            default:
+                LOG.debug("Unhandled text command: " + message);
+        }
     }
 
     private void handlePacket(Packet packet, Channel channel)

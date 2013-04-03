@@ -37,19 +37,28 @@ import org.gearman.constants.GearmanConstants;
  */
 public final class ByteArray {
 	private final byte[] bytes;
+    private int offset;
 
     public ByteArray()
     {
         this.bytes = null;
+        offset = 0;
     }
 
   	public ByteArray(final byte[] bytes) {
 		this.bytes = bytes;
+        offset = bytes.length;
 	}
 	
 	public ByteArray(final String value) {
 		this.bytes = value.getBytes(GearmanConstants.CHARSET);
+        offset = bytes.length;
 	}
+
+    public ByteArray(final int length) {
+        this.bytes = new byte[length];
+        this.offset = 0;
+    }
 	
 	@Override
 	public final int hashCode() {
@@ -98,4 +107,14 @@ public final class ByteArray {
 	public final boolean equals(final byte[] array) {
 		return Arrays.equals(this.bytes, array);
 	}
+
+    public void push(byte b)
+    {
+        if(offset < bytes.length)
+        {
+            bytes[offset++] = b;
+        } else {
+            throw new ArrayIndexOutOfBoundsException("Underlying byte array is full.");
+        }
+    }
 }

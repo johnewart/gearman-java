@@ -16,12 +16,14 @@ import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.util.EqualsLock;
-import org.gearman.util.ByteArray;
 import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -30,12 +32,6 @@ public class JobStore {
 
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues = new ConcurrentHashMap<>();
-
-    // All jobs: jobHandle <--> Job
-    private final ConcurrentHashMap<String, Job> allJobs = new ConcurrentHashMap<>();
-
-    // Jobs associated with a given client: Client <--> Jobs
-    private final ConcurrentHashMap<Channel, Set<Job>> clientJobs = new ConcurrentHashMap<>();
 
     // Workers: Worker <--> Abilities
     private final ConcurrentHashMap<Channel, Set<String>> workers = new ConcurrentHashMap<>();
@@ -52,18 +48,13 @@ public class JobStore {
     private final Counter pendingJobs = Metrics.newCounter(JobStore.class, "pending-jobs");
 
 
-    public JobStore()
-    {
-        persistenceEngine = null;
-    }
-
     public JobStore(PersistenceEngine persistenceEngine)
     {
         this.persistenceEngine = persistenceEngine;
     }
 
     public synchronized Job getByJobHandle(String jobHandle){
-        return allJobs.get(jobHandle);
+        return persistenceEngine.findJobByHandle(jobHandle);
     }
 
     public void registerWorker(String funcName, Channel worker)
@@ -151,7 +142,6 @@ public class JobStore {
 
     public synchronized void removeJob(Job job)
     {
-        allJobs.remove(job.getJobHandle());
         pendingJobs.dec();
         getJobQueue(job.getFunctionName()).remove(job);
 
@@ -223,7 +213,6 @@ public class JobStore {
                 if(job.isReady())
                     jobQueue.notifyWorkers();
 
-                allJobs.put(job.getJobHandle(), job);
             }
         } finally {
             // Always unlock lock
@@ -257,7 +246,7 @@ public class JobStore {
     @Metered
     public synchronized void workComplete(WorkResponse packet)
     {
-        Job job = allJobs.get(packet.getJobHandle());
+        Job job = getByJobHandle(packet.getJobHandle());
 
         if(job != null)
         {
@@ -281,7 +270,7 @@ public class JobStore {
     public void checkJobStatus(GetStatus getStatus, Channel channel)
     {
         String jobHandle = getStatus.jobHandle.get();
-        Job job = allJobs.get(jobHandle);
+        Job job = getByJobHandle(jobHandle);
         StatusRes response;
 
         if(job != null)
@@ -297,8 +286,9 @@ public class JobStore {
 
     public void updateJobStatus(WorkStatus workStatus)
     {
-        Job job = allJobs.get(workStatus.jobHandle.get());
+        Job job = getByJobHandle(workStatus.jobHandle.get());
         job.setStatus(workStatus.completenumerator, workStatus.completedenominator);
+        persistenceEngine.write(job);
     }
 
     public synchronized void channelDisconnected(Channel channel)
@@ -361,7 +351,6 @@ public class JobStore {
                     JobQueue jobQueue = getJobQueue(functionName);
                     try {
                         jobQueue.enqueue(job, false);
-                        allJobs.put(job.getJobHandle(), job);
                         pendingJobs.inc();
                     } catch (Exception e) {
                         LOG.error(e.toString());
