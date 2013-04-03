@@ -51,28 +51,26 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
                     buffer.readBytes(header, 1, 11);
                     messageLength = Ints.fromByteArray(Arrays.copyOfRange(header, 8, 12));
                     packetData = Arrays.copyOf(header, messageLength + 12);
-                    checkpoint(DecodingState.PAYLOAD);
                 } else {
                     textCommand = new ByteArray(1024);
                     textCommand.push(firstByte);
-                    checkpoint(DecodingState.TEXT);
                 }
 
-                return null;
+                checkpoint(DecodingState.PAYLOAD);
 
             case PAYLOAD:
-                buffer.readBytes(packetData, 12, messageLength);
-                try {
-                    packet = PacketFactory.packetFromBytes(packetData);
-                    LOG.debug("---> " + packet.getType());
-                    return packet;
-                } finally {
-                    this.reset();
-                }
-
-            case TEXT:
-                if(textCommand != null)
+                if(textCommand == null)
                 {
+
+                    buffer.readBytes(packetData, 12, messageLength);
+                    try {
+                        packet = PacketFactory.packetFromBytes(packetData);
+                        LOG.debug("---> " + packet.getType());
+                        return packet;
+                    } finally {
+                        this.reset();
+                    }
+                } else {
                     int textOffset = 1;
                     byte b;
                     do {
@@ -87,8 +85,6 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
                     } finally {
                         this.reset();
                     }
-                } else {
-                    LOG.debug("Unable to process text command...");
                 }
 
 
