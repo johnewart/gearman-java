@@ -2,6 +2,7 @@ package org.gearman.server.persistence;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.gearman.server.Job;
+import org.gearman.server.core.RunnableJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
@@ -12,35 +13,37 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/13/12
- * Time: 12:38 PM
- * To change this template use File | Settings | File Templates.
- */
+
 public class RedisQueue implements PersistenceEngine {
 
     private final ObjectMapper mapper;
     private final JedisPool jedisPool;
+    private final ConcurrentHashMap<String, RunnableJob> jobHandleToUniqueIdMap;
+    private final String hostname;
+    private final int port;
+
     private static Logger LOG = LoggerFactory.getLogger(RedisQueue.class);
 
-    public RedisQueue()
+    public RedisQueue(String hostname, int port)
     {
-        LOG.debug("RedisQueue connecting on localhost:6379");
-        jedisPool = new JedisPool(new JedisPoolConfig(), "localhost");
+        this.hostname = hostname;
+        this.port = port;
         mapper = new ObjectMapper();
+        jobHandleToUniqueIdMap = new ConcurrentHashMap<>();
+        LOG.debug(String.format("RedisQueue connecting on %s:%s", hostname, port));
+        jedisPool = new JedisPool(new JedisPoolConfig(), this.hostname, this.port);
     }
 
     public void write(Job job)
     {
         Jedis redisClient = jedisPool.getResource();
-        String json = null;
         try {
-            json = mapper.writeValueAsString(job);
+            String json = mapper.writeValueAsString(job);
             String bucket = "gm:" + job.getFunctionName();
-            String key = job.getUniqueID().toString();
+            String key = job.getUniqueID();
+            jobHandleToUniqueIdMap.put(job.getJobHandle(), job.getRunnableJob());
             redisClient.hset(bucket, key, json);
             LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
         } catch (IOException e) {
@@ -53,7 +56,8 @@ public class RedisQueue implements PersistenceEngine {
     {
         Jedis redisClient = jedisPool.getResource();
         String bucket = "gm:" + job.getFunctionName();
-        String key = job.getUniqueID().toString();
+        String key = job.getUniqueID();
+        jobHandleToUniqueIdMap.remove(job.getJobHandle());
         LOG.debug("Removing from redis " + bucket + ": " + key);
         redisClient.hdel(bucket, key);
         jedisPool.returnResource(redisClient);
@@ -66,6 +70,7 @@ public class RedisQueue implements PersistenceEngine {
         {
             redisClient.del(key);
         }
+        jobHandleToUniqueIdMap.clear();
         jedisPool.returnResource(redisClient);
     }
 
@@ -76,8 +81,7 @@ public class RedisQueue implements PersistenceEngine {
         Job job = null;
         try {
             String bucket = "gm:" + functionName;
-            String key = uniqueID;
-            String jobJSON = redisClient.hgetAll(bucket).get(key);
+            String jobJSON = redisClient.hgetAll(bucket).get(uniqueID);
             job = mapper.readValue(jobJSON, Job.class);
         } catch (IOException e) {
             e.printStackTrace();
@@ -87,10 +91,11 @@ public class RedisQueue implements PersistenceEngine {
         return job;
     }
 
-    public Collection<Job> readAll()
+    public Collection<RunnableJob> readAll()
     {
         Jedis redisClient = jedisPool.getResource();
-        ArrayList<Job> jobs = new ArrayList<Job>();
+        ArrayList<RunnableJob> jobs = new ArrayList<>();
+        Job currentJob;
         for(String functionQueue : redisClient.keys("gm:*"))
         {
             Map<String, String> redisJobs = redisClient.hgetAll(functionQueue);
@@ -100,8 +105,9 @@ public class RedisQueue implements PersistenceEngine {
                     LOG.debug("Loading " + uniqueID + " from " + functionQueue);
                     String jobJSON = redisJobs.get(uniqueID);
                     LOG.debug("JSON: " + jobJSON);
-                    Job job = mapper.readValue(jobJSON, Job.class);
-                    jobs.add(job);
+                    currentJob = mapper.readValue(jobJSON, Job.class);
+                    jobs.add(currentJob.getRunnableJob());
+                    jobHandleToUniqueIdMap.put(currentJob.getJobHandle(), currentJob.getRunnableJob());
                 } catch (IOException e) {
                     LOG.debug("Error deserializing job: " + e.toString());
                 }
@@ -114,17 +120,19 @@ public class RedisQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<Job> getAllForFunction(String functionName) {
+    public Collection<RunnableJob> getAllForFunction(String functionName) {
         Jedis redisClient = jedisPool.getResource();
-        ArrayList<Job> jobs = new ArrayList<Job>();
+        ArrayList<RunnableJob> jobs = new ArrayList<>();
         Map<String, String> redisJobs = redisClient.hgetAll("gm:" + functionName);
+        Job currentJob;
 
         for(String uniqueID : redisJobs.keySet())
         {
             try {
                 String jobJSON = redisJobs.get(uniqueID);
-                Job job = mapper.readValue(jobJSON, Job.class);
-                jobs.add(job);
+                currentJob = mapper.readValue(jobJSON, Job.class);
+
+                jobs.add(currentJob.getRunnableJob());
             } catch (IOException e) {
                 LOG.debug("Error deserializing job: " + e.toString());
             }
@@ -137,6 +145,7 @@ public class RedisQueue implements PersistenceEngine {
 
     @Override
     public Job findJobByHandle(String jobHandle) {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+        RunnableJob runnableJob = jobHandleToUniqueIdMap.get(jobHandle);
+        return findJob(runnableJob.getFunctionName(), runnableJob.getUniqueID());
     }
 }

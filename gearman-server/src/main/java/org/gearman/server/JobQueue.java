@@ -93,36 +93,43 @@ public final class JobQueue {
     }
 
 
+    public final boolean enqueue(RunnableJob runnableJob)
+    {
+
+        synchronized (this.allJobs) {
+            if(this.maxQueueSize>0 && maxQueueSize<=jobsInQueue.longValue()) {
+                return false;
+            }
+
+            allJobs.add(runnableJob.uniqueID);
+            jobsInQueue.incrementAndGet();
+        }
+
+        switch (runnableJob.getPriority()) {
+            case LOW:
+                return low.add(runnableJob);
+            case NORMAL:
+                return mid.add(runnableJob);
+            case HIGH:
+                return high.add(runnableJob);
+            default:
+                return false;
+        }
+
+    }
+
     // Enqueue a job in the correct job queue
     // used when re-enqueuing
     public final boolean enqueue(Job job, boolean persist)
     {
         if(job != null)
         {
-            synchronized (this.allJobs) {
-                if(this.maxQueueSize>0 && maxQueueSize<=jobsInQueue.longValue()) {
-                    return false;
-                }
-
-                jobsInQueue.incrementAndGet();
-                allJobs.add(job.getUniqueID());
-            }
-
-            RunnableJob runnableJob = new RunnableJob(job.getUniqueID(), job.getTimeToRun());
-
             if(persist)
+            {
                 persistenceEngine.write(job);
-
-            switch (job.getPriority()) {
-                case LOW:
-                    return low.add(runnableJob);
-                case NORMAL:
-                    return mid.add(runnableJob);
-                case HIGH:
-                    return high.add(runnableJob);
-                default:
-                    return false;
             }
+
+            return enqueue(job.getRunnableJob());
         } else {
             return false;
         }
@@ -140,16 +147,16 @@ public final class JobQueue {
         RunnableJob runnableJob = high.poll();
 
         if (runnableJob != null)
-            return fetchJob(runnableJob);
+            return fetchJob(runnableJob.getUniqueID());
 
         // Check to see which, if any, need to be run now
         for(RunnableJob rj : mid)
         {
-            if(rj.whenToRun < currentTime)
+            if(rj.timeToRun < currentTime)
             {
                 if(mid.remove(rj))
                 {
-                    return fetchJob(rj);
+                    return fetchJob(rj.getUniqueID());
                 }
             }
         }
@@ -157,15 +164,15 @@ public final class JobQueue {
         runnableJob = low.poll();
 
         if (runnableJob != null)
-            return fetchJob(runnableJob);
+            return fetchJob(runnableJob.getUniqueID());
 
         return null;
     }
 
 
-    private Job fetchJob(RunnableJob runnableJob)
+    private Job fetchJob(String uniqueID)
     {
-        return persistenceEngine.findJob(this.name, runnableJob.uniqueID);
+        return persistenceEngine.findJob(this.name, uniqueID);
     }
 
 	/**
@@ -235,8 +242,7 @@ public final class JobQueue {
     {
         if(allJobs.contains(uniqueId))
         {
-            RunnableJob runnableJob = new RunnableJob(uniqueId, 0);
-            return fetchJob(runnableJob);
+            return fetchJob(uniqueId);
         } else {
             return null;
         }
@@ -289,7 +295,7 @@ public final class JobQueue {
         return this.name.toString().replaceAll(":", ".");
     }
 
-    public Collection<Job> getAllJobs() {
+    public Collection<RunnableJob> getAllJobs() {
         return persistenceEngine.getAllForFunction(this.name);
     }
 

@@ -4,6 +4,7 @@ import org.codehaus.jackson.annotate.JsonIgnore;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.*;
 import org.gearman.constants.JobPriority;
+import org.gearman.server.core.RunnableJob;
 import org.jboss.netty.channel.Channel;
 
 import java.util.Date;
@@ -262,6 +263,12 @@ public class Job {
     public boolean isReady()
     {
         return this.timeToRun < (new Date().getTime() / 1000);
+    }
+
+    @JsonIgnore
+    public RunnableJob getRunnableJob()
+    {
+        return new RunnableJob(uniqueID, timeToRun, priority, functionName);
     }
 
 

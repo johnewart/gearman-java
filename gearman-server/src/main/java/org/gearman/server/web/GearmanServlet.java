@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import org.gearman.server.Job;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
+import org.gearman.server.core.RunnableJob;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.util.JobQueueSnapshot;
 import org.slf4j.Logger;
@@ -125,15 +126,14 @@ public class GearmanServlet extends HttpServlet {
         if(jobStore.getJobQueues().containsKey(jobQueueName))
         {
             JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
-            ImmutableSet<Job> jobs = ImmutableSet.copyOf(jobQueue.getAllJobs());
+            ImmutableSet<RunnableJob> jobs = ImmutableSet.copyOf(jobQueue.getAllJobs());
             json.writeFieldName("jobs");
             json.writeStartArray();
-            for(Job job : jobs)
+            for(RunnableJob job : jobs)
             {
                 json.writeStartObject();
                 {
                     json.writeStringField("unique_id", job.getUniqueID());
-                    json.writeStringField("job_handle", job.getJobHandle());
                     json.writeNumberField("time_to_run", job.getTimeToRun());
                 }
                 json.writeEndObject();

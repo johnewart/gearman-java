@@ -76,7 +76,7 @@ public class JobQueueMonitor {
 
                 for(RunnableJob job : queue)
                 {
-                    long timeDiff = job.whenToRun - currentTime;
+                    long timeDiff = job.timeToRun - currentTime;
 
                     if(timeDiff > 0)
                     {

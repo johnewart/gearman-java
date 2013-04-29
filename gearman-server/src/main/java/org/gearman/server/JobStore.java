@@ -14,6 +14,7 @@ import org.gearman.common.packets.response.WorkStatus;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
+import org.gearman.server.core.RunnableJob;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.util.EqualsLock;
 import org.jboss.netty.channel.Channel;
@@ -332,7 +333,7 @@ public class JobStore {
     {
         if(persistenceEngine != null)
         {
-            Collection<Job> jobs = null;
+            Collection<RunnableJob> jobs = null;
 
             try {
                 jobs = persistenceEngine.readAll();
@@ -342,7 +343,7 @@ public class JobStore {
             }
 
             if(jobs==null) return;
-            for(Job job : jobs) {
+            for(RunnableJob job : jobs) {
                 String functionName = job.getFunctionName();
                 if(functionName == null) {
                     // TODO log
@@ -350,7 +351,7 @@ public class JobStore {
                 } else {
                     JobQueue jobQueue = getJobQueue(functionName);
                     try {
-                        jobQueue.enqueue(job, false);
+                        jobQueue.enqueue(job);
                         pendingJobs.inc();
                     } catch (Exception e) {
                         LOG.error(e.toString());

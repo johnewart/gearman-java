@@ -1,6 +1,7 @@
 package org.gearman.server.persistence;
 
 import org.gearman.server.Job;
+import org.gearman.server.core.RunnableJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MemoryQueue implements PersistenceEngine {
-    private final ConcurrentHashMap<String, HashMap<String, Job>> jobHash;
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, Job>> jobHash;
     private final Logger LOG = LoggerFactory.getLogger(MemoryQueue.class);
     private final ConcurrentHashMap<String, Job> jobHandleMap;
 
@@ -27,7 +28,7 @@ public class MemoryQueue implements PersistenceEngine {
 
     @Override
     public void delete(Job job) {
-        HashMap<String, Job> funcHash = getFunctionHash(job.getFunctionName());
+        ConcurrentHashMap<String, Job> funcHash = getFunctionHash(job.getFunctionName());
         if(funcHash.containsKey(job.getUniqueID()))
         {
             funcHash.remove(job.getUniqueID());
@@ -48,7 +49,7 @@ public class MemoryQueue implements PersistenceEngine {
     @Override
     public Job findJob(String functionName, String uniqueID) {
         Job job = null;
-        HashMap<String, Job> funcHash = getFunctionHash(functionName);
+        ConcurrentHashMap<String, Job> funcHash = getFunctionHash(functionName);
 
 
         if(funcHash != null && funcHash.containsKey(uniqueID))
@@ -60,20 +61,27 @@ public class MemoryQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<Job> readAll() {
-        return new ArrayList<Job>();
+    public Collection<RunnableJob> readAll() {
+        return new ArrayList<RunnableJob>();
     }
 
     @Override
-    public Collection<Job> getAllForFunction(String functionName) {
-        HashMap<String, Job> funcHash = getFunctionHash(functionName);
+    public Collection<RunnableJob> getAllForFunction(String functionName) {
+        ConcurrentHashMap<String, Job> funcHash = getFunctionHash(functionName);
+        ArrayList<RunnableJob> runnableJobs = new ArrayList<>();
 
         if(funcHash != null)
         {
-            return funcHash.values();
+            for( Job job : funcHash.values())
+            {
+                runnableJobs.add(job.getRunnableJob());
+            }
+
+            return runnableJobs;
         } else {
             return null;
         }
+
     }
 
     @Override
@@ -81,14 +89,14 @@ public class MemoryQueue implements PersistenceEngine {
         return jobHandleMap.get(jobHandle);
     }
 
-    private HashMap<String, Job> getFunctionHash(String functionName)
+    private ConcurrentHashMap<String, Job> getFunctionHash(String functionName)
     {
-        HashMap<String, Job> hash = null;
+        ConcurrentHashMap<String, Job> hash = null;
         if(jobHash.containsKey(functionName))
         {
             hash = jobHash.get(functionName);
         } else {
-            hash = new HashMap<>();
+            hash = new ConcurrentHashMap<>();
             jobHash.put(functionName, hash);
         }
 

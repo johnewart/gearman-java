@@ -156,7 +156,20 @@ public class GearmanDaemon {
                     break;
 
                 case "redis":
-                    storageEngine = new RedisQueue();
+                    String redisHostname = cmd.getOptionValue("redis-host");
+
+                    if (redisHostname == null)
+                        redisHostname = "localhost";
+
+                    int redisPort;
+
+                    try {
+                        redisPort = Integer.parseInt(cmd.getOptionValue("redis-port"));
+                    } catch (NumberFormatException nfe) {
+                        redisPort = 6379;
+                    }
+
+                    storageEngine = new RedisQueue(redisHostname, redisPort);
                     break;
 
                 default:
