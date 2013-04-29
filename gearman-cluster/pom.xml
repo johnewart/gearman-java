@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>gearman-java</artifactId>
+        <groupId>org.gearman</groupId>
+        <version>0.5.1</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <repositories>
+        <repository>
+            <id>typesafe</id>
+            <name>typesafe-snapshots</name>
+            <url>http://repo.typesafe.com/typesafe/snapshots</url>
+        </repository>
+        <repository>
+            <id>central</id>
+            <url>http://repo1.maven.org/maven2/</url>
+        </repository>
+    </repositories>
+
+
+    <artifactId>gearman-cluster</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-cluster-experimental_2.10</artifactId>
+            <version>2.2-M3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.gearman</groupId>
+            <artifactId>gearman-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.gearman</groupId>
+            <artifactId>gearman-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+</project>
