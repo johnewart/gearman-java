@@ -22,10 +22,6 @@ public class Job {
         REENQUEUE, MARKCOMPLETE, DONOTHING
     }
 
-
-    private static final byte[] STATUS_TRUE = new byte[]{'1'};
-    private static final byte[] STATUS_FALSE = new byte[]{'0'};
-
     private JobState state = JobState.QUEUED;
 
     private final JobPriority priority;

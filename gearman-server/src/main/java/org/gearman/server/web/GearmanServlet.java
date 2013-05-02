@@ -6,12 +6,12 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.gearman.server.Job;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
 import org.gearman.server.core.RunnableJob;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.util.JobQueueSnapshot;
+import org.gearman.server.util.SystemSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +21,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +44,8 @@ public class GearmanServlet extends HttpServlet {
         final String classPrefix = req.getParameter("class");
         final boolean pretty = Boolean.parseBoolean(req.getParameter("pretty"));
         final boolean history = Boolean.parseBoolean(req.getParameter("history"));
+        final boolean systemsnapshots = Boolean.parseBoolean(req.getParameter("system"));
+
         final String jobQueueName = req.getParameter("jobQueue");
 
         resp.setStatus(HttpServletResponse.SC_OK);
@@ -51,28 +54,56 @@ public class GearmanServlet extends HttpServlet {
         resp.setContentType(CONTENT_TYPE);
         final OutputStream output = resp.getOutputStream();
         final JsonGenerator json = jsonFactory.createJsonGenerator(output, JsonEncoding.UTF8);
+
         if (pretty) {
             json.useDefaultPrettyPrinter();
         }
-        json.writeStartObject();
+
+        if(systemsnapshots)
         {
-            if(jobQueueName == null)
+            writeSystemSnapshots(json);
+        } else {
+            json.writeStartObject();
             {
-                writeJobQueueStats(json);
-            } else {
-                if(history)
+                if(jobQueueName == null)
                 {
-                    writeJobQueueSnapshots(jobQueueName, json);
+                    writeAllJobQueueStats(json);
                 } else {
-                    writeJobQueueDetails(jobQueueName, json);
+                    if(history)
+                    {
+                        writeJobQueueSnapshots(jobQueueName, json);
+                    } else {
+                        writeJobQueueDetails(jobQueueName, json);
+                    }
                 }
             }
+            json.writeEndObject();
         }
-        json.writeEndObject();
+
         json.close();
     }
 
-    public void writeJobQueueStats(JsonGenerator json) throws IOException {
+    public void writeSystemSnapshots(JsonGenerator json) throws IOException {
+        List<SystemSnapshot> snapshots = new ArrayList<>();
+        snapshots.addAll(jobQueueMonitor.getSystemSnapshots());
+        json.writeStartArray();
+        for(SystemSnapshot snapshot : snapshots)
+        {
+            json.writeStartObject();
+            {
+                json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
+                json.writeNumberField("totalQueued", snapshot.getTotalJobsQueued());
+                json.writeNumberField("totalProcessed", snapshot.getTotalJobsProcessed());
+                json.writeNumberField("diffQueued", snapshot.getJobsQueuedSinceLastSnapshot());
+                json.writeNumberField("diffProcessed", snapshot.getJobsProcessedSinceLastSnapshot());
+                json.writeNumberField("heapUsed", snapshot.getHeapUsed());
+            }
+            json.writeEndObject();
+        }
+        json.writeEndArray();
+    }
+
+    public void writeAllJobQueueStats(JsonGenerator json) throws IOException {
 
         ConcurrentHashMap<String, JobQueue> jobQueues = jobStore.getJobQueues();
         for(String jobQueueName : jobQueues.keySet())

@@ -22,11 +22,13 @@ public class JobQueueMonitor {
     private JobStore jobStore;
     private HashMap<String, List<JobQueueSnapshot>> snapshots;
     private final Logger LOG = LoggerFactory.getLogger(JobQueueMonitor.class);
+    private List<SystemSnapshot> systemSnapshots;
 
     public JobQueueMonitor(JobStore jobStore)
     {
         this.jobStore = jobStore;
         this.snapshots = new HashMap<>();
+        this.systemSnapshots = new ArrayList<>();
 
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor();
@@ -54,6 +56,7 @@ public class JobQueueMonitor {
         LOG.debug("Snapshotting job queues.");
         // Time in seconds
         long currentTime = new Date().getTime() / 1000;
+
         for(String jobQueueName : jobStore.getJobQueues().keySet())
         {
             JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
@@ -66,8 +69,8 @@ public class JobQueueMonitor {
             HashMap<Integer, Long> hourCounts = new HashMap<>();
             HashMap<String, Long> priorityCounts = new HashMap<>();
 
-            Long future = 0L;
-            Long immediate = 0L;
+            Long futureCount = 0L;
+            Long immediateCount = 0L;
 
             for(String priority : copyOfQueues.keySet())
             {
@@ -88,24 +91,42 @@ public class JobQueueMonitor {
                         }
 
                         hourCounts.put(hoursFromNow, hourCounts.get(hoursFromNow) + 1);
-                        future += 1;
+                        futureCount += 1;
                     } else {
-                        immediate += 1;
+                        immediateCount += 1;
                     }
                 }
             }
 
-            JobQueueSnapshot snapshot = new JobQueueSnapshot(new Date(), immediate, future, hourCounts, priorityCounts);
-
+            JobQueueSnapshot snapshot = new JobQueueSnapshot(new Date(), immediateCount, futureCount, hourCounts, priorityCounts);
             snapshots.get(jobQueueName).add(snapshot);
         }
-    }
 
-    public JobStore getJobStore() {
-        return jobStore;
+
+        // Generate an overall snapshot
+        SystemSnapshot currentSnapshot;
+        Long totalProcessed = jobStore.getCompletedJobs().count();
+        Long totalQueued = jobStore.getQueuedJobs().count();
+        Long totalPending = jobStore.getPendingJobs().count();
+        Long heapUsed = Runtime.getRuntime().totalMemory();
+        if(systemSnapshots.size() > 0)
+        {
+            SystemSnapshot previousSnapshot = systemSnapshots.get(systemSnapshots.size()-1);
+            long processedDiff = totalProcessed - previousSnapshot.getTotalJobsProcessed();
+            long queuedDiff = totalQueued - previousSnapshot.getTotalJobsQueued();
+            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, queuedDiff, processedDiff, totalPending, heapUsed);
+        } else {
+            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, 0L, 0L, totalPending, heapUsed);
+        }
+
+        systemSnapshots.add(currentSnapshot);
     }
 
     public HashMap<String, List<JobQueueSnapshot>> getSnapshots() {
         return snapshots;
+    }
+
+    public List<SystemSnapshot> getSystemSnapshots() {
+        return systemSnapshots;
     }
 }

@@ -49,6 +49,28 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
+    public String getIdentifier() {
+        String result = url;
+
+        try {
+            Connection connection = connectionPool.getConnection();
+            DatabaseMetaData metaData = connection.getMetaData();
+            int majorVersion, minorVersion;
+            String productName, productVersion;
+
+            majorVersion = metaData.getDatabaseMajorVersion();
+            minorVersion = metaData.getDatabaseMinorVersion();
+            productName = metaData.getDatabaseProductName();
+            productVersion = metaData.getDatabaseProductVersion();
+            result = String.format("%s (%s v%d.%d) - %s", productName, productVersion, majorVersion, minorVersion, url);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    @Override
     public void write(Job job) {
         PreparedStatement st = null;
         ResultSet rs = null;
@@ -300,6 +322,7 @@ public class PostgresQueue implements PersistenceEngine {
                 st = conn.prepareStatement("SELECT unique_id, time_to_run, priority FROM jobs WHERE function_name = ?");
                 st.setString(1, functionName);
                 ObjectMapper mapper = new ObjectMapper();
+                rs = st.executeQuery();
 
                 while(rs.next())
                 {

@@ -6,6 +6,9 @@ import com.yammer.metrics.reporting.AdminServlet;
 import com.yammer.metrics.reporting.MetricsServlet;
 import org.apache.commons.cli.*;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.gearman.server.healthchecks.RedisHealthCheck;
@@ -15,6 +18,7 @@ import org.gearman.server.persistence.PostgresQueue;
 import org.gearman.server.persistence.RedisQueue;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.web.GearmanServlet;
+import org.gearman.server.web.StatusServlet;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 
@@ -44,35 +48,45 @@ public class GearmanDaemon {
         // Metrics, yo.
         try {
             Server httpServer = new Server(8087);
-
+            HandlerList handlerList = new HandlerList();
             MetricsServlet metricsServlet = new MetricsServlet(true);
             AdminServlet adminServlet = new AdminServlet();
             GearmanServlet gearmanServlet = new GearmanServlet(jobQueueMonitor, sl.getJobStore());
-            ServletContextHandler context = new ServletContextHandler(
-                    ServletContextHandler.SESSIONS);
-            context.setContextPath("/");
+            StatusServlet statusServlet = new StatusServlet(jobQueueMonitor, sl.getJobStore());
+            String webDir = GearmanDaemon.class.getClassLoader().getResource("org/gearman/server/web/templates").toExternalForm();
+
+            ResourceHandler resourceHandler = new ResourceHandler();
+            resourceHandler.setResourceBase(webDir);
+            ContextHandler resourceContext = new ContextHandler("/static");
+            resourceContext.setHandler(resourceHandler);
 
             ServletContainer container = new ServletContainer();
             ServletHolder h = new ServletHolder(container);
 
-            context.addServlet(new ServletHolder(gearmanServlet), "/gearman/*");
-            context.addServlet(new ServletHolder(metricsServlet), "/status/*");
-            context.addServlet(new ServletHolder(adminServlet), "/admin/*");
+            ServletContextHandler servletHandler = new ServletContextHandler(
+                    ServletContextHandler.SESSIONS);
+            servletHandler.setContextPath("/");
 
-            httpServer.setHandler(context);
+            servletHandler.addServlet(new ServletHolder(gearmanServlet), "/gearman/*");
+            servletHandler.addServlet(new ServletHolder(statusServlet), "/status/*");
+            servletHandler.addServlet(new ServletHolder(metricsServlet), "/metrics/*");
+            servletHandler.addServlet(new ServletHolder(adminServlet), "/admin/*");
+
+            handlerList.addHandler(resourceContext);
+            handlerList.addHandler(servletHandler);
+
+            httpServer.setHandler(handlerList);
             httpServer.start();
             httpServer.join();
         } catch (Exception e) {
-                    LOG.error(e.toString());
+            LOG.error(e.toString());
         }
-
-
     }
 
     public static void main(String... args)
     {
         PersistenceEngine storageEngine;
-        boolean jobMonitorEnabled = false;
+        boolean jobMonitorEnabled = true;
 
         Options options = new Options();
         options.addOption("port", true, "port to listen on");
@@ -87,7 +101,7 @@ public class GearmanDaemon {
 
         // Allow for job queue monitor (periodically snapshot job queues)
         // TODO: Add options to fine-tune how much data to keep
-        options.addOption("", "enable-monitor", false, "Enable job queue monitor");
+        options.addOption("", "disable-monitor", false, "Disable job queue monitor");
 
         // Redis options
         options.addOption("", "redis-host", true, "Redis hostname");
@@ -101,11 +115,11 @@ public class GearmanDaemon {
             CommandLine cmd = parser.parse( options, args);
 
 
-            if(cmd.hasOption("enable-monitor"))
+            if(cmd.hasOption("disable-monitor"))
             {
                 // Enable job queue monitor
-                System.err.println("Job Queue Monitor enabled.");
-                jobMonitorEnabled = true;
+                System.err.println("Job Queue Monitor disabled.");
+                jobMonitorEnabled = false;
             }
 
             if(cmd.hasOption("port"))

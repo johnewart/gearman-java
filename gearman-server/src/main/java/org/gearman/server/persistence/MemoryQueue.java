@@ -22,6 +22,11 @@ public class MemoryQueue implements PersistenceEngine {
     }
 
     @Override
+    public String getIdentifier() {
+        return "Memory-only";
+    }
+
+    @Override
     public void write(Job job) {
         getFunctionHash(job.getFunctionName()).put(job.getUniqueID(), job);
     }

@@ -36,6 +36,11 @@ public class RedisQueue implements PersistenceEngine {
         jedisPool = new JedisPool(new JedisPoolConfig(), this.hostname, this.port);
     }
 
+    @Override
+    public String getIdentifier() {
+        return String.format("Redis - %s:%d", this.hostname, this.port);
+    }
+
     public void write(Job job)
     {
         Jedis redisClient = jedisPool.getResource();

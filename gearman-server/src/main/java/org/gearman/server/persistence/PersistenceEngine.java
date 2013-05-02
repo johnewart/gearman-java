@@ -6,6 +6,7 @@ import org.gearman.server.core.RunnableJob;
 import java.util.Collection;
 
 public interface PersistenceEngine {
+    public String getIdentifier();
 	public void write(Job job);
 	public void delete(Job job);
 	public void deleteAll();

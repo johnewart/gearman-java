@@ -21,16 +21,17 @@ import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 
+/**
+ *
+ */
 public class JobStore {
-    private static Logger LOG = LoggerFactory.getLogger(JobStore.class);
+    public static final Date timeStarted = new Date();
 
+    private static Logger LOG = LoggerFactory.getLogger(JobStore.class);
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues = new ConcurrentHashMap<>();
 
@@ -40,14 +41,15 @@ public class JobStore {
     // Active jobs Worker <--> Job
     private final ConcurrentHashMap<Channel, Job> activeJobs = new ConcurrentHashMap<>();
 
-
     private final EqualsLock lock = new EqualsLock();
     private final PersistenceEngine persistenceEngine;
 
     // Metrics counters, FunctionName <--> Counter
     private final ConcurrentHashMap<String, Counter> pendingCounters = new ConcurrentHashMap<>();
-    private final Counter pendingJobs = Metrics.newCounter(JobStore.class, "pending-jobs");
 
+    private final Counter pendingJobs = Metrics.newCounter(JobStore.class, "pending-jobs");
+    private final Counter queuedJobs = Metrics.newCounter(JobStore.class, "queued-jobs");
+    private final Counter completedJobs = Metrics.newCounter(JobStore.class, "completed-jobs");
 
     public JobStore(PersistenceEngine persistenceEngine)
     {
@@ -169,6 +171,7 @@ public class JobStore {
         boolean isBackground = packet.isBackground();
 
         pendingJobs.inc();
+        queuedJobs.inc();
 
         JobQueue jobQueue = getJobQueue(funcName);
 
@@ -205,7 +208,7 @@ public class JobStore {
 
             final Job job = new Job(funcName, uniqueID, data, priority, isBackground, timeToRun, creator);
 
-            if(!jobQueue.enqueue(job, true))
+            if(!jobQueue.enqueue(job))
             {
                 LOG.error("Unable to enqueue job");
             } else {
@@ -233,7 +236,7 @@ public class JobStore {
             case WORKING:
                 // Requeue
                 LOG.debug("Re-enqueing job " + job.toString());
-                final boolean value = jobQueue.enqueue(job, false);
+                final boolean value = jobQueue.enqueue(job);
                 assert value;
                 break;
             case COMPLETE:
@@ -245,9 +248,9 @@ public class JobStore {
 
     @Timed
     @Metered
-    public synchronized void workComplete(WorkResponse packet)
+    public synchronized void workComplete(WorkResponse packet, Channel worker)
     {
-        Job job = getByJobHandle(packet.getJobHandle());
+        Job job = activeJobs.remove(worker); //getByJobHandle(packet.getJobHandle());
 
         if(job != null)
         {
@@ -257,13 +260,9 @@ public class JobStore {
                 client.write(packet);
             }
 
-            if(activeJobs.containsValue(job))
-            {
-                activeJobs.remove(job.getWorker());
-            }
-
             job.complete();
             removeJob(job);
+            completedJobs.inc();
         }
     }
 
@@ -301,6 +300,8 @@ public class JobStore {
             {
                 getJobQueue(jobQueueName).removeWorker(channel);
             }
+
+            workers.remove(channel);
 
             if(activeJobs.containsKey(channel))
             {
@@ -383,19 +384,28 @@ public class JobStore {
         }
     }
 
-    public final void sendStatus(Channel client) {
-
-        for(JobQueue jobQueue : jobQueues.values()) {
-            if(jobQueue!=null)
-            {
-                client.write(jobQueue.getStatus());
-            }
-        }
-
-        //client.sendPacket(StaticPackets.TEXT_DONE, null /*TODO*/);
-    }
-
     public ConcurrentHashMap<String, JobQueue> getJobQueues() {
         return jobQueues;
+    }
+
+    public PersistenceEngine getPersistenceEngine()
+    {
+        return persistenceEngine;
+    }
+
+    public Counter getPendingJobs() {
+        return pendingJobs;
+    }
+
+    public Counter getCompletedJobs() {
+        return completedJobs;
+    }
+
+    public Counter getQueuedJobs() {
+        return queuedJobs;
+    }
+
+    public Integer getWorkerCount() {
+        return workers.keySet().size();
     }
 }

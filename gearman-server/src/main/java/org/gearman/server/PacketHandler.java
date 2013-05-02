@@ -121,7 +121,7 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case WORK_WARNING:
             case WORK_EXCEPTION:
             case WORK_FAIL:
-                jobStore.workComplete((WorkResponse)packet);
+                jobStore.workComplete((WorkResponse)packet, channel);
                 return;
 
             case WORK_STATUS:
