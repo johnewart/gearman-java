@@ -21,27 +21,8 @@ Quick start:
 2. Run java -jar gearman-server-0.6.0.jar 
 3. This will default to port 4730 and memory-only persistence, with snapshotting and the web interface listening on port 8080
 
-Command-line options:
+If you want to use more advanced features, you can see what command-line options are available by passing *-h* or *--help* on the command line. Currently you can toggle / configure storage engine, port, HTTP port and debugging level.
 
-You can see what command-line options are available by passing -h or --help on the command line. Currently supported:
-
-<pre>
-<code>
-usage: java -jar gearman-server.jar [options]
-    --disable-monitor         Disable job queue monitor
- -h,--help                    Display this message
-    --port <arg>              Port to listen on
-    --postgres-dbname <arg>   PostgreSQL database name
-    --postgres-host <arg>     PostgreSQL hostname
-    --postgres-pass <arg>     PostgreSQL password
-    --postgres-port <arg>     PostgreSQL port
-    --postgres-user <arg>     PostgreSQL user
-    --redis-host <arg>        Redis hostname
-    --redis-port <arg>        Redis port
-    --storage <arg>           Storage engine to use (redis, postgresql),
-                              default is memory only
-</code>
-</pre>
 
 Web Interface
 -------------
