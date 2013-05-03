@@ -15,13 +15,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.Executors;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/1/12
- * Time: 12:26 AM
- * To change this template use File | Settings | File Templates.
- */
 public class ServerListener {
     private final int port;
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);

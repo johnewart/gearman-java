@@ -1,20 +1,12 @@
 package org.gearman.server.web;
 
 import java.io.*;
-import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
-import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import org.gearman.server.Job;
-import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
 import org.gearman.server.util.JobQueueMonitor;
-import org.gearman.server.util.JobQueueSnapshot;
-import org.gearman.server.util.SystemSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,15 +19,15 @@ import javax.servlet.http.HttpServletResponse;
  *
  */
 
-public class StatusServlet extends HttpServlet {
+public class DashboardServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "text/html";
     private JobQueueMonitor jobQueueMonitor;
     private JobStore jobStore;
     private static final JsonFactory jsonFactory = new JsonFactory();
-    private final Logger LOG = LoggerFactory.getLogger(StatusServlet.class);
+    private final Logger LOG = LoggerFactory.getLogger(DashboardServlet.class);
     private static Configuration cfg = new Configuration();
 
-    public StatusServlet(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
+    public DashboardServlet(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
     {
         this.jobQueueMonitor = jobQueueMonitor;
         this.jobStore = jobStore;
@@ -44,7 +36,7 @@ public class StatusServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
     {
-        cfg.setClassForTemplateLoading(StatusServlet.class, "templates");
+        cfg.setClassForTemplateLoading(DashboardServlet.class, "templates");
         cfg.setTemplateUpdateDelay(0);
 
         final boolean queues = Boolean.parseBoolean(req.getParameter("queues"));

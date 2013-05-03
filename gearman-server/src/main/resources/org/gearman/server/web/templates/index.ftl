@@ -4,8 +4,6 @@
 <@layout>
     <h1>${hostname!"Unknown Host"}</h1>
 
-
-
     <div class="info">
         <div class="box">
             <span class="number">${numberFormatter.format(totalJobsPending)}</span>
@@ -41,230 +39,232 @@
         <div class="clear"></div>
     </div>
 
-    <div id="snapshots"></div>
-    <div id="memory"></div>
+    <div id="charts">
+        <form class="chart">
+            <h3>Activity</h3>
+            <div id="jobslegend" class="legend"></div>
+            <div class="chart_container">
+                <div id="jobschart"></div>
+                <div id="jobstimeline"></div>
+                <div id="jobsslider"></div>
+            </div>
+        </form>
 
-    <!DOCTYPE html>
-    <meta charset="utf-8">
-    <style>
+        <form class="chart">
+            <h3>Memory Usage (MB)</h3>
+            <div id="memorylegend" class="legend"></div>
+            <div class="chart_container">
+                <div id="memorychart"></div>
+                <div id="memorytimeline"></div>
+                <div id="memoryslider"></div>
+            </div>
 
-
-        .axis path,
-        .axis line {
-            fill: none;
-            stroke: #000;
-            stroke-width: .5px;
-            shape-rendering: crispEdges;
-        }
-
-        .x.axis path {
-            display: none;
-        }
-
-        .line {
-            fill: none;
-            stroke: steelblue;
-            stroke-width: 1.5px;
-        }
-
-        .grid .tick {
-            stroke: lightgrey;
-            opacity: 0.7;
-        }
-        .grid path {
-            stroke-width: 0;
-        }
-
-    </style>
-    <script>
-                var margin = {top: 20, right: 80, bottom: 30, left: 50};
-                var jobsWidth = 960 - margin.left - margin.right;
-                var jobsHeight = 400 - margin.top - margin.bottom;
-                var memoryWidth = jobsWidth;
-                var memoryHeight = 150 - margin.top - margin.bottom;
-
-                var x = d3.time.scale()
-                        .range([0, jobsWidth]);
-
-                var jobsY = d3.scale.linear()
-                        .range([jobsHeight, 0]);
-                
-                var memoryY = d3.scale.linear()
-                        .range([memoryHeight, 0]);
-
-                var color = d3.scale.category10();
-
-                var xAxis = d3.svg.axis()
-                        .scale(x)
-                        .orient("bottom");
-
-                var jobsYAxis = d3.svg.axis()
-                        .scale(jobsY)
-                        .orient("left");
-
-                var memoryYAxis = d3.svg.axis()
-                        .scale(memoryY)
-                        .orient("left")
-                        .ticks(4);
-
-                var jobsLine = d3.svg.line()
-                        .interpolate("basis")
-                        .x(function(d) { return x(d.date); })
-                        .y(function(d) { return jobsY(d.value); });
-
-                var memoryLine = d3.svg.line()
-                        .interpolate("basis")
-                        .x(function(d) { return x(d.date); })
-                        .y(function(d) { return memoryY(d.value); });
-
-                var jobsSVG = d3.select("#snapshots").append("svg")
-                        .attr("width", jobsWidth + margin.left + margin.right)
-                        .attr("height", jobsHeight + margin.top + margin.bottom)
-                        .append("g")
-                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-                var memorySVG = d3.select("#memory").append("svg")
-                        .attr("width", memoryWidth + margin.left + margin.right)
-                        .attr("height", memoryHeight + margin.top + margin.bottom)
-                        .append("g")
-                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-                d3.json("/gearman/?system=true", function(error, data) {
-
-                    labelMap = {
-                        //"totalQueued" : "Total Queued",
-                        //"totalProcessed": "Total Processed",
-                        "diffQueued" : "Queued",
-                        "diffProcessed" : "Processed"
-                    }
-
-                    labelKeys = [];
-                    for(key in labelMap)
-                    {
-                        labelKeys.push(key);
-                    }
-
-                    color.domain(labelKeys);
-
-                    data.forEach(function(d) {
-                        d.date = new Date(d.timestamp);
-                    });
-
-                    var jobsMetrics = color.domain().map(function(key) {
-                        return {
-                            name: labelMap[key],
-                            values: data.map(function(d) {
-                                return {date: d.date, value: d[key]};
-                            })
-                        };
-                    });
-                    
-                    var memoryMetrics = [
-                        {
-                            name: "Heap Used (MB)",
-                            values: data.map(function(d) {
-                                return { date: d.date, value: d['heapUsed'] / (1024 * 1024)}
-                            })
-                        }
-                    ];
-
-                    x.domain(d3.extent(data, function(d) { return d.date; }));
-
-                    jobsY.domain([
-                        d3.min(jobsMetrics, function(c) { return d3.min(c.values, function(v) { return v.value; }); }),
-                        d3.max(jobsMetrics, function(c) { return d3.max(c.values, function(v) { return v.value; }); })
-                    ]);
-                    
-                    memoryY.domain([0, ${maxMemory?string.computer}]);
-
-                    var legend = jobsSVG.selectAll('g')
-                            .data(jobsMetrics)
-                            .enter()
-                            .append('g')
-                            .attr('class', 'legend');
-
-                    legend.append('rect')
-                            .attr('x', jobsWidth - 20)
-                            .attr('y', function(d, i){ return i *  20;})
-                            .attr('width', 10)
-                            .attr('height', 10)
-                            .style('fill', function(d) {
-                                return color(d.name);
-                            });
-
-                    legend.append('text')
-                            .attr('x', jobsWidth - 8)
-                            .attr('y', function(d, i){ return (i *  20) + 9;})
-                            .text(function(d){ return d.name; });
-
-
-                    jobsSVG.append("g")
-                            .attr("class", "x axis")
-                            .attr("transform", "translate(0," + jobsHeight + ")")
-                            .call(xAxis);
-
-                    memorySVG.append("g")
-                            .attr("class", "x axis")
-                            .attr("transform", "translate(0," + memoryHeight + ")")
-                            .call(xAxis);
-
-                    jobsSVG.append("g")
-                            .attr("class", "y axis")
-                            .call(jobsYAxis)
-                            .append("text")
-                            .attr("transform", "rotate(-90)")
-                            .attr("y", 6)
-                            .attr("dy", ".71em")
-                            .style("text-anchor", "end")
-                            .text("Jobs");
-
-                    memorySVG.append("g")
-                            .attr("class", "y axis")
-                            .call(memoryYAxis)
-                            .append("text")
-                            .attr("transform", "rotate(-90)")
-                            .attr("y", 6)
-                            .attr("dy", ".71em")
-                            .style("text-anchor", "end")
-                            .text("MB");
-
-                    var memoryMetric = memorySVG.selectAll(".memoryMetric")
-                            .data(memoryMetrics)
-                            .enter().append("g")
-                            .attr("class", "memoryMetric");
-
-                    memoryMetric.append("path")
-                            .attr("class", "line")
-                            .attr("d", function(d) { return memoryLine(d.values); })
-                            .style("stroke", function(d) { return color(d.name); });
-
-                    memoryMetric.append("text")
-                            .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-                            .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + memoryY(d.value.value) + ")"; })
-                            .attr("x", 3)
-                            .attr("dy", ".35em")
-                            .text(function(d) { return d.name; });
-
-                    var jobsMetric = jobsSVG.selectAll(".jobsMetric")
-                            .data(jobsMetrics)
-                            .enter().append("g")
-                            .attr("class", "jobsMetric");
-
-                    jobsMetric.append("path")
-                            .attr("class", "line")
-                            .attr("d", function(d) { return jobsLine(d.values); })
-                            .style("stroke", function(d) { return color(d.name); });
-
-                    /*jobsMetric.append("text")
-                            .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-                            .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + jobsY(d.value.value) + ")"; })
-                            .attr("x", 3)
-                            .attr("dy", ".35em")
-                            .text(function(d) { return d.name; });*/
-
-
-                });
-        </script>
+        </form>
     </div>
+<script>
+
+var palette = new Rickshaw.Color.Palette( { scheme: 'spectrum14' } );
+var graph = null;
+var drawn = false;
+var memchartDrawn = false;
+
+var jobsGraph = new Rickshaw.Graph.Ajax( {
+    element: document.getElementById("jobschart"),
+    width: 700,
+    height: 160,
+    renderer: 'line',
+    stroke: true,
+    preserve: false,
+    dataURL: "/gearman/?system=true",
+    onData: function(data) {
+        var graphData = [
+            {
+                "name": "Queued",
+                "data": []
+            },
+            {
+                "name": "Processed",
+                "data": []
+            }
+        ];
+
+        data.forEach(function(d) {
+            var timestamp = parseInt(d.timestamp / 1000);
+            graphData[0].data.push( { 'x': timestamp, 'y': d.diffQueued });
+            graphData[1].data.push( { 'x': timestamp, 'y': d.diffProcessed });
+        });
+
+        return graphData;
+    },
+    onComplete: function(transport) {
+        var graph = transport.graph;
+
+        if(!drawn)
+        {
+            var slider = new Rickshaw.Graph.RangeSlider( {
+                graph: graph,
+                element: $('#jobsslider')
+            } );
+
+            var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+                graph: graph
+            } );
+
+            var annotator = new Rickshaw.Graph.Annotate( {
+                graph: graph,
+                element: document.getElementById('jobstimeline')
+            } );
+
+            var legend = new Rickshaw.Graph.Legend( {
+                graph: graph,
+                element: document.getElementById('jobslegend')
+            } );
+
+            var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
+                graph: graph,
+                legend: legend
+            } );
+
+            var order = new Rickshaw.Graph.Behavior.Series.Order( {
+                graph: graph,
+                legend: legend
+            } );
+
+            var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight( {
+                graph: graph,
+                legend: legend
+            } );
+
+
+            var ticksTreatment = 'glow';
+
+            var xAxis = new Rickshaw.Graph.Axis.Time( {
+                graph: graph,
+                //ticksTreatment: ticksTreatment
+            } );
+
+            xAxis.render();
+
+            var yAxis = new Rickshaw.Graph.Axis.Y( {
+                graph: graph,
+                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                //ticksTreatment: ticksTreatment
+            } );
+
+            yAxis.render();
+
+            drawn = true;
+        }
+    },
+    series: [
+        {
+            name: "Queued",
+            color: palette.color()
+        },
+        {
+            name: "Processed",
+            color: palette.color()
+        }
+    ]
+} );
+
+var memoryGraph = new Rickshaw.Graph.Ajax( {
+    element: document.getElementById("memorychart"),
+    width: 700,
+    height: 160,
+    renderer: 'line',
+    stroke: true,
+    preserve: false,
+    dataURL: "/gearman/?system=true",
+    onData: function(data) {
+        var graphData = [
+            {
+                "name": "Heap Used",
+                "data": []
+            }
+        ];
+
+        data.forEach(function(d) {
+            var timestamp = parseInt(d.timestamp / 1000);
+            graphData[0].data.push( { 'x': timestamp, 'y': d.heapUsed / (1024 * 1024) });
+        });
+
+        return graphData;
+    },
+    onComplete: function(transport) {
+        graph = transport.graph;
+
+        if(!memchartDrawn)
+        {
+            var slider = new Rickshaw.Graph.RangeSlider( {
+                graph: graph,
+                element: $('#memoryslider')
+            } );
+
+            var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+                graph: graph
+            } );
+
+            var annotator = new Rickshaw.Graph.Annotate( {
+                graph: graph,
+                element: document.getElementById('memorytimeline')
+            } );
+
+            var legend = new Rickshaw.Graph.Legend( {
+                graph: graph,
+                element: document.getElementById('memorylegend')
+            } );
+
+            var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
+                graph: graph,
+                legend: legend
+            } );
+
+            var order = new Rickshaw.Graph.Behavior.Series.Order( {
+                graph: graph,
+                legend: legend
+            } );
+
+            var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight( {
+                graph: graph,
+                legend: legend
+            } );
+
+            var ticksTreatment = 'glow';
+
+            var xAxis = new Rickshaw.Graph.Axis.Time( {
+                graph: graph,
+                ticksTreatment: ticksTreatment
+            } );
+
+            xAxis.render();
+
+            var yAxis = new Rickshaw.Graph.Axis.Y( {
+                graph: graph,
+                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                ticksTreatment: ticksTreatment
+            } );
+
+            yAxis.render();
+            memchartDrawn = true;
+        }
+
+    },
+    series: [
+        {
+            name: "Heap Used",
+            color: palette.color()
+        }
+    ]
+} );
+
+setInterval( function() {
+    jobsGraph.request();
+    memoryGraph.request();
+}, 30000 );
+
+
+
+</script>
 
 </@layout>

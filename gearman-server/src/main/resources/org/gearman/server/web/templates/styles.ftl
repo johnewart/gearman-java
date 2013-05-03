@@ -1,6 +1,6 @@
 <style>
-    body {
-        font-family: "PT Sans", sans-serif;
+    * {
+        font-family: "PT Sans", sans-serif !important;
     }
 
     div#container {
@@ -20,11 +20,12 @@
     }
     table.grid {
         border-collapse: collapse;
-        width: 80%
+        width: 80%;
+        margin-top: 20px;
     }
 
     table.grid td {
-        border: 1px solid #888;
+        border: 1px solid #ccc;
         padding: 5px;
         vertical-align: top;
     }
@@ -109,4 +110,36 @@
     h1 {
     font-size: 44px;
     }
+
+    form.chart {
+        position: relative;
+        width: 850px;
+        margin-left: 60px;
+    }
+
+    .legend {
+        width: 120px;
+        height: 120px;
+        position: absolute;
+        right: 0;
+        top: 0;
+        z-index: 999;
+        background-color: #fff;
+        color: #888;
+        font-size: 14px;
+    }
+
+    div.rickshaw_annotation_timeline {
+        border-top: 0px;
+    }
+
+    div.rickshaw_annotation_timeline {
+        border-top: 0px;
+    }
+
+    .rickshaw_graph .x_tick .title {
+        bottom: -24px;
+        left: -18px;
+    }
+
 </style>

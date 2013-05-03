@@ -71,11 +71,18 @@ public final class JobQueue {
 
        switch (runnableJob.getPriority()) {
             case LOW:
-                return low.add(runnableJob);
+                synchronized(low)
+                {
+                    return low.add(runnableJob);
+                }
             case NORMAL:
-                return mid.add(runnableJob);
+                synchronized(mid) {
+                    return mid.add(runnableJob);
+                }
             case HIGH:
-                return high.add(runnableJob);
+                synchronized(high) {
+                    return high.add(runnableJob);
+                }
             default:
                 return false;
        }
@@ -109,14 +116,17 @@ public final class JobQueue {
         if (runnableJob == null)
         {
             // Check to see which, if any, need to be run now
-            for(RunnableJob rj : mid)
+            synchronized (mid)
             {
-                if(rj.timeToRun < currentTime)
+                for(RunnableJob rj : mid)
                 {
-                    if(mid.remove(rj))
+                    if(rj.timeToRun < currentTime)
                     {
-                        runnableJob = rj;
-                        break;
+                        if(mid.remove(rj))
+                        {
+                            runnableJob = rj;
+                            break;
+                        }
                     }
                 }
             }
@@ -253,9 +263,19 @@ public final class JobQueue {
     public HashMap<String, ImmutableList<RunnableJob>> getCopyOfJobQueues()
     {
         HashMap<String, ImmutableList<RunnableJob>> queues = new HashMap<>();
-        queues.put("high", ImmutableList.copyOf(high));
-        queues.put("mid",  ImmutableList.copyOf(mid));
-        queues.put("low",  ImmutableList.copyOf(low));
+
+        synchronized(high) {
+            queues.put("high", ImmutableList.copyOf(high));
+        }
+
+        synchronized(mid) {
+            queues.put("mid",  ImmutableList.copyOf(mid));
+        }
+
+        synchronized(low) {
+            queues.put("low",  ImmutableList.copyOf(low));
+        }
+
         return queues;
     }
 

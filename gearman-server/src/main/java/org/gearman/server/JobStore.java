@@ -126,12 +126,12 @@ public class JobStore {
                     try {
                         worker.write(packet);
                     } catch (Exception e) {
-                            LOG.error("Unable to write to worker. Re-enqueing job.");
-                            try {
-                                reEnqueueJob(job);
-                            } catch (IllegalJobStateTransitionException ee) {
-                                LOG.error("Error re-enqueing after failed transmission: ", ee);
-                            }
+                        LOG.error("Unable to write to worker. Re-enqueing job.");
+                        try {
+                            reEnqueueJob(job);
+                        } catch (IllegalJobStateTransitionException ee) {
+                            LOG.error("Error re-enqueing after failed transmission: ", ee);
+                        }
                     }
                 }
             }
