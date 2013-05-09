@@ -5,3 +5,4 @@ gearman-client/target
 gearman-common/target
 gearman-example/target
 gearman-server/target
+coverage

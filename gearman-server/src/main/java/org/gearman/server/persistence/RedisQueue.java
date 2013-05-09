@@ -1,8 +1,8 @@
 package org.gearman.server.persistence;
 
 import org.codehaus.jackson.map.ObjectMapper;
-import org.gearman.server.Job;
-import org.gearman.server.core.RunnableJob;
+import org.gearman.common.Job;
+import org.gearman.server.core.QueuedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
@@ -20,7 +20,7 @@ public class RedisQueue implements PersistenceEngine {
 
     private final ObjectMapper mapper;
     private final JedisPool jedisPool;
-    private final ConcurrentHashMap<String, RunnableJob> jobHandleToUniqueIdMap;
+    private final ConcurrentHashMap<String, QueuedJob> jobHandleToQueuedJobMap;
     private final String hostname;
     private final int port;
 
@@ -31,7 +31,7 @@ public class RedisQueue implements PersistenceEngine {
         this.hostname = hostname;
         this.port = port;
         mapper = new ObjectMapper();
-        jobHandleToUniqueIdMap = new ConcurrentHashMap<>();
+        jobHandleToQueuedJobMap = new ConcurrentHashMap<>();
         LOG.debug(String.format("RedisQueue connecting on %s:%s", hostname, port));
         jedisPool = new JedisPool(new JedisPoolConfig(), this.hostname, this.port);
     }
@@ -48,7 +48,8 @@ public class RedisQueue implements PersistenceEngine {
             String json = mapper.writeValueAsString(job);
             String bucket = "gm:" + job.getFunctionName();
             String key = job.getUniqueID();
-            jobHandleToUniqueIdMap.put(job.getJobHandle(), job.getRunnableJob());
+            QueuedJob queuedJob = new QueuedJob(job);
+            jobHandleToQueuedJobMap.put(job.getJobHandle(), queuedJob);
             redisClient.hset(bucket, key, json);
             LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
         } catch (IOException e) {
@@ -59,10 +60,17 @@ public class RedisQueue implements PersistenceEngine {
 
     public void delete(Job job)
     {
+        delete(job.getFunctionName(), job.getUniqueID());
+    }
+
+    @Override
+    public void delete(String functionName, String uniqueID)
+    {
         Jedis redisClient = jedisPool.getResource();
-        String bucket = "gm:" + job.getFunctionName();
-        String key = job.getUniqueID();
-        jobHandleToUniqueIdMap.remove(job.getJobHandle());
+        String bucket = "gm:" + functionName;
+        String key = uniqueID;
+
+        //jobHandleToQueuedJobMap.remove(job.getJobHandle());
         LOG.debug("Removing from redis " + bucket + ": " + key);
         redisClient.hdel(bucket, key);
         jedisPool.returnResource(redisClient);
@@ -75,7 +83,7 @@ public class RedisQueue implements PersistenceEngine {
         {
             redisClient.del(key);
         }
-        jobHandleToUniqueIdMap.clear();
+        jobHandleToQueuedJobMap.clear();
         jedisPool.returnResource(redisClient);
     }
 
@@ -96,10 +104,10 @@ public class RedisQueue implements PersistenceEngine {
         return job;
     }
 
-    public Collection<RunnableJob> readAll()
+    public Collection<QueuedJob> readAll()
     {
         Jedis redisClient = jedisPool.getResource();
-        ArrayList<RunnableJob> jobs = new ArrayList<>();
+        ArrayList<QueuedJob> jobs = new ArrayList<>();
         Job currentJob;
         for(String functionQueue : redisClient.keys("gm:*"))
         {
@@ -111,8 +119,9 @@ public class RedisQueue implements PersistenceEngine {
                     String jobJSON = redisJobs.get(uniqueID);
                     LOG.debug("JSON: " + jobJSON);
                     currentJob = mapper.readValue(jobJSON, Job.class);
-                    jobs.add(currentJob.getRunnableJob());
-                    jobHandleToUniqueIdMap.put(currentJob.getJobHandle(), currentJob.getRunnableJob());
+                    QueuedJob queuedJob = new QueuedJob(currentJob);
+                    jobHandleToQueuedJobMap.put(currentJob.getJobHandle(), queuedJob);
+                    jobs.add(queuedJob);
                 } catch (IOException e) {
                     LOG.debug("Error deserializing job: " + e.toString());
                 }
@@ -125,9 +134,9 @@ public class RedisQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<RunnableJob> getAllForFunction(String functionName) {
+    public Collection<QueuedJob> getAllForFunction(String functionName) {
         Jedis redisClient = jedisPool.getResource();
-        ArrayList<RunnableJob> jobs = new ArrayList<>();
+        ArrayList<QueuedJob> jobs = new ArrayList<>();
         Map<String, String> redisJobs = redisClient.hgetAll("gm:" + functionName);
         Job currentJob;
 
@@ -137,7 +146,7 @@ public class RedisQueue implements PersistenceEngine {
                 String jobJSON = redisJobs.get(uniqueID);
                 currentJob = mapper.readValue(jobJSON, Job.class);
 
-                jobs.add(currentJob.getRunnableJob());
+                jobs.add(new QueuedJob(currentJob));
             } catch (IOException e) {
                 LOG.debug("Error deserializing job: " + e.toString());
             }
@@ -150,7 +159,7 @@ public class RedisQueue implements PersistenceEngine {
 
     @Override
     public Job findJobByHandle(String jobHandle) {
-        RunnableJob runnableJob = jobHandleToUniqueIdMap.get(jobHandle);
+        QueuedJob runnableJob = jobHandleToQueuedJobMap.get(jobHandle);
         return findJob(runnableJob.getFunctionName(), runnableJob.getUniqueID());
     }
 }

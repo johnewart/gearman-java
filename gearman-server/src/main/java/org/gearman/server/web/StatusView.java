@@ -88,12 +88,12 @@ public class StatusView {
 
     public Long getTotalJobsQueued()
     {
-        return jobStore.getQueuedJobs().count();
+        return jobStore.getQueuedJobsCounter().count();
     }
 
     public Long getTotalJobsProcessed()
     {
-        return jobStore.getCompletedJobs().count();
+        return jobStore.getCompletedJobsCounter().count();
     }
 
     public Integer getWorkerCount()

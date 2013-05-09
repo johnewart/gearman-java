@@ -1,4 +1,4 @@
-package org.gearman.server;
+package org.gearman.server.net;
 
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.request.CanDo;
@@ -7,7 +7,6 @@ import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.packets.response.WorkStatus;
-import org.gearman.constants.GearmanConstants;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
@@ -18,15 +17,13 @@ import java.util.Set;
 public class PacketHandler extends SimpleChannelUpstreamHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(PacketHandler.class);
-    private final JobStore jobStore;
-    private final String hostName;
+    private final NetworkManager networkManager;
     private final ChannelGroup channelGroup;
 
-    public PacketHandler(JobStore jobStore, String hostName, ChannelGroup channelGroup)
+    public PacketHandler(NetworkManager networkManager, ChannelGroup channelGroup)
     {
         LOG.debug("Creating new handler!");
-        this.jobStore = jobStore;
-        this.hostName = hostName;
+        this.networkManager = networkManager;
         this.channelGroup = channelGroup;
     }
 
@@ -52,7 +49,7 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
     {
         LOG.debug("Client closed channel: " + e.toString());
-        jobStore.channelDisconnected(e.getChannel());
+        networkManager.channelDisconnected(e.getChannel());
     }
 
     private void handleTextCommand(String message, Channel channel)
@@ -60,12 +57,12 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
         switch(message.toLowerCase()) {
             case "status":
                 String header = "FUNCTION\tTOTAL\tRUNNING\tAVAILABLE_WORKERS\n";
-                Set<String> jobQueueNames = jobStore.getJobQueues().keySet();
+                Set<String> jobQueueNames = networkManager.getJobStore().getJobQueues().keySet();
                 channel.write(header);
 
                 for(String jobQueueName : jobQueueNames)
                 {
-                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, jobStore.getJobQueue(jobQueueName).size(), 0, 0));
+                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobStore().getJobQueue(jobQueueName).size(), 0, 0));
                 }
 
                 channel.write(".\n");
@@ -94,16 +91,16 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
         {
             case CAN_DO:
             case CAN_DO_TIMEOUT:
-                jobStore.registerWorker(((CanDo)packet).getFunctionName(), channel);
+                networkManager.registerAbility(((CanDo)packet).getFunctionName(), channel);
                 return;
             case CANT_DO:
-                jobStore.unregisterWorker(((CantDo)packet).getFunctionName(), channel);
+                networkManager.unregisterAbility(((CantDo)packet).getFunctionName(), channel);
                 return;
             case GRAB_JOB:
-                jobStore.nextJobForWorker(channel, false);
+                networkManager.nextJobForWorker(channel, false);
                 return;
             case GRAB_JOB_UNIQ:
-                jobStore.nextJobForWorker(channel, true);
+                networkManager.nextJobForWorker(channel, true);
                 return;
             case SUBMIT_JOB:
             case SUBMIT_JOB_BG:
@@ -111,32 +108,30 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case SUBMIT_JOB_HIGH_BG:
             case SUBMIT_JOB_LOW:
             case SUBMIT_JOB_LOW_BG:
-                jobStore.createJob((SubmitJob)packet, channel);
-                return;
             case SUBMIT_JOB_EPOCH:
-                jobStore.createJob((SubmitJob)packet, channel);
+                networkManager.createJob((SubmitJob)packet, channel);
                 break;
             case WORK_COMPLETE:
             case WORK_DATA:
             case WORK_WARNING:
             case WORK_EXCEPTION:
             case WORK_FAIL:
-                jobStore.workComplete((WorkResponse)packet, channel);
+                networkManager.workComplete((WorkResponse)packet, channel);
                 return;
 
             case WORK_STATUS:
-                jobStore.updateJobStatus((WorkStatus)packet);
+                networkManager.updateJobStatus((WorkStatus)packet);
                 return;
 
             case GET_STATUS:
-                jobStore.checkJobStatus((GetStatus)packet, channel);
+                networkManager.checkJobStatus((GetStatus)packet, channel);
                 return;
 
             case SET_CLIENT_ID:
                 return;
 
             case PRE_SLEEP:
-                jobStore.sleepingWorker(channel);
+                networkManager.sleepingWorker(channel);
                 return;
 
             // Packets Not Yet Implemented

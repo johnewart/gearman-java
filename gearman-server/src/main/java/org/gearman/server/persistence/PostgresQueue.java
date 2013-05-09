@@ -4,8 +4,8 @@ import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.gearman.constants.JobPriority;
-import org.gearman.server.Job;
-import org.gearman.server.core.RunnableJob;
+import org.gearman.common.Job;
+import org.gearman.server.core.QueuedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,18 +127,23 @@ public class PostgresQueue implements PersistenceEngine {
 
     @Override
     public void delete(Job job) {
+
+    }
+
+    @Override
+    public void delete(String functionName, String uniqueID) {
         PreparedStatement st = null;
-        ResultSet rs = null;
         Connection conn = null;
 
         try {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("DELETE FROM jobs WHERE unique_id = ?");
-                st.setString(1, job.getUniqueID());
+                st = conn.prepareStatement("DELETE FROM jobs WHERE function_name = ? AND unique_id = ?");
+                st.setString(1, functionName);
+                st.setString(2, uniqueID);
                 int deleted = st.executeUpdate();
-                LOG.debug("Deleted " + deleted + " records for UUID " + job.getUniqueID());
+                LOG.debug("Deleted " + deleted + " records for " + functionName + "/" +uniqueID);
             }
         } catch (SQLException se) {
 
@@ -239,8 +244,8 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<RunnableJob> readAll() {
-        LinkedList<RunnableJob> jobs = new LinkedList<>();
+    public Collection<QueuedJob> readAll() {
+        LinkedList<QueuedJob> jobs = new LinkedList<>();
         Statement st = null;
         ResultSet rs = null;
         Connection conn = null;
@@ -263,7 +268,7 @@ public class PostgresQueue implements PersistenceEngine {
                     int totalJobs = rs.getInt("jobCount");
                     int fetchedJobs = 0;
                     LOG.debug("Reading " + totalJobs + " jobs from PostgreSQL");
-                    RunnableJob currentJob;
+                    QueuedJob currentJob;
                     do {
                         rs = st.executeQuery("SELECT function_name, priority, unique_id, time_to_run FROM jobs LIMIT " + jobsPerPage + " OFFSET " + (pageNum * jobsPerPage));
 
@@ -271,7 +276,7 @@ public class PostgresQueue implements PersistenceEngine {
                         {
 
                             try {
-                                currentJob = new RunnableJob(rs.getString("unique_id"), rs.getLong("time_to_run"), JobPriority.valueOf(rs.getString("priority")), rs.getString("function_name"));
+                                currentJob = new QueuedJob(rs.getString("unique_id"), rs.getLong("time_to_run"), JobPriority.valueOf(rs.getString("priority")), rs.getString("function_name"));
                                 jobs.add(currentJob);
                             } catch (Exception e) {
                                 LOG.error("Unable to load job '" + rs.getString("unique_id") + "'");
@@ -308,12 +313,12 @@ public class PostgresQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<RunnableJob> getAllForFunction(String functionName) {
-        LinkedList<RunnableJob> jobs = new LinkedList<>();
+    public Collection<QueuedJob> getAllForFunction(String functionName) {
+        LinkedList<QueuedJob> jobs = new LinkedList<>();
         PreparedStatement st = null;
         ResultSet rs = null;
         Connection conn = null;
-        RunnableJob job;
+        QueuedJob job;
 
         try {
             conn = connectionPool.getConnection();
@@ -326,7 +331,7 @@ public class PostgresQueue implements PersistenceEngine {
 
                 while(rs.next())
                 {
-                    job = new RunnableJob(rs.getString("unique_id"), rs.getLong("time_to_run"), JobPriority.valueOf(rs.getString("priority")), functionName);
+                    job = new QueuedJob(rs.getString("unique_id"), rs.getLong("time_to_run"), JobPriority.valueOf(rs.getString("priority")), functionName);
                     jobs.add(job);
                 }
             }

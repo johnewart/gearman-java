@@ -2,6 +2,7 @@ package org.gearman.server;
 
 import org.gearman.server.codec.Decoder;
 import org.gearman.server.codec.Encoder;
+import org.gearman.server.net.*;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
@@ -19,7 +20,8 @@ public class ServerListener {
     private final int port;
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
     private final JobStore jobStore;
-    private final String hostName;
+    private final NetworkManager networkManager;
+
     private final DefaultChannelGroup channelGroup;
     private final ServerChannelFactory serverFactory;
 
@@ -29,13 +31,10 @@ public class ServerListener {
         this.serverFactory =  new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
                                                                 Executors.newCachedThreadPool());
         this.port = port;
-
         this.jobStore = new JobStore(storageEngine);
+        this.networkManager = new NetworkManager(jobStore);
 
-        if(jobStore != null)
-        {
-            jobStore.loadAllJobs();
-        }
+        jobStore.loadAllJobs();
 
         String host;
 
@@ -44,8 +43,6 @@ public class ServerListener {
         } catch (UnknownHostException e) {
             host = "localhost";
         }
-
-        this.hostName = host;
 
         LOG.info("Listening on " + host + ":" + port);
     }
@@ -62,7 +59,7 @@ public class ServerListener {
                 ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("encoder", Encoder.getInstance());
                 pipeline.addLast("decoder", new Decoder());
-                pipeline.addLast("handler", new PacketHandler(jobStore, hostName, channelGroup));
+                pipeline.addLast("handler", new PacketHandler(networkManager, channelGroup));
                 return pipeline;
             }
         };
@@ -85,6 +82,7 @@ public class ServerListener {
     }
 
     public void stop() {
+        LOG.info("Stopping listener...");
         if (this.channelGroup != null) {
             this.channelGroup.close();
         }

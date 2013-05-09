@@ -1,25 +1,16 @@
 package org.gearman.common.packets.response;
 
+import org.gearman.common.JobStatus;
 import org.gearman.constants.PacketType;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 8:46 AM
- * To change this template use File | Settings | File Templates.
- */
 public class StatusRes extends ResponsePacket {
-    private AtomicReference<String> jobHandle, numeratorStr, denominatorStr;
-    private boolean statusKnown;
-    private boolean running;
-    private int numerator;
-    private int denominator;
-
-    public StatusRes()
-    {}
+    private final AtomicReference<String> jobHandle;
+    private final boolean statusKnown;
+    private final boolean running;
+    private final int numerator;
+    private final int denominator;
 
     public StatusRes(String jobHandle, boolean running, boolean statusKnown, int numerator, int denominator)
     {
@@ -34,25 +25,33 @@ public class StatusRes extends ResponsePacket {
     public StatusRes(byte[] pktdata)
     {
         super(pktdata);
-        jobHandle = new AtomicReference<String>();
-        numeratorStr = new AtomicReference<String>();
-        denominatorStr = new AtomicReference<String>();
+        jobHandle = new AtomicReference<>();
+        AtomicReference<String> numeratorStr = new AtomicReference<>();
+        AtomicReference<String> denominatorStr = new AtomicReference<>();
 
-        AtomicReference<String> statusStr = new AtomicReference<String>();
-        AtomicReference<String> runningStr = new AtomicReference<String>();
+        AtomicReference<String> statusStr = new AtomicReference<>();
+        AtomicReference<String> runningStr = new AtomicReference<>();
 
         int pOff = 0;
         pOff = parseString(pOff, jobHandle);
         pOff = parseString(pOff, statusStr);
         pOff = parseString(pOff, runningStr);
         pOff = parseString(pOff, numeratorStr);
-        pOff = parseString(pOff, denominatorStr);
+        parseString(pOff, denominatorStr);
 
         running = Integer.parseInt(runningStr.get()) == 1;
         statusKnown = Integer.parseInt(statusStr.get()) == 1;
 
         denominator = Integer.parseInt(denominatorStr.get());
         numerator = Integer.parseInt(numeratorStr.get());
+    }
+
+    public StatusRes(JobStatus jobStatus) {
+        running = jobStatus.isRunning();
+        statusKnown = jobStatus.isStatusKnown();
+        denominator = jobStatus.getDenominator();
+        numerator = jobStatus.getNumerator();
+        jobHandle = new AtomicReference<>(jobStatus.getJobHandle());
     }
 
     public byte[] toByteArray()

@@ -6,7 +6,7 @@ import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 import org.gearman.server.JobQueue;
 import org.gearman.server.JobStore;
-import org.gearman.server.core.RunnableJob;
+import org.gearman.server.core.QueuedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,7 +65,7 @@ public class JobQueueMonitor {
                 snapshots.put(jobQueueName, new ArrayList<JobQueueSnapshot>());
             }
 
-            HashMap<String, ImmutableList<RunnableJob>> copyOfQueues = jobQueue.getCopyOfJobQueues();
+            HashMap<String, ImmutableList<QueuedJob>> copyOfQueues = jobQueue.getCopyOfJobQueues();
             HashMap<Integer, Long> hourCounts = new HashMap<>();
             HashMap<String, Long> priorityCounts = new HashMap<>();
 
@@ -74,10 +74,10 @@ public class JobQueueMonitor {
 
             for(String priority : copyOfQueues.keySet())
             {
-                ImmutableList<RunnableJob> queue = copyOfQueues.get(priority);
+                ImmutableList<QueuedJob> queue = copyOfQueues.get(priority);
                 priorityCounts.put(priority, new Long(queue.size()));
 
-                for(RunnableJob job : queue)
+                for(QueuedJob job : queue)
                 {
                     long timeDiff = job.timeToRun - currentTime;
 
@@ -105,9 +105,9 @@ public class JobQueueMonitor {
 
         // Generate an overall snapshot
         SystemSnapshot currentSnapshot;
-        Long totalProcessed = jobStore.getCompletedJobs().count();
-        Long totalQueued = jobStore.getQueuedJobs().count();
-        Long totalPending = jobStore.getPendingJobs().count();
+        Long totalProcessed = jobStore.getCompletedJobsCounter().count();
+        Long totalQueued = jobStore.getQueuedJobsCounter().count();
+        Long totalPending = jobStore.getPendingJobsCounter().count();
         Long heapUsed = Runtime.getRuntime().totalMemory();
         if(systemSnapshots.size() > 0)
         {

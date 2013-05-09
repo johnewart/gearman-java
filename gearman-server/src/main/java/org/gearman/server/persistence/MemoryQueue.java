@@ -1,13 +1,11 @@
 package org.gearman.server.persistence;
 
-import org.gearman.server.Job;
-import org.gearman.server.core.RunnableJob;
+import org.gearman.common.Job;
+import org.gearman.server.core.QueuedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MemoryQueue implements PersistenceEngine {
@@ -29,19 +27,27 @@ public class MemoryQueue implements PersistenceEngine {
     @Override
     public void write(Job job) {
         getFunctionHash(job.getFunctionName()).put(job.getUniqueID(), job);
+        jobHandleMap.put(job.getJobHandle(), job);
     }
 
     @Override
     public void delete(Job job) {
-        ConcurrentHashMap<String, Job> funcHash = getFunctionHash(job.getFunctionName());
-        if(funcHash.containsKey(job.getUniqueID()))
-        {
-            funcHash.remove(job.getUniqueID());
-        }
+        delete(job.getFunctionName(), job.getUniqueID());
+    }
 
-        if(jobHandleMap.containsKey(job.getJobHandle()))
+    @Override
+    public void delete(String functionName, String uniqueID) {
+        Map<String, Job> funcHash = getFunctionHash(functionName);
+        if(funcHash.containsKey(uniqueID))
         {
-            jobHandleMap.remove(job.getJobHandle());
+            Job job = funcHash.get(uniqueID);
+
+            if(jobHandleMap.containsKey(job.getJobHandle()))
+            {
+                jobHandleMap.remove(job.getJobHandle());
+            }
+
+            funcHash.remove(uniqueID);
         }
     }
 
@@ -66,27 +72,28 @@ public class MemoryQueue implements PersistenceEngine {
     }
 
     @Override
-    public Collection<RunnableJob> readAll() {
-        return new ArrayList<RunnableJob>();
+    public Collection<QueuedJob> readAll() {
+        Set<QueuedJob> allJobs = new HashSet<>();
+
+        for(String functionName : jobHash.keySet())
+        {
+            allJobs.addAll(getAllForFunction(functionName));
+        }
+
+        return allJobs;
     }
 
     @Override
-    public Collection<RunnableJob> getAllForFunction(String functionName) {
+    public Collection<QueuedJob> getAllForFunction(String functionName) {
         ConcurrentHashMap<String, Job> funcHash = getFunctionHash(functionName);
-        ArrayList<RunnableJob> runnableJobs = new ArrayList<>();
+        ArrayList<QueuedJob> runnableJobs = new ArrayList<>();
 
-        if(funcHash != null)
+        for( Job job : funcHash.values())
         {
-            for( Job job : funcHash.values())
-            {
-                runnableJobs.add(job.getRunnableJob());
-            }
-
-            return runnableJobs;
-        } else {
-            return null;
+            runnableJobs.add(new QueuedJob(job));
         }
 
+        return runnableJobs;
     }
 
     @Override
