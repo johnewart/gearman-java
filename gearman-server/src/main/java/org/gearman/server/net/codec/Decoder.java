@@ -1,4 +1,4 @@
-package org.gearman.server.codec;
+package org.gearman.server.net.codec;
 
 /**
  * Created with IntelliJ IDEA.

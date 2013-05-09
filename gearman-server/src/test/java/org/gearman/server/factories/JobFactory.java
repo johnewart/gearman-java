@@ -2,7 +2,7 @@ package org.gearman.server.factories;
 
 import org.gearman.constants.JobPriority;
 import org.gearman.common.Job;
-import org.gearman.server.JobHandleFactory;
+import org.gearman.server.util.JobHandleFactory;
 import org.joda.time.DateTime;
 import org.joda.time.Seconds;
 

@@ -2,7 +2,7 @@ package org.gearman.server;
 
 import org.gearman.server.core.QueuedJob;
 import org.gearman.server.factories.JobFactory;
-import org.gearman.server.persistence.MemoryQueue;
+import org.gearman.server.storage.JobQueue;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.Seconds;

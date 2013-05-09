@@ -1,4 +1,4 @@
-package org.gearman.server.codec;
+package org.gearman.server.net.codec;
 
 import org.gearman.common.packets.Packet;
 import org.gearman.constants.GearmanConstants;

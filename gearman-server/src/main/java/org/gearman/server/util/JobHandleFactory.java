@@ -1,4 +1,4 @@
-package org.gearman.server;
+package org.gearman.server.util;
 
 import java.util.UUID;
 

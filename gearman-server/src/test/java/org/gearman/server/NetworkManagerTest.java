@@ -11,6 +11,7 @@ import org.gearman.constants.JobPriority;
 import org.gearman.server.core.NetworkClient;
 import org.gearman.server.core.NetworkWorker;
 import org.gearman.server.net.NetworkManager;
+import org.gearman.server.storage.JobStore;
 import org.jboss.netty.channel.Channel;
 import org.junit.Before;
 import org.junit.Test;

@@ -5,7 +5,7 @@ import java.io.*;
 import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateException;
-import org.gearman.server.JobStore;
+import org.gearman.server.storage.JobStore;
 import org.gearman.server.util.JobQueueMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

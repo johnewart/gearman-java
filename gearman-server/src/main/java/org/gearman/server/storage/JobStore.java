@@ -1,4 +1,4 @@
-package org.gearman.server;
+package org.gearman.server.storage;
 
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.annotation.Metered;
@@ -10,9 +10,10 @@ import org.gearman.common.JobState;
 import org.gearman.common.JobStatus;
 import org.gearman.common.interfaces.Client;
 import org.gearman.common.interfaces.Worker;
-import org.gearman.common.packets.response.StatusRes;
 import org.gearman.constants.GearmanConstants;
 import org.gearman.constants.JobPriority;
+import org.gearman.server.exceptions.IllegalJobStateTransitionException;
+import org.gearman.server.util.JobHandleFactory;
 import org.gearman.server.core.*;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.util.EqualsLock;

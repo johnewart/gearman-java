@@ -1,16 +1,19 @@
-package org.gearman.server;
+package org.gearman.server.net;
 
-import org.gearman.server.codec.Decoder;
-import org.gearman.server.codec.Encoder;
-import org.gearman.server.net.*;
+import org.gearman.server.net.codec.Decoder;
+import org.gearman.server.net.codec.Encoder;
+import org.gearman.server.net.ssl.GearmanSslContextFactory;
 import org.gearman.server.persistence.PersistenceEngine;
+import org.gearman.server.storage.JobStore;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLEngine;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -21,16 +24,18 @@ public class ServerListener {
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
     private final JobStore jobStore;
     private final NetworkManager networkManager;
+    private final boolean enableSSL;
 
     private final DefaultChannelGroup channelGroup;
     private final ServerChannelFactory serverFactory;
 
-    public ServerListener(int port, PersistenceEngine storageEngine)
+    public ServerListener(int port, PersistenceEngine storageEngine, boolean enableSSL)
     {
         this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
         this.serverFactory =  new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
                                                                 Executors.newCachedThreadPool());
         this.port = port;
+        this.enableSSL = enableSSL;
         this.jobStore = new JobStore(storageEngine);
         this.networkManager = new NetworkManager(jobStore);
 
@@ -47,22 +52,13 @@ public class ServerListener {
         LOG.info("Listening on " + host + ":" + port);
     }
 
-
     public boolean start()
     {
         ServerBootstrap bootstrap = new ServerBootstrap(serverFactory);
 
         // Set up the pipeline factory.
-        ChannelPipelineFactory pipelineFactory = new ChannelPipelineFactory() {
-            @Override
-            public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = Channels.pipeline();
-                pipeline.addLast("encoder", Encoder.getInstance());
-                pipeline.addLast("decoder", new Decoder());
-                pipeline.addLast("handler", new PacketHandler(networkManager, channelGroup));
-                return pipeline;
-            }
-        };
+        ChannelPipelineFactory pipelineFactory =
+                new GearmanPipelineFactory(networkManager, channelGroup, enableSSL);
 
         // Bind and start to accept incoming connections.
         bootstrap.setOption("reuseAddress", true);

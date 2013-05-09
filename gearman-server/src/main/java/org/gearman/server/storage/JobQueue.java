@@ -1,4 +1,4 @@
-package org.gearman.server;
+package org.gearman.server.storage;
 
 import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.Metrics;

@@ -13,6 +13,7 @@ import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.gearman.server.net.ServerListener;
 import org.gearman.server.persistence.MemoryQueue;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.persistence.PostgresQueue;
@@ -28,11 +29,14 @@ public class GearmanDaemon {
 
 	public GearmanDaemon(int port,
                          int webport,
-                         PersistenceEngine storageEngine)
+                         PersistenceEngine storageEngine,
+                         boolean enableSSL)
     {
         try {
             LOG.info("Starting ServerListener...");
-            final ServerListener serverListener = new ServerListener(port, storageEngine);
+
+            final ServerListener serverListener = new ServerListener(port, storageEngine, enableSSL);
+
             final JobQueueMonitor jobQueueMonitor =
                     new JobQueueMonitor(serverListener.getJobStore());
 
@@ -107,6 +111,9 @@ public class GearmanDaemon {
         options.addOption(null, "redis-host", true, "Redis hostname");
         options.addOption(null, "redis-port", true, "Redis port");
 
+        // SSL configuration
+        options.addOption(null, "enable-ssl", false, "Enable SSL");
+
         // Debug level
         options.addOption(null, "debug", false, "Log debug messages");
 
@@ -119,6 +126,7 @@ public class GearmanDaemon {
             int port = 4730;
             int webport = 8080;
             boolean debugging = false;
+            boolean enableSSL = false;
 
             CommandLine cmd = parser.parse(options, args);
 
@@ -130,6 +138,11 @@ public class GearmanDaemon {
                 if(cmd.hasOption("debug"))
                 {
                     debugging = true;
+                }
+
+                if(cmd.hasOption("enable-ssl"))
+                {
+                    enableSSL = true;
                 }
 
                 if(cmd.hasOption("port"))
@@ -214,7 +227,7 @@ public class GearmanDaemon {
                     root.setLevel(Level.ERROR);
                 }
 
-                new GearmanDaemon(port, webport, storageEngine);
+                new GearmanDaemon(port, webport, storageEngine, enableSSL);
             }
 
         } catch (ParseException e) {

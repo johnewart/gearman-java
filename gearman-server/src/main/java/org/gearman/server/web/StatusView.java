@@ -1,7 +1,7 @@
 package org.gearman.server.web;
 
-import org.gearman.server.JobQueue;
-import org.gearman.server.JobStore;
+import org.gearman.server.storage.JobQueue;
+import org.gearman.server.storage.JobStore;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.util.JobQueueSnapshot;
 import org.gearman.server.util.SystemSnapshot;

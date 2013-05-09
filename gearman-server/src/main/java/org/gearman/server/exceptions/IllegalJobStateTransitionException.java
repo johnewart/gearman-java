@@ -1,4 +1,4 @@
-package org.gearman.server;
+package org.gearman.server.exceptions;
 
 public class IllegalJobStateTransitionException extends Exception {
     String message;
