@@ -6,3 +6,4 @@ gearman-common/target
 gearman-example/target
 gearman-server/target
 coverage
+target
