@@ -1,7 +1,7 @@
 package org.gearman.server.web;
 
+import org.gearman.server.storage.JobManager;
 import org.gearman.server.storage.JobQueue;
-import org.gearman.server.storage.JobStore;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.util.JobQueueSnapshot;
 import org.gearman.server.util.SystemSnapshot;
@@ -21,24 +21,24 @@ import java.util.Map;
  */
 public class StatusView {
     protected final JobQueueMonitor jobQueueMonitor;
-    protected final JobStore jobStore;
+    protected final JobManager jobManager;
 
-    public StatusView(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
+    public StatusView(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobStore = jobStore;
+        this.jobManager = jobManager;
     }
 
     public List<JobQueue> getJobQueues()
     {
-        return new ArrayList<>(jobStore.getJobQueues().values());
+        return new ArrayList<>(jobManager.getJobQueues().values());
     }
 
     public long getUptimeInSeconds()
     {
         Date now = new Date();
-        Date startTime = JobStore.timeStarted;
-        long uptimeMilliseconds = now.getTime() - JobStore.timeStarted.getTime();
+        Date startTime = JobManager.timeStarted;
+        long uptimeMilliseconds = now.getTime() - JobManager.timeStarted.getTime();
         long uptimeSeconds = uptimeMilliseconds / 1000;
 
         return uptimeSeconds;
@@ -72,7 +72,7 @@ public class StatusView {
 
     public String getPersistenceEngineInfo()
     {
-        return jobStore.getPersistenceEngine().getIdentifier();
+        return jobManager.getPersistenceEngine().getIdentifier();
     }
 
     public Long getTotalJobsPending()
@@ -88,17 +88,17 @@ public class StatusView {
 
     public Long getTotalJobsQueued()
     {
-        return jobStore.getQueuedJobsCounter().count();
+        return jobManager.getQueuedJobsCounter().count();
     }
 
     public Long getTotalJobsProcessed()
     {
-        return jobStore.getCompletedJobsCounter().count();
+        return jobManager.getCompletedJobsCounter().count();
     }
 
     public Integer getWorkerCount()
     {
-        return jobStore.getWorkerCount();
+        return jobManager.getWorkerCount();
     }
 
     public String getHostname()

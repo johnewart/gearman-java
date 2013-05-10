@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
+import org.gearman.server.storage.JobManager;
 import org.gearman.server.storage.JobQueue;
-import org.gearman.server.storage.JobStore;
 import org.gearman.server.core.QueuedJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,14 +19,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class JobQueueMonitor {
-    private JobStore jobStore;
+    private JobManager jobManager;
     private HashMap<String, List<JobQueueSnapshot>> snapshots;
     private final Logger LOG = LoggerFactory.getLogger(JobQueueMonitor.class);
     private List<SystemSnapshot> systemSnapshots;
 
-    public JobQueueMonitor(JobStore jobStore)
+    public JobQueueMonitor(JobManager jobManager)
     {
-        this.jobStore = jobStore;
+        this.jobManager = jobManager;
         this.snapshots = new HashMap<>();
         this.systemSnapshots = new ArrayList<>();
 
@@ -57,9 +57,9 @@ public class JobQueueMonitor {
         // Time in seconds
         long currentTime = new Date().getTime() / 1000;
 
-        for(String jobQueueName : jobStore.getJobQueues().keySet())
+        for(String jobQueueName : jobManager.getJobQueues().keySet())
         {
-            JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
+            JobQueue jobQueue = jobManager.getJobQueues().get(jobQueueName);
             if(!snapshots.containsKey(jobQueueName))
             {
                 snapshots.put(jobQueueName, new ArrayList<JobQueueSnapshot>());
@@ -105,9 +105,9 @@ public class JobQueueMonitor {
 
         // Generate an overall snapshot
         SystemSnapshot currentSnapshot;
-        Long totalProcessed = jobStore.getCompletedJobsCounter().count();
-        Long totalQueued = jobStore.getQueuedJobsCounter().count();
-        Long totalPending = jobStore.getPendingJobsCounter().count();
+        Long totalProcessed = jobManager.getCompletedJobsCounter().count();
+        Long totalQueued = jobManager.getQueuedJobsCounter().count();
+        Long totalPending = jobManager.getPendingJobsCounter().count();
         Long heapUsed = Runtime.getRuntime().totalMemory();
         if(systemSnapshots.size() > 0)
         {

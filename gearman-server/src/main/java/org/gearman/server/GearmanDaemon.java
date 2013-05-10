@@ -38,7 +38,7 @@ public class GearmanDaemon {
             final ServerListener serverListener = new ServerListener(port, storageEngine, enableSSL);
 
             final JobQueueMonitor jobQueueMonitor =
-                    new JobQueueMonitor(serverListener.getJobStore());
+                    new JobQueueMonitor(serverListener.getJobManager());
 
             final Server httpServer = new Server(webport);
             final HandlerList handlerList = new HandlerList();
@@ -47,9 +47,9 @@ public class GearmanDaemon {
 
             final AdminServlet adminServlet = new AdminServlet();
             final GearmanServlet gearmanServlet =
-                    new GearmanServlet(jobQueueMonitor, serverListener.getJobStore());
+                    new GearmanServlet(jobQueueMonitor, serverListener.getJobManager());
             final DashboardServlet dashboardServlet =
-                    new DashboardServlet(jobQueueMonitor, serverListener.getJobStore());
+                    new DashboardServlet(jobQueueMonitor, serverListener.getJobManager());
             final String webDir =
                     GearmanDaemon.class
                             .getClassLoader()

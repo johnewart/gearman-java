@@ -12,7 +12,7 @@ import org.gearman.constants.JobPriority;
 import org.gearman.server.core.NetworkClient;
 import org.gearman.server.core.NetworkWorker;
 import org.gearman.server.net.NetworkManager;
-import org.gearman.server.storage.JobStore;
+import org.gearman.server.storage.JobManager;
 import org.jboss.netty.channel.Channel;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,7 +23,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
 public class NetworkManagerTest {
-    private final JobStore mockJobStore;
+    private final JobManager mockJobManager;
     private final NetworkManager networkManager;
     private final Channel mockClientChannel, mockWorkerChannel;
     private final NetworkClient client;
@@ -31,8 +31,8 @@ public class NetworkManagerTest {
 
     public NetworkManagerTest()
     {
-        mockJobStore = mock(JobStore.class);
-        networkManager = new NetworkManager(mockJobStore);
+        mockJobManager = mock(JobManager.class);
+        networkManager = new NetworkManager(mockJobManager);
         mockClientChannel = mock(Channel.class);
         mockWorkerChannel = mock(Channel.class);
 
@@ -55,7 +55,7 @@ public class NetworkManagerTest {
         final Job job = new Job(functionName, uniqueID, submitData, JobPriority.NORMAL, false);
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
 
-        when(mockJobStore.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
+        when(mockJobManager.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
 
         networkManager.createJob(submitJobPacket, mockClientChannel);
 
@@ -73,10 +73,10 @@ public class NetworkManagerTest {
         final Job job = new Job(functionName, uniqueID, submitData, JobPriority.NORMAL, false);
 
         // Pretend storing works A-OK!
-        when(mockJobStore.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
-        when(mockJobStore.storeJob(any(Job.class))).thenReturn(job);
-        when(mockJobStore.nextJobForWorker(any(Worker.class))).thenReturn(job);
-        when(mockJobStore.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
+        when(mockJobManager.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
+        when(mockJobManager.storeJob(any(Job.class))).thenReturn(job);
+        when(mockJobManager.nextJobForWorker(any(Worker.class))).thenReturn(job);
+        when(mockJobManager.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
         // When we get a JOB_CREATED packet, pull out the job handle
         when(mockClientChannel.write(any(JobCreated.class))).thenAnswer(new Answer() {
@@ -104,7 +104,7 @@ public class NetworkManagerTest {
 
         byte[] resultdata = {'f','o', 'o'};
         WorkResponse workResponse = new WorkComplete(jobHandle[0], resultdata);
-        networkManager.workComplete(workResponse, mockWorkerChannel);
+        networkManager.workResponse(workResponse, mockWorkerChannel);
         verify(mockClientChannel).write(any(WorkComplete.class));
     }
 }

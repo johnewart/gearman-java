@@ -48,6 +48,7 @@
                 <div id="jobstimeline"></div>
                 <div id="jobsslider"></div>
             </div>
+
         </form>
 
         <form class="chart">
@@ -71,8 +72,9 @@ var memchartDrawn = false;
 var jobsGraph = new Rickshaw.Graph.Ajax( {
     element: document.getElementById("jobschart"),
     width: 700,
-    height: 160,
+    height: 220,
     renderer: 'line',
+    interpolation: 'basis',
     stroke: true,
     preserve: false,
     dataURL: "/gearman/?system=true",
@@ -93,6 +95,7 @@ var jobsGraph = new Rickshaw.Graph.Ajax( {
             graphData[0].data.push( { 'x': timestamp, 'y': d.diffQueued });
             graphData[1].data.push( { 'x': timestamp, 'y': d.diffProcessed });
         });
+
 
         return graphData;
     },
@@ -139,7 +142,7 @@ var jobsGraph = new Rickshaw.Graph.Ajax( {
             var ticksTreatment = 'glow';
 
             var xAxis = new Rickshaw.Graph.Axis.Time( {
-                graph: graph,
+                graph: graph
                 //ticksTreatment: ticksTreatment
             } );
 
@@ -147,32 +150,39 @@ var jobsGraph = new Rickshaw.Graph.Ajax( {
 
             var yAxis = new Rickshaw.Graph.Axis.Y( {
                 graph: graph,
-                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                tickFormat: Rickshaw.Fixtures.Number.formatKMBT
                 //ticksTreatment: ticksTreatment
             } );
 
             yAxis.render();
-
             drawn = true;
         }
     },
     series: [
         {
             name: "Queued",
-            color: palette.color()
+            color: "#6060c0",
         },
         {
             name: "Processed",
-            color: palette.color()
+            color: "#30c020",
         }
-    ]
+    ],
+    min: -.001,
+    padding: {
+        top: 0.05,
+        bottom: 0.05,
+        left: 0.02,
+        right: 0.02
+    }
 } );
 
 var memoryGraph = new Rickshaw.Graph.Ajax( {
     element: document.getElementById("memorychart"),
     width: 700,
     height: 160,
-    renderer: 'line',
+    renderer: 'area',
+    interpolation: 'basis',
     stroke: true,
     preserve: false,
     dataURL: "/gearman/?system=true",
@@ -255,7 +265,14 @@ var memoryGraph = new Rickshaw.Graph.Ajax( {
             name: "Heap Used",
             color: palette.color()
         }
-    ]
+    ],
+    padding: {
+        top: 0.05,
+        bottom: 0.05,
+        left: 0.02,
+        right: 0.02
+    },
+    max: ${maxMemory?string.computer}
 } );
 
 setInterval( function() {

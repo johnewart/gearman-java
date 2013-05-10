@@ -57,12 +57,12 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
         switch(message.toLowerCase()) {
             case "status":
                 String header = "FUNCTION\tTOTAL\tRUNNING\tAVAILABLE_WORKERS\n";
-                Set<String> jobQueueNames = networkManager.getJobStore().getJobQueues().keySet();
+                Set<String> jobQueueNames = networkManager.getJobManager().getJobQueues().keySet();
                 channel.write(header);
 
                 for(String jobQueueName : jobQueueNames)
                 {
-                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobStore().getJobQueue(jobQueueName).size(), 0, 0));
+                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobManager().getJobQueue(jobQueueName).size(), 0, 0));
                 }
 
                 channel.write(".\n");
@@ -112,11 +112,11 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
                 networkManager.createJob((SubmitJob)packet, channel);
                 break;
             case WORK_COMPLETE:
-            case WORK_DATA:
             case WORK_WARNING:
             case WORK_EXCEPTION:
+            case WORK_DATA:
             case WORK_FAIL:
-                networkManager.workComplete((WorkResponse)packet, channel);
+                networkManager.workResponse((WorkResponse) packet, channel);
                 return;
 
             case WORK_STATUS:

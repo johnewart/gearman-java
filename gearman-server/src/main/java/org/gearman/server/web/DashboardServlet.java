@@ -5,7 +5,7 @@ import java.io.*;
 import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateException;
-import org.gearman.server.storage.JobStore;
+import org.gearman.server.storage.JobManager;
 import org.gearman.server.util.JobQueueMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,15 +22,15 @@ import javax.servlet.http.HttpServletResponse;
 public class DashboardServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "text/html";
     private JobQueueMonitor jobQueueMonitor;
-    private JobStore jobStore;
+    private JobManager jobManager;
     private static final JsonFactory jsonFactory = new JsonFactory();
     private final Logger LOG = LoggerFactory.getLogger(DashboardServlet.class);
     private static Configuration cfg = new Configuration();
 
-    public DashboardServlet(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
+    public DashboardServlet(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobStore = jobStore;
+        this.jobManager = jobManager;
     }
 
     @Override
@@ -49,13 +49,13 @@ public class DashboardServlet extends HttpServlet {
 
             if(queues)
             {
-                cfg.getTemplate("queues.ftl").process(new StatusView(jobQueueMonitor, jobStore), wr);
+                cfg.getTemplate("queues.ftl").process(new StatusView(jobQueueMonitor, jobManager), wr);
             } else {
                 if(jobQueueName != null)
                 {
-                    cfg.getTemplate("queue.ftl").process(new JobQueueStatusView(jobQueueMonitor, jobStore, jobQueueName), wr);
+                    cfg.getTemplate("queue.ftl").process(new JobQueueStatusView(jobQueueMonitor, jobManager, jobQueueName), wr);
                 } else {
-                    cfg.getTemplate("index.ftl").process(new StatusView(jobQueueMonitor, jobStore), wr);
+                    cfg.getTemplate("index.ftl").process(new StatusView(jobQueueMonitor, jobManager), wr);
                 }
             }
 

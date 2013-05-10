@@ -118,15 +118,24 @@
     }
 
     .legend {
-        width: 120px;
-        height: 120px;
-        position: absolute;
-        right: 0;
-        top: 0;
-        z-index: 999;
+        text-align: center;
         background-color: #fff;
         color: #888;
         font-size: 14px;
+        width: 100%;
+    }
+
+    div.legend ul {
+        list-style-type: none;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    li.line {
+        float: left;
+        width: auto;
+        position: relative;
+        clear: none !important;
     }
 
     div.rickshaw_annotation_timeline {

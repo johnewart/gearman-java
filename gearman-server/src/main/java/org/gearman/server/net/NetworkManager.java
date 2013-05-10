@@ -14,24 +14,23 @@ import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
 import org.gearman.server.exceptions.IllegalJobStateTransitionException;
 import org.gearman.common.Job;
-import org.gearman.server.storage.JobStore;
+import org.gearman.server.storage.JobManager;
 import org.gearman.server.core.*;
 import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkManager {
-    private final JobStore jobStore;
+    private final JobManager jobManager;
     private final ConcurrentHashMap<Channel, NetworkWorker> workers;
     private final ConcurrentHashMap<Channel, NetworkClient> clients;
     private static Logger LOG = LoggerFactory.getLogger(NetworkManager.class);
 
-    public NetworkManager(JobStore jobStore)
+    public NetworkManager(JobManager jobManager)
     {
-        this.jobStore = jobStore;
+        this.jobManager = jobManager;
         this.workers = new ConcurrentHashMap<>();
         this.clients = new ConcurrentHashMap<>();
     }
@@ -41,11 +40,11 @@ public class NetworkManager {
         if(workers.containsKey(channel))
         {
             Worker worker = workers.get(channel);
-            jobStore.unregisterWorker(worker);
+            jobManager.unregisterWorker(worker);
             workers.remove(channel);
         } else if (clients.containsKey(channel)) {
             Client client = clients.get(channel);
-            jobStore.unregisterClient(client);
+            jobManager.unregisterClient(client);
             clients.remove(channel);
         }
     }
@@ -56,21 +55,21 @@ public class NetworkManager {
         if(workers.containsKey(channel))
         {
             Worker worker = workers.get(channel);
-            jobStore.sleepingWorker(worker);
+            jobManager.sleepingWorker(worker);
         }
     }
 
     public void registerAbility(String functionName, Channel channel) {
         Worker worker = findOrCreateWorker(channel);
         worker.addAbility(functionName);
-        jobStore.registerWorkerAbility(functionName, worker);
+        jobManager.registerWorkerAbility(functionName, worker);
     }
 
     public void unregisterAbility(String functionName, Channel channel) {
         if(workers.containsKey(channel))
         {
             Worker worker = workers.get(channel);
-            jobStore.unregisterWorkerAbility(functionName, worker);
+            jobManager.unregisterWorkerAbility(functionName, worker);
         }
     }
 
@@ -78,7 +77,7 @@ public class NetworkManager {
         if(workers.containsKey(channel))
         {
             NetworkWorker worker = workers.get(channel);
-            Job nextJob = jobStore.nextJobForWorker(worker);
+            Job nextJob = jobManager.nextJobForWorker(worker);
 
             if(nextJob != null)
             {
@@ -96,7 +95,7 @@ public class NetworkManager {
                 } catch (Exception e) {
                     LOG.error("Unable to write to worker. Re-enqueing job.");
                     try {
-                        jobStore.reEnqueueJob(nextJob);
+                        jobManager.reEnqueueJob(nextJob);
                     } catch (IllegalJobStateTransitionException ee) {
                         LOG.error("Error re-enqueing after failed transmission: ", ee);
                     }
@@ -120,7 +119,7 @@ public class NetworkManager {
         long timeToRun = -1;
 
         if(packet.getUniqueId().isEmpty())
-            uniqueID = jobStore.generateUniqueID(funcName);
+            uniqueID = jobManager.generateUniqueID(funcName);
 
         if(packet.getType() == PacketType.SUBMIT_JOB_EPOCH)
         {
@@ -128,7 +127,7 @@ public class NetworkManager {
         }
 
         // This could return an existing job, or the newly generated one
-        Job storedJob = jobStore.storeJobForClient(new Job(funcName, uniqueID, data, priority, isBackground, timeToRun), client);
+        Job storedJob = jobManager.storeJobForClient(new Job(funcName, uniqueID, data, priority, isBackground, timeToRun), client);
 
         if(storedJob != null)
         {
@@ -141,7 +140,7 @@ public class NetworkManager {
 
     public void checkJobStatus(GetStatus getStatus, Channel channel) {
         Client client = findOrCreateClient(channel);
-        JobStatus jobStatus =  jobStore.checkJobStatus(getStatus.jobHandle.get());
+        JobStatus jobStatus =  jobManager.checkJobStatus(getStatus.jobHandle.get());
 
         StatusRes result = new StatusRes(jobStatus);
         client.send(result);
@@ -151,7 +150,7 @@ public class NetworkManager {
         String jobHandle = workStatus.jobHandle.get();
         int completeNumerator = workStatus.completenumerator;
         int completeDenominator = workStatus.completedenominator;
-        jobStore.updateJobStatus(jobHandle, completeNumerator, completeDenominator);
+        jobManager.updateJobStatus(jobHandle, completeNumerator, completeDenominator);
     }
 
     private Client findOrCreateClient(Channel channel)
@@ -184,16 +183,24 @@ public class NetworkManager {
         return worker;
     }
 
-    public void workComplete(WorkResponse packet, Channel channel) {
+    public void workResponse(WorkResponse packet, Channel channel) {
         if(workers.containsKey(channel))
         {
             Worker worker = workers.get(channel);
-            Job currentJob = jobStore.getCurrentJobForWorker(worker);
+            Job currentJob = jobManager.getCurrentJobForWorker(worker);
 
             switch(packet.getType())
             {
                 case WORK_COMPLETE:
-                    jobStore.workComplete(currentJob,((WorkComplete)packet).getData());
+                    jobManager.workComplete(currentJob,((WorkComplete)packet).getData());
+                    break;
+
+                case WORK_DATA:
+                    jobManager.workData(currentJob, ((WorkData)packet).getData());
+                    break;
+
+                case WORK_EXCEPTION:
+                    jobManager.workException(currentJob, ((WorkException)packet).getException());
                     break;
 
                 default:
@@ -202,8 +209,8 @@ public class NetworkManager {
         }
     }
 
-    public JobStore getJobStore() {
-        return jobStore;
+    public JobManager getJobManager() {
+        return jobManager;
     }
 
     public final Packet createJobAssignPacket(Job job) {
@@ -235,4 +242,5 @@ public class NetworkManager {
 
         return new StatusRes(jobHandle, isRunning, knownState, numerator, denominator);
     }
+
 }

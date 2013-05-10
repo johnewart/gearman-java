@@ -11,7 +11,6 @@ import org.gearman.common.JobStatus;
 import org.gearman.common.interfaces.Client;
 import org.gearman.common.interfaces.Worker;
 import org.gearman.constants.GearmanConstants;
-import org.gearman.constants.JobPriority;
 import org.gearman.server.exceptions.IllegalJobStateTransitionException;
 import org.gearman.server.util.JobHandleFactory;
 import org.gearman.server.core.*;
@@ -27,10 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  *
  */
-public class JobStore {
+public class JobManager {
     public static final Date timeStarted = new Date();
 
-    private static Logger LOG = LoggerFactory.getLogger(JobStore.class);
+    private static Logger LOG = LoggerFactory.getLogger(JobManager.class);
 
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues;
@@ -46,12 +45,12 @@ public class JobStore {
     private final EqualsLock lock = new EqualsLock();
     private final PersistenceEngine persistenceEngine;
 
-    private final Counter pendingJobsCounter = Metrics.newCounter(JobStore.class, "pending-jobs");
-    private final Counter queuedJobsCounter = Metrics.newCounter(JobStore.class, "queued-jobs");
-    private final Counter completedJobsCounter = Metrics.newCounter(JobStore.class, "completed-jobs");
-    private final Counter activeJobsCounter = Metrics.newCounter(JobStore.class, "active-jobs");
+    private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
+    private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
+    private final Counter completedJobsCounter = Metrics.newCounter(JobManager.class, "completed-jobs");
+    private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
 
-    public JobStore(PersistenceEngine persistenceEngine)
+    public JobManager(PersistenceEngine persistenceEngine)
     {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
@@ -93,6 +92,8 @@ public class JobStore {
         if(job != null)
         {
             JobAction action = disconnectWorker(job, worker);
+            removeJob(job);
+
             switch (action)
             {
                 case REENQUEUE:
@@ -102,11 +103,9 @@ public class JobStore {
                         LOG.error("Unable to re-enqueue job: " + e.toString());
                     }
                     break;
+                // Let it go away
                 case MARKCOMPLETE:
-                    removeJob(job);
-                    break;
                 case DONOTHING:
-                    // Let it go away
                 default:
                     break;
             }
@@ -301,6 +300,38 @@ public class JobStore {
             job.complete();
             removeJob(job);
             completedJobsCounter.inc();
+        }
+    }
+
+    public synchronized void workData(Job job, byte[] data)
+    {
+        if(job != null)
+        {
+            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
+            {
+                for(Client client : clients)
+                {
+                    client.sendJobData(job.getJobHandle(), data);
+                }
+            }
+        }
+    }
+
+    public synchronized void workException(Job job, byte[] exception)
+    {
+        if(job != null)
+        {
+            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
+            {
+                for(Client client : clients)
+                {
+                    client.sendJobException(job.getJobHandle(), exception);
+                }
+            }
         }
     }
 

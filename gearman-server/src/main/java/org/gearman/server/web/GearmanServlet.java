@@ -6,8 +6,8 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.gearman.server.storage.JobManager;
 import org.gearman.server.storage.JobQueue;
-import org.gearman.server.storage.JobStore;
 import org.gearman.server.core.QueuedJob;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.util.JobQueueSnapshot;
@@ -29,14 +29,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GearmanServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json";
     private JobQueueMonitor jobQueueMonitor;
-    private JobStore jobStore;
+    private JobManager jobManager;
     private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
     private final Logger LOG = LoggerFactory.getLogger(GearmanServlet.class);
 
-    public GearmanServlet(JobQueueMonitor jobQueueMonitor, JobStore jobStore)
+    public GearmanServlet(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobStore = jobStore;
+        this.jobManager = jobManager;
     }
 
     @Override
@@ -105,7 +105,7 @@ public class GearmanServlet extends HttpServlet {
 
     public void writeAllJobQueueStats(JsonGenerator json) throws IOException {
 
-        ConcurrentHashMap<String, JobQueue> jobQueues = jobStore.getJobQueues();
+        ConcurrentHashMap<String, JobQueue> jobQueues = jobManager.getJobQueues();
         for(String jobQueueName : jobQueues.keySet())
         {
             json.writeNumberField(jobQueueName, jobQueues.get(jobQueueName).size());
@@ -154,9 +154,9 @@ public class GearmanServlet extends HttpServlet {
 
     public void writeJobQueueDetails(String jobQueueName, JsonGenerator json) throws  IOException {
 
-        if(jobStore.getJobQueues().containsKey(jobQueueName))
+        if(jobManager.getJobQueues().containsKey(jobQueueName))
         {
-            JobQueue jobQueue = jobStore.getJobQueues().get(jobQueueName);
+            JobQueue jobQueue = jobManager.getJobQueues().get(jobQueueName);
             ImmutableSet<QueuedJob> jobs = ImmutableSet.copyOf(jobQueue.getAllJobs());
             json.writeFieldName("jobs");
             json.writeStartArray();

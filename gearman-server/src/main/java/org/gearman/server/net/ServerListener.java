@@ -1,19 +1,14 @@
 package org.gearman.server.net;
 
-import org.gearman.server.net.codec.Decoder;
-import org.gearman.server.net.codec.Encoder;
-import org.gearman.server.net.ssl.GearmanSslContextFactory;
 import org.gearman.server.persistence.PersistenceEngine;
-import org.gearman.server.storage.JobStore;
+import org.gearman.server.storage.JobManager;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.ssl.SslHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLEngine;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -22,7 +17,7 @@ import java.util.concurrent.Executors;
 public class ServerListener {
     private final int port;
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
-    private final JobStore jobStore;
+    private final JobManager jobManager;
     private final NetworkManager networkManager;
     private final boolean enableSSL;
 
@@ -36,10 +31,10 @@ public class ServerListener {
                                                                 Executors.newCachedThreadPool());
         this.port = port;
         this.enableSSL = enableSSL;
-        this.jobStore = new JobStore(storageEngine);
-        this.networkManager = new NetworkManager(jobStore);
+        this.jobManager = new JobManager(storageEngine);
+        this.networkManager = new NetworkManager(jobManager);
 
-        jobStore.loadAllJobs();
+        jobManager.loadAllJobs();
 
         String host;
 
@@ -87,7 +82,7 @@ public class ServerListener {
         }
     }
 
-    public JobStore getJobStore() {
-        return jobStore;
+    public JobManager getJobManager() {
+        return jobManager;
     }
 }

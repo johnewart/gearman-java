@@ -51,4 +51,8 @@ public class WorkException extends RequestPacket implements WorkResponse
     {
         return this.jobHandle.get();
     }
+
+    public byte[] getException() {
+        return exception;
+    }
 }

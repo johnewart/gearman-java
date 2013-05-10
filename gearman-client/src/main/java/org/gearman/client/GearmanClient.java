@@ -17,13 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 7:59 AM
- * To change this template use File | Settings | File Templates.
- */
 public class GearmanClient {
     // A list of managers to cycle through
     private List<Connection> managers, bogusManagers;

@@ -140,7 +140,14 @@
                 name: "Immediate",
                 color: palette.color()
             }
-        ]
+        ],
+        min: -.001,
+        padding: {
+            top: 0.05,
+            bottom: 0.05,
+            left: 0.02,
+            right: 0.02
+        }
     } );
 
     var futuresGraph = new Rickshaw.Graph.Ajax( {
