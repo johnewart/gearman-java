@@ -2,6 +2,7 @@ package org.gearman.server.core;
 
 import org.gearman.common.interfaces.Client;
 import org.gearman.common.packets.Packet;
+import org.gearman.common.packets.response.WorkComplete;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.Job;
 import org.jboss.netty.channel.Channel;
@@ -23,6 +24,12 @@ public class NetworkClient implements Client {
     @Override
     public void setCurrentJob(Job job) {
         this.currentJob = job;
+    }
+
+    @Override
+    public void sendJobResults(String jobHandle, byte[] data)
+    {
+        channel.write(new WorkComplete(jobHandle, data));
     }
 
     public void send(Packet packet)

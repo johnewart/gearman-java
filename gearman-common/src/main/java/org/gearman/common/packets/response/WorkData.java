@@ -56,4 +56,9 @@ public class WorkData extends ResponsePacket implements WorkResponse {
         return this.jobHandle.get().length() + 1 +
                this.data.length;
     }
+
+    public byte[] getData()
+    {
+        return data;
+    }
 }

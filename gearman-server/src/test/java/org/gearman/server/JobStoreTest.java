@@ -66,6 +66,7 @@ public class JobStoreTest {
         jobStore.storeJob(job);
 
         Job nextJob = jobStore.nextJobForWorker(worker);
+        byte[] result = {'r','e','s','u','l','t'};
 
         assertThat("The jobs are the same",
                 job.equals(nextJob),
@@ -84,7 +85,7 @@ public class JobStoreTest {
                 is(0L));
 
         // Complete the job
-        jobStore.workComplete(nextJob, worker);
+        jobStore.workComplete(nextJob, result);
 
         assertThat("The job store has one complete job",
                 jobStore.getCompletedJobsCounter().count(),
@@ -124,8 +125,7 @@ public class JobStoreTest {
         Client mockClient = mock(NetworkClient.class);
 
         Job job = JobFactory.generateForegroundJob("reverseString");
-        job.addClient(mockClient);
-        jobStore.storeJob(job);
+        jobStore.storeJobForClient(job, mockClient);
 
         jobStore.nextJobForWorker(worker);
 
@@ -151,10 +151,7 @@ public class JobStoreTest {
     @Test
     public void dropsForegroundJobWhenNoClientAttached() throws Exception
     {
-        Client mockClient = mock(NetworkClient.class);
-
         Job job = JobFactory.generateForegroundJob("reverseString");
-        job.addClient(mockClient);
         jobStore.storeJob(job);
 
         jobStore.nextJobForWorker(worker);
@@ -166,16 +163,10 @@ public class JobStoreTest {
         // Simulate abort before completion
         jobStore.unregisterWorker(worker);
 
-        assertThat("Job queue has one job",
+        assertThat("Job queue has no jobs",
                 jobStore.getJobQueue("reverseString").size(),
-                is(1));
+                is(0));
 
-        // Re-fetch the job, make sure it's the same one
-        Job nextJob = jobStore.nextJobForWorker(worker);
-
-        assertThat("The job was returned to the queue",
-                nextJob.equals(job),
-                is(true));
     }
 
     @Test
@@ -302,5 +293,46 @@ public class JobStoreTest {
                 jobStore.getPendingJobsCounter().count(),
                 is(300L));
     }
+
+    @Test
+    public void coalescesResultsForMultipleClients() throws Exception {
+
+        Client mockClientOne = mock(NetworkClient.class);
+        Client mockClientTwo = mock(NetworkClient.class);
+
+        Job jobOne = JobFactory.generateForegroundJob("reverseString");
+        Job jobTwo = JobFactory.generateForegroundJob("reverseString");
+        jobTwo.setUniqueID(jobOne.getUniqueID());
+
+        jobStore.storeJobForClient(jobOne, mockClientOne);
+        jobStore.storeJobForClient(jobTwo, mockClientTwo);
+
+        assertThat("Job queue has one job because they had the same unique id",
+                jobStore.getJobQueue("reverseString").size(),
+                is(1));
+
+        assertThat("There is 1 job pending in the job store",
+                jobStore.getPendingJobsCounter().count(),
+                is(1L));
+
+        assertThat("There has been 1 job queued in the job store",
+                jobStore.getQueuedJobsCounter().count(),
+                is(1L));
+
+        Job nextJob = jobStore.nextJobForWorker(worker);
+        byte[] result = {'r','e','s','u','l','t'};
+
+        assertThat("Job pulled out is equal to job #1",
+                nextJob.equals(jobOne),
+                is(true));
+
+        // Complete the job
+        jobStore.workComplete(nextJob, result);
+
+        verify(mockClientOne).sendJobResults(jobOne.getJobHandle(), result);
+        verify(mockClientTwo).sendJobResults(jobOne.getJobHandle(), result);
+    }
+
+    // TODO: Verify that it will coalesce results if a job is submitted while a worker is working on the same one
 
 }

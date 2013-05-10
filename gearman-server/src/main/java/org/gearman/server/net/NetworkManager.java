@@ -128,14 +128,12 @@ public class NetworkManager {
         }
 
         // This could return an existing job, or the newly generated one
-        Job job = jobStore.createAndStoreJob(funcName, uniqueID, data, priority, isBackground, timeToRun);
+        Job storedJob = jobStore.storeJobForClient(new Job(funcName, uniqueID, data, priority, isBackground, timeToRun), client);
 
-        if(job != null)
+        if(storedJob != null)
         {
-            if(!job.isBackground())
-                job.addClient(client);
-            client.setCurrentJob(job);
-            client.send(createJobCreatedPacket(job));
+            client.setCurrentJob(storedJob);
+            client.send(createJobCreatedPacket(storedJob));
         } else {
             // TODO: send a failure/error packet?
         }
@@ -192,16 +190,15 @@ public class NetworkManager {
             Worker worker = workers.get(channel);
             Job currentJob = jobStore.getCurrentJobForWorker(worker);
 
-            if(currentJob != null)
+            switch(packet.getType())
             {
-                Set<Client> clients = currentJob.getClients();
+                case WORK_COMPLETE:
+                    jobStore.workComplete(currentJob,((WorkComplete)packet).getData());
+                    break;
 
-                for(Client client : clients) {
-                    client.send(packet);
-                }
+                default:
+                    break;
             }
-
-            jobStore.workComplete(currentJob, worker);
         }
     }
 

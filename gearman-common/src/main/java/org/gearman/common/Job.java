@@ -1,15 +1,12 @@
 package org.gearman.common;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.gearman.common.interfaces.Client;
 import org.gearman.constants.JobPriority;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public class Job {
     private static Logger LOG = LoggerFactory.getLogger(Job.class);
@@ -24,7 +21,6 @@ public class Job {
     protected int denominator;
     protected long timeToRun;
     protected JobState state = JobState.QUEUED;
-    protected final Set<Client> clients = new CopyOnWriteArraySet<>();
 
     public Job()
     {
@@ -84,14 +80,6 @@ public class Job {
         return functionName;
     }
 
-    public Set<Client> getClients()
-    {
-        return clients;
-    }
-
-    public final boolean addClient(final Client client) {
-        return this.clients.add(client);
-    }
 
     public byte[] getData() {
         return this.data;
@@ -126,6 +114,10 @@ public class Job {
         return this.uniqueID;
     }
 
+    public void setUniqueID(String uniqueID) {
+        this.uniqueID = uniqueID;
+    }
+
     public boolean isBackground() {
         return this.background;
     }
@@ -145,7 +137,6 @@ public class Job {
 
     public final void complete() {
         this.state = JobState.COMPLETE;
-        this.clients.clear();
     }
 
     public String toString()

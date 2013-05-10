@@ -20,10 +20,7 @@ import org.gearman.server.util.EqualsLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -37,13 +34,15 @@ public class JobStore {
 
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues;
+    private final ConcurrentHashMap<Worker, Job> workerJobs;
+    // Active jobs (job handle <--> Job)
+    private final ConcurrentHashMap<String, Job> activeJobHandles;
+    private final ConcurrentHashMap<String, Job> activeUniqueIds;
+
+    // Jobs clients are waiting on (unique id <--> clients)
+    private final ConcurrentHashMap<String, Set<Client>> uniqueIdClients;
 
     private final Set<Worker> workers;
-    private final ConcurrentHashMap<Worker, Job> workerJobs;
-
-    // Active jobs (job handle <--> Job)
-    private final ConcurrentHashMap<String, Job> activeJobs;
-
     private final EqualsLock lock = new EqualsLock();
     private final PersistenceEngine persistenceEngine;
 
@@ -54,7 +53,9 @@ public class JobStore {
 
     public JobStore(PersistenceEngine persistenceEngine)
     {
-        this.activeJobs  = new ConcurrentHashMap<>();
+        this.activeJobHandles = new ConcurrentHashMap<>();
+        this.activeUniqueIds = new ConcurrentHashMap<>();
+        this.uniqueIdClients = new ConcurrentHashMap<>();
         this.jobQueues = new ConcurrentHashMap<>();
         this.persistenceEngine = persistenceEngine;
         this.workers = new ConcurrentHashSet<>();
@@ -65,11 +66,6 @@ public class JobStore {
         this.queuedJobsCounter.clear();
         this.completedJobsCounter.clear();
         this.activeJobsCounter.clear();
-    }
-
-    public synchronized Job getByJobHandle(String jobHandle)
-    {
-        return persistenceEngine.findJobByHandle(jobHandle);
     }
 
     public void registerWorkerAbility(String funcName, Worker worker)
@@ -122,7 +118,7 @@ public class JobStore {
 
     public void unregisterClient(Client client)
     {
-
+        removeClientForUniqueId(client.getCurrentJob().getUniqueID(), client);
     }
 
     public void sleepingWorker(Worker worker)
@@ -161,7 +157,8 @@ public class JobStore {
                 Job job = fetchJob(queuedJob);
                 job.setState(JobState.WORKING);
 
-                activeJobs.put(job.getJobHandle(), job);
+                activeJobHandles.put(job.getJobHandle(), job);
+                activeUniqueIds.put(job.getUniqueID(), job);
                 workerJobs.put(worker, job);
                 pendingJobsCounter.dec();
                 activeJobsCounter.inc();
@@ -179,18 +176,19 @@ public class JobStore {
         // Remove it from the job queue
         getJobQueue(job.getFunctionName()).remove(new QueuedJob(job));
 
-        // If it's a background job, remove it
-        if(job.isBackground() && persistenceEngine != null)
-        {
-            try {
-                persistenceEngine.delete(job);
-            } catch (Exception e) {
-                // TODO: be more specific
-                LOG.debug("Can't remove job from persistence engine: " + e.toString());
-                e.printStackTrace();
-            }
-        }
+        // Remove it from our local tracking maps
+        activeJobHandles.remove(job.getJobHandle());
+        activeUniqueIds.remove(job.getUniqueID());
+        uniqueIdClients.remove(job.getUniqueID());
 
+        // Remove the data from the storage engine
+        try {
+            persistenceEngine.delete(job);
+        } catch (Exception e) {
+            // TODO: be more specific
+            LOG.debug("Can't remove job from persistence engine: " + e.toString());
+            e.printStackTrace();
+        }
     }
 
     public String generateUniqueID(String functionName)
@@ -205,26 +203,14 @@ public class JobStore {
         return uniqueID;
     }
 
-    public Job createAndStoreJob(String functionName,
-                                 String uniqueID,
-                                 byte[] data,
-                                 JobPriority priority,
-                                 boolean isBackground,
-                                 long timeToRun)
+    public Job storeJobForClient(Job job, Client client)
     {
-        Job job = new Job(functionName, uniqueID, data, priority, isBackground, timeToRun);
-        if(storeJob(job))
-        {
-            return job;
-        } else {
-            return null;
-        }
+        addClientForUniqueId(job.getUniqueID(), client);
+        return storeJob(job);
     }
 
-    public boolean storeJob(Job job)
+    public Job storeJob(Job job)
     {
-        queuedJobsCounter.inc();
-
         final String functionName = job.getFunctionName();
         final String uniqueID = job.getUniqueID();
         final Integer key = uniqueID.hashCode();
@@ -233,31 +219,41 @@ public class JobStore {
         // Make sure only one thread attempts to add a job with this unique id
         this.lock.lock(key);
         try {
-            if(job.getJobHandle() == null || job.getJobHandle().isEmpty())
-            {
-                job.setJobHandle(JobHandleFactory.getNextJobHandle().toString());
-            }
-            // Client is submitting a job whose unique ID is in use
-            // i.e re-submitting an existing job, ignore and
-            // return the existing job.
-            if(jobQueue.uniqueIdInUse(uniqueID)) {
-                removeJob(job);
-            }
 
-            if(!jobQueue.enqueue(new QueuedJob(job)))
+            if(activeUniqueIds.containsKey(uniqueID))
             {
-                LOG.error("Unable to enqueue job");
-                return false;
+                // If the job is already being processed, pull from active jobs
+                return activeUniqueIds.get(uniqueID);
+            } else if (jobQueue.uniqueIdInUse(uniqueID)) {
+                // If the job is queued but not active, pull it from storage
+                return fetchJob(functionName, uniqueID);
             } else {
-                persistenceEngine.write(job);
+                // New job, store it in the queue and storage
+                if(job.getJobHandle() == null || job.getJobHandle().isEmpty())
+                {
+                    job.setJobHandle(new String(JobHandleFactory.getNextJobHandle()));
+                }
 
-                // Notify any workers if this job is ready to run so it
-                // gets picked up quickly
-                if(job.isReady())
-                    jobQueue.notifyWorkers();
+                // Client is submitting a job whose unique ID is in use
+                // i.e re-submitting an existing job, ignore and
+                // return the existing job.
+                if(!jobQueue.enqueue(new QueuedJob(job)))
+                {
+                    LOG.error("Unable to enqueue job");
+                    return null;
+                } else {
 
-                pendingJobsCounter.inc();
-                return true;
+                    persistenceEngine.write(job);
+
+                    // Notify any workers if this job is ready to run so it
+                    // gets picked up quickly
+                    if(job.isReady())
+                        jobQueue.notifyWorkers();
+
+                    queuedJobsCounter.inc();
+                    pendingJobsCounter.inc();
+                    return job;
+                }
             }
         } finally {
             // Always unlock lock
@@ -269,7 +265,6 @@ public class JobStore {
     {
         JobState previousState = job.getState();
         job.setState(JobState.QUEUED);
-        final JobQueue jobQueue = getJobQueue(job.getFunctionName());
         switch(previousState) {
             case QUEUED:
                 // Do nothing
@@ -289,11 +284,20 @@ public class JobStore {
 
     @Timed
     @Metered
-    public synchronized void workComplete(Job job, Worker worker)
+    public synchronized void workComplete(Job job, byte[] data)
     {
         if(job != null)
         {
-            activeJobs.remove(job.getJobHandle());
+            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
+            {
+                for(Client client : clients)
+                {
+                    client.sendJobResults(job.getJobHandle(), data);
+                }
+            }
+
             job.complete();
             removeJob(job);
             completedJobsCounter.inc();
@@ -302,9 +306,9 @@ public class JobStore {
 
     public JobStatus checkJobStatus(String jobHandle)
     {
-        if(activeJobs.containsKey(jobHandle))
+        if(activeJobHandles.containsKey(jobHandle))
         {
-            Job job = activeJobs.get(jobHandle);
+            Job job = activeJobHandles.get(jobHandle);
             return job.getStatus();
         } else {
             // Not found, so send an "I don't know" answer
@@ -314,9 +318,9 @@ public class JobStore {
 
     public void updateJobStatus(String jobHandle, int completeNumerator, int completeDenominator)
     {
-        if(activeJobs.containsKey(jobHandle))
+        if(activeJobHandles.containsKey(jobHandle))
         {
-            Job job = activeJobs.get(jobHandle);
+            Job job = activeJobHandles.get(jobHandle);
             job.setStatus(completeNumerator, completeDenominator);
         }
     }
@@ -415,20 +419,44 @@ public class JobStore {
         return workerJobs.get(worker);
     }
 
+    private final void removeClientForUniqueId(String uniqueID, Client client)
+    {
+        Set<Client> clients = getClientsForUniqueId(uniqueID);
+        clients.remove(client);
+    }
+
+    private final void addClientForUniqueId(String uniqueID, Client client)
+    {
+        Set<Client> clients = getClientsForUniqueId(uniqueID);
+        clients.add(client);
+    }
+
+    private final Set<Client> getClientsForUniqueId(String uniqueID)
+    {
+        if(uniqueIdClients.containsKey(uniqueID))
+            return uniqueIdClients.get(uniqueID);
+        else {
+            Set<Client> clients = new ConcurrentHashSet<>();
+            uniqueIdClients.put(uniqueID, clients);
+            return clients;
+        }
+    }
+
     public final JobAction disconnectClient(final Job job, final Client client) {
         JobAction result = JobAction.DONOTHING;
-        job.getClients().remove(client);
+
+        Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
 
         switch (job.getState()) {
             // If the job was in the QUEUED state, all attached clients have
             // disconnected, and it is not a background job, drop the job
             case QUEUED:
-                if(job.getClients().isEmpty() && !job.isBackground())
+                if(clients.isEmpty() && !job.isBackground())
                     result = JobAction.MARKCOMPLETE;
                 break;
 
             case WORKING:
-                if(job.getClients().isEmpty())
+                if(clients.isEmpty())
                 {
                     // The last client disconnected, so be done.
                     result = JobAction.MARKCOMPLETE;
@@ -451,6 +479,7 @@ public class JobStore {
     public final JobAction disconnectWorker(final Job job, final Worker worker) {
 
         JobAction result = JobAction.DONOTHING;
+        Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
 
         switch (job.getState()) {
             case QUEUED:
@@ -459,7 +488,7 @@ public class JobStore {
                 break;
 
             case WORKING:
-                if(job.getClients().isEmpty() && !job.isBackground()) {
+                if(clients.isEmpty() && !job.isBackground()) {
                     // Nobody to send it to and it's not a background job,
                     // not much we can do here..
                     result = JobAction.MARKCOMPLETE;

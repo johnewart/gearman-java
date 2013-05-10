@@ -1,6 +1,7 @@
 package org.gearman.server;
 
 import org.gearman.common.Job;
+import org.gearman.common.interfaces.Client;
 import org.gearman.common.interfaces.Worker;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.JobAssign;
@@ -54,8 +55,7 @@ public class NetworkManagerTest {
         final Job job = new Job(functionName, uniqueID, submitData, JobPriority.NORMAL, false);
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
 
-        when(mockJobStore.createAndStoreJob(anyString(), anyString(), any(byte[].class),
-                any(JobPriority.class), anyBoolean(), anyLong())).thenReturn(job);
+        when(mockJobStore.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
 
         networkManager.createJob(submitJobPacket, mockClientChannel);
 
@@ -73,11 +73,8 @@ public class NetworkManagerTest {
         final Job job = new Job(functionName, uniqueID, submitData, JobPriority.NORMAL, false);
 
         // Pretend storing works A-OK!
-        when(mockJobStore.createAndStoreJob(
-                    anyString(), anyString(), any(byte[].class),
-                    any(JobPriority.class), anyBoolean(), anyLong()
-                )).thenReturn(job);
-        when(mockJobStore.storeJob(any(Job.class))).thenReturn(true);
+        when(mockJobStore.storeJobForClient(any(Job.class), any(Client.class))).thenReturn(job);
+        when(mockJobStore.storeJob(any(Job.class))).thenReturn(job);
         when(mockJobStore.nextJobForWorker(any(Worker.class))).thenReturn(job);
         when(mockJobStore.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
@@ -108,6 +105,6 @@ public class NetworkManagerTest {
         byte[] resultdata = {'f','o', 'o'};
         WorkResponse workResponse = new WorkComplete(jobHandle[0], resultdata);
         networkManager.workComplete(workResponse, mockWorkerChannel);
-        verify(mockClientChannel).write(workResponse);
+        verify(mockClientChannel).write(any(WorkComplete.class));
     }
 }
