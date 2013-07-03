@@ -5,32 +5,21 @@ import org.gearman.constants.PacketType;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 8:43 AM
- * To change this template use File | Settings | File Templates.
- */
 public class JobAssignUniq extends ResponsePacket {
     private AtomicReference<String> jobHandle, functionName, uniqueId;
     private byte[] data;
-
-    public JobAssignUniq()
-    {
-        jobHandle = new AtomicReference<>();
-        this.type = PacketType.JOB_ASSIGN;
-    }
 
     public JobAssignUniq(byte[] pktdata)
     {
         super(pktdata);
         jobHandle = new AtomicReference<>();
+        functionName = new AtomicReference<>();
+        uniqueId = new AtomicReference<>();
         int pOff = parseString(0, jobHandle);
         pOff = parseString(pOff, functionName);
-        parseString(pOff, uniqueId);
+        pOff = parseString(pOff, uniqueId);
         this.data = Arrays.copyOfRange(rawdata, pOff, rawdata.length);
-        this.type = PacketType.JOB_ASSIGN;
+        this.type = PacketType.JOB_ASSIGN_UNIQ;
     }
 
     public JobAssignUniq(String jobhandle, String functionName, String uniqueId, byte[] data)
@@ -39,7 +28,7 @@ public class JobAssignUniq extends ResponsePacket {
         this.functionName = new AtomicReference<>(functionName);
         this.uniqueId = new AtomicReference<>(uniqueId);
         this.data = data.clone();
-        this.type = PacketType.JOB_ASSIGN;
+        this.type = PacketType.JOB_ASSIGN_UNIQ;
     }
 
     public String getJobHandle()
@@ -50,12 +39,28 @@ public class JobAssignUniq extends ResponsePacket {
     @Override
     public byte[] toByteArray()
     {
-        return concatByteArrays(getHeader(), jobHandle.get().getBytes());
+        byte[] metadata = stringsToTerminatedByteArray(jobHandle.get(), functionName.get(), uniqueId.get());
+        return concatByteArrays(getHeader(), metadata, data);
     }
 
     @Override
     public int getPayloadSize()
     {
-        return this.jobHandle.get().length();
+        return this.jobHandle.get().length() + 1 +
+               this.functionName.get().length() + 1 +
+               this.uniqueId.get().length() + 1 +
+               this.data.length;
+    }
+
+    public String getFunctionName() {
+        return functionName.get();
+    }
+
+    public String getUniqueId() {
+        return uniqueId.get();
+    }
+
+    public byte[] getData() {
+        return data;
     }
 }

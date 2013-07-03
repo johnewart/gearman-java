@@ -5,34 +5,22 @@ import org.gearman.constants.PacketType;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 10:06 AM
- * To change this template use File | Settings | File Templates.
- */
-public class WorkData extends ResponsePacket implements WorkResponse {
+public class WorkDataResponse extends ResponsePacket implements WorkResponse {
 
     public AtomicReference<String> jobHandle;
     public byte[] data;
 
-    public WorkData()
+    public WorkDataResponse(String jobhandle, byte[] data)
     {
-        this.type = PacketType.WORK_DATA;
-    }
-
-    public WorkData(String jobhandle, byte[] data)
-    {
-        this.jobHandle = new AtomicReference<String>(jobhandle);
+        this.jobHandle = new AtomicReference<>(jobhandle);
         this.data = data.clone();
         this.type = PacketType.WORK_DATA;
     }
 
-    public WorkData(byte[] pktdata)
+    public WorkDataResponse(byte[] pktdata)
     {
         super(pktdata);
-        this.jobHandle = new AtomicReference<String>();
+        this.jobHandle = new AtomicReference<>();
 
         int pOff = 0;
         pOff = parseString(pOff, jobHandle);

@@ -1,5 +1,6 @@
 package org.gearman.server.net;
 
+import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
 import org.gearman.common.JobState;
@@ -22,6 +23,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+
+/**
+ * Serves as an interface between the packet handler and the job manager
+ * General flow:
+ *   Netty -> CODEC -> PacketHandler -> NetworkManager -> JobManager
+ *
+ */
 public class NetworkManager {
     private final JobManager jobManager;
     private final ConcurrentHashMap<Channel, NetworkWorker> workers;
@@ -147,9 +155,9 @@ public class NetworkManager {
     }
 
     public void updateJobStatus(WorkStatus workStatus) {
-        String jobHandle = workStatus.jobHandle.get();
-        int completeNumerator = workStatus.completenumerator;
-        int completeDenominator = workStatus.completedenominator;
+        String jobHandle = workStatus.getJobHandle();
+        int completeNumerator = workStatus.getCompletenumerator();
+        int completeDenominator = workStatus.getCompletedenominator();
         jobManager.updateJobStatus(jobHandle, completeNumerator, completeDenominator);
     }
 
@@ -192,15 +200,23 @@ public class NetworkManager {
             switch(packet.getType())
             {
                 case WORK_COMPLETE:
-                    jobManager.workComplete(currentJob,((WorkComplete)packet).getData());
+                    jobManager.workComplete(currentJob,((WorkCompleteResponse)packet).getData());
                     break;
 
                 case WORK_DATA:
-                    jobManager.workData(currentJob, ((WorkData)packet).getData());
+                    jobManager.workData(currentJob, ((WorkDataResponse)packet).getData());
                     break;
 
                 case WORK_EXCEPTION:
-                    jobManager.workException(currentJob, ((WorkException)packet).getException());
+                    jobManager.workException(currentJob, ((WorkExceptionResponse)packet).getException());
+                    break;
+
+                case WORK_WARNING:
+                    jobManager.workWarning(currentJob, ((WorkWarningResponse)packet).getData());
+                    break;
+
+                case WORK_FAIL:
+                    jobManager.workFail(currentJob);
                     break;
 
                 default:
@@ -241,6 +257,17 @@ public class NetworkManager {
         }
 
         return new StatusRes(jobHandle, isRunning, knownState, numerator, denominator);
+    }
+
+
+    public ImmutableList<NetworkClient> getClientList()
+    {
+        return ImmutableList.copyOf(clients.values());
+    }
+
+    public ImmutableList<NetworkWorker> getWorkerList()
+    {
+        return ImmutableList.copyOf(workers.values());
     }
 
 }

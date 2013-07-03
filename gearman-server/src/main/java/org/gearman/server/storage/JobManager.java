@@ -34,6 +34,7 @@ public class JobManager {
     // Job Queues: Function Name <--> JobQueue
     private final ConcurrentHashMap<String, JobQueue> jobQueues;
     private final ConcurrentHashMap<Worker, Job> workerJobs;
+    private final ConcurrentHashMap<Job, Worker> jobWorker;
     // Active jobs (job handle <--> Job)
     private final ConcurrentHashMap<String, Job> activeJobHandles;
     private final ConcurrentHashMap<String, Job> activeUniqueIds;
@@ -59,6 +60,7 @@ public class JobManager {
         this.persistenceEngine = persistenceEngine;
         this.workers = new ConcurrentHashSet<>();
         this.workerJobs = new ConcurrentHashMap<>();
+        this.jobWorker = new ConcurrentHashMap<>();
 
         // Initialize counters to zero
         this.pendingJobsCounter.clear();
@@ -88,7 +90,7 @@ public class JobManager {
         workers.remove(worker);
 
         // If this worker has any active jobs, clean up after it
-        Job job = workerJobs.get(worker);
+        Job job = getCurrentJobForWorker(worker);
         if(job != null)
         {
             JobAction action = disconnectWorker(job, worker);
@@ -159,6 +161,7 @@ public class JobManager {
                 activeJobHandles.put(job.getJobHandle(), job);
                 activeUniqueIds.put(job.getUniqueID(), job);
                 workerJobs.put(worker, job);
+                jobWorker.put(job, worker);
                 pendingJobsCounter.dec();
                 activeJobsCounter.inc();
 
@@ -179,6 +182,10 @@ public class JobManager {
         activeJobHandles.remove(job.getJobHandle());
         activeUniqueIds.remove(job.getUniqueID());
         uniqueIdClients.remove(job.getUniqueID());
+        Worker worker = jobWorker.remove(job);
+
+        if(worker != null)
+            workerJobs.remove(worker);
 
         // Remove the data from the storage engine
         try {
@@ -287,13 +294,16 @@ public class JobManager {
     {
         if(job != null)
         {
-            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
-
-            if(!clients.isEmpty())
+            if(!job.isBackground())
             {
-                for(Client client : clients)
+                Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+                if(!clients.isEmpty())
                 {
-                    client.sendJobResults(job.getJobHandle(), data);
+                    for(Client client : clients)
+                    {
+                        client.sendWorkResults(job.getJobHandle(), data);
+                    }
                 }
             }
 
@@ -305,7 +315,7 @@ public class JobManager {
 
     public synchronized void workData(Job job, byte[] data)
     {
-        if(job != null)
+        if(job != null && !job.isBackground())
         {
             Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
 
@@ -313,7 +323,7 @@ public class JobManager {
             {
                 for(Client client : clients)
                 {
-                    client.sendJobData(job.getJobHandle(), data);
+                    client.sendWorkData(job.getJobHandle(), data);
                 }
             }
         }
@@ -321,7 +331,7 @@ public class JobManager {
 
     public synchronized void workException(Job job, byte[] exception)
     {
-        if(job != null)
+        if(job != null && !job.isBackground())
         {
             Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
 
@@ -329,7 +339,39 @@ public class JobManager {
             {
                 for(Client client : clients)
                 {
-                    client.sendJobException(job.getJobHandle(), exception);
+                    client.sendWorkException(job.getJobHandle(), exception);
+                }
+            }
+        }
+    }
+
+    public synchronized void workWarning(Job job, byte[] warning)
+    {
+        if(job != null && !job.isBackground())
+        {
+            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
+            {
+                for(Client client : clients)
+                {
+                    client.sendWorkWarning(job.getJobHandle(), warning);
+                }
+            }
+        }
+    }
+
+    public synchronized void workFail(Job job)
+    {
+        if(job != null && !job.isBackground())
+        {
+            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
+            {
+                for(Client client : clients)
+                {
+                    client.sendWorkFail(job.getJobHandle());
                 }
             }
         }
@@ -353,6 +395,20 @@ public class JobManager {
         {
             Job job = activeJobHandles.get(jobHandle);
             job.setStatus(completeNumerator, completeDenominator);
+            JobStatus status = checkJobStatus(jobHandle);
+
+            if(status != null)
+            {
+                Set<Client> clients = uniqueIdClients.get(job.getUniqueID());
+
+                if(clients != null && clients.size() > 0)
+                {
+                    for(Client client : clients)
+                    {
+                        client.sendWorkStatus(status);
+                    }
+                }
+            }
         }
     }
 

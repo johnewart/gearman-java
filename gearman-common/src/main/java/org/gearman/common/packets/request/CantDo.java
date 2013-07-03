@@ -44,12 +44,11 @@ public class CantDo extends RequestPacket {
     public byte[] toByteArray()
     {
         return concatByteArrays(getHeader(), functionName.get().getBytes());
-
     }
 
     @Override
     public int getPayloadSize()
     {
-        return 0;
+        return functionName.get().length();
     }
 }

@@ -39,11 +39,23 @@ public class StatusRes extends ResponsePacket {
         pOff = parseString(pOff, numeratorStr);
         parseString(pOff, denominatorStr);
 
-        running = Integer.parseInt(runningStr.get()) == 1;
-        statusKnown = Integer.parseInt(statusStr.get()) == 1;
+        if(Integer.parseInt(runningStr.get()) == 1)
+        {
+            running = true;
+        } else {
+            running = false;
+        }
+
+        if(Integer.parseInt(statusStr.get()) == 1)
+        {
+            statusKnown = true;
+        } else {
+            statusKnown = false;
+        }
 
         denominator = Integer.parseInt(denominatorStr.get());
         numerator = Integer.parseInt(numeratorStr.get());
+        type = PacketType.STATUS_RES;
     }
 
     public StatusRes(JobStatus jobStatus) {
@@ -52,6 +64,7 @@ public class StatusRes extends ResponsePacket {
         denominator = jobStatus.getDenominator();
         numerator = jobStatus.getNumerator();
         jobHandle = new AtomicReference<>(jobStatus.getJobHandle());
+        type = PacketType.STATUS_RES;
     }
 
     public byte[] toByteArray()
@@ -59,6 +72,7 @@ public class StatusRes extends ResponsePacket {
         int knownStatus = statusKnown ? 1 : 0;
         int runningStatus = running ? 1 : 0;
         byte[] metadata = stringsToTerminatedByteArray(
+                false,  // No final terminator
                 jobHandle.get(),
                 String.valueOf(knownStatus),
                 String.valueOf(runningStatus),
@@ -103,7 +117,7 @@ public class StatusRes extends ResponsePacket {
     @Override
     public int getPayloadSize()
     {
-        return jobHandle.get().length() + 1 + 4 + 4 + String.valueOf(numerator).length() + 1 + String.valueOf(denominator).length();
+        return jobHandle.get().length() + 1 + 2 + 2 + String.valueOf(numerator).length() + 1 + String.valueOf(denominator).length();
     }
 
     public String toString()

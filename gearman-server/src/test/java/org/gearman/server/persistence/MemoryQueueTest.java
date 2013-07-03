@@ -1,11 +1,13 @@
 package org.gearman.server.persistence;
 
 import org.gearman.common.Job;
+import org.gearman.server.core.QueuedJob;
 import org.gearman.server.factories.JobFactory;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 import static org.hamcrest.core.Is.is;
@@ -137,6 +139,19 @@ public class MemoryQueueTest {
                     memoryQueue.getAllForFunction(jobQueue).size(),
                     is(0));
         }
+    }
+
+    @Test
+    public void dataThatGoesInComesBackOut() throws Exception
+    {
+        String jobQueue = jobQueues[0];
+        byte[] jobData = {'b','a','r'};
+        QueuedJob queuedJob = new LinkedList<>(memoryQueue.getAllForFunction(jobQueue)).get(0);
+        Job job = memoryQueue.findJob(queuedJob.getFunctionName(), queuedJob.getUniqueID());
+
+        assertThat("Job data is {'b','a','r'}",
+                job.getData(),
+                is(jobData));
     }
 
 }

@@ -1,5 +1,7 @@
 package org.gearman.server;
 
+import com.google.common.collect.ImmutableList;
+import org.gearman.common.interfaces.Worker;
 import org.gearman.server.core.QueuedJob;
 import org.gearman.server.factories.JobFactory;
 import org.gearman.server.storage.JobQueue;
@@ -9,9 +11,16 @@ import org.joda.time.Seconds;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JobQueueTest {
     private JobQueue jobQueue;
@@ -133,5 +142,135 @@ public class JobQueueTest {
 
     }
 
+
+    @Test
+    public void enqueuedJobsAreReturned() throws Exception {
+        QueuedJob job;
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateHighPriorityBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateLowPriorityBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        Collection<QueuedJob> allJobs = jobQueue.getAllJobs();
+
+        assertThat("There are thirty jobs in the job queue as reported by getAllJobs()",
+                allJobs.size(),
+                is(30));
+
+    }
+
+    @Test
+    public void copyOfJobQueuesContainsAllJobQueues() throws Exception
+    {
+        QueuedJob job;
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateHighPriorityBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        for(int i = 0; i < 10; i++)
+        {
+            job = new QueuedJob(JobFactory.generateLowPriorityBackgroundJob(queueName));
+            jobQueue.enqueue(job);
+        }
+
+        HashMap<String, ImmutableList<QueuedJob>> jobMap = jobQueue.getCopyOfJobQueues();
+
+        assertThat("There are three keys",
+                jobMap.keySet().size(),
+                is(3));
+
+
+        assertThat("The map has the jobs for 'high'",
+                jobMap.containsKey("high"),
+                is(true));
+
+        assertThat("The map has the jobs for 'mid'",
+                jobMap.containsKey("mid"),
+                is(true));
+
+        assertThat("The map has the jobs for 'low'",
+                jobMap.containsKey("low"),
+                is(true));
+
+        assertThat("The map has ten jobs for 'high'",
+                jobMap.get("high").size(),
+                is(10));
+
+        assertThat("The map has ten jobs for 'mid'",
+                jobMap.get("mid").size(),
+                is(10));
+
+        assertThat("The map has ten jobs for 'low'",
+                jobMap.get("low").size(),
+                is(10));
+
+    }
+
+    @Test
+    public void removalBehavesCorrectly() throws Exception
+    {
+        QueuedJob normalJob = new QueuedJob(JobFactory.generateBackgroundJob(queueName));
+        QueuedJob highJob = new QueuedJob(JobFactory.generateHighPriorityBackgroundJob(queueName));
+        QueuedJob lowJob = new QueuedJob(JobFactory.generateLowPriorityBackgroundJob(queueName));
+
+        jobQueue.enqueue(normalJob);
+        jobQueue.enqueue(highJob);
+        jobQueue.enqueue(lowJob);
+
+        assertThat("There are three jobs in the queue",
+                jobQueue.size(),
+                is(3));
+
+        assertTrue(jobQueue.remove(highJob));
+
+        assertThat("Job queue has size == 2",
+                jobQueue.size(),
+                is(2));
+
+        assertFalse(jobQueue.remove(highJob));
+
+        assertThat("Job queue has size == 2",
+                jobQueue.size(),
+                is(2));
+
+        assertTrue(jobQueue.remove(normalJob));
+
+
+        assertThat("Job queue has size == 1",
+                jobQueue.size(),
+                is(1));
+
+        jobQueue.remove(lowJob);
+
+        assertThat("Job queue has size == 0",
+                jobQueue.size(),
+                is(0));
+
+        assertFalse("Removing a null job fails",
+                jobQueue.remove(null));
+    }
 
 }

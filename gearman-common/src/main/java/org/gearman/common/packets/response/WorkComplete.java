@@ -9,14 +9,14 @@ import org.gearman.constants.PacketType;
  * Time: 10:12 AM
  * To change this template use File | Settings | File Templates.
  */
-public class WorkComplete extends WorkData {
-    public WorkComplete(String jobhandle, byte[] data)
+public class WorkCompleteResponse extends WorkDataResponse {
+    public WorkCompleteResponse(String jobhandle, byte[] data)
     {
         super(jobhandle, data);
         this.type = PacketType.WORK_COMPLETE;
     }
 
-    public WorkComplete(byte[] pktdata)
+    public WorkCompleteResponse(byte[] pktdata)
     {
         super(pktdata);
 

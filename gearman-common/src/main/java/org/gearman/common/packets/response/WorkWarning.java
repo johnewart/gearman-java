@@ -9,15 +9,15 @@ import org.gearman.constants.PacketType;
  * Time: 10:14 AM
  * To change this template use File | Settings | File Templates.
  */
-public class WorkWarning extends WorkData
+public class WorkWarningResponse extends WorkDataResponse
 {
-    public WorkWarning(String jobhandle, byte[] data)
+    public WorkWarningResponse(String jobhandle, byte[] data)
     {
         super(jobhandle, data);
         this.type = PacketType.WORK_WARNING;
     }
 
-    public WorkWarning(byte[] pktdata)
+    public WorkWarningResponse(byte[] pktdata)
     {
         super(pktdata);
         this.type = PacketType.WORK_WARNING;

@@ -5,29 +5,17 @@ import org.gearman.constants.PacketType;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 8:43 AM
- * To change this template use File | Settings | File Templates.
- */
 public class JobAssign extends ResponsePacket {
     private AtomicReference<String> jobHandle, functionName;
     private byte[] data;
-
-    public JobAssign()
-    {
-        jobHandle = new AtomicReference<>();
-        this.type = PacketType.JOB_ASSIGN;
-    }
 
     public JobAssign(byte[] pktdata)
     {
         super(pktdata);
         jobHandle = new AtomicReference<>();
+        functionName = new AtomicReference<>();
         int pOff = parseString(0, jobHandle);
-        parseString(pOff, functionName);
+        pOff = parseString(pOff, functionName);
         this.data = Arrays.copyOfRange(rawdata, pOff, rawdata.length);
         this.type = PacketType.JOB_ASSIGN;
     }
@@ -58,5 +46,13 @@ public class JobAssign extends ResponsePacket {
         return this.jobHandle.get().length() + 1 +
                this.functionName.get().length() + 1 +
                this.data.length;
+    }
+
+    public String getFunctionName() {
+        return functionName.get();
+    }
+
+    public byte[] getData() {
+        return data;
     }
 }

@@ -1,6 +1,7 @@
 package org.gearman.common.packets.request;
 
 import org.gearman.common.packets.Packet;
+import org.gearman.constants.PacketMagic;
 
 /**
  * Created with IntelliJ IDEA.
@@ -22,8 +23,7 @@ public abstract class RequestPacket extends Packet {
     @Override
     public byte[] getMagic()
     {
-        byte[] magic = { '\0', 'R', 'E', 'Q' };
-        return magic;
+        return PacketMagic.REQUEST;
     }
 
 

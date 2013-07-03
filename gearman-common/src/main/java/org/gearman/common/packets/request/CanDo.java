@@ -51,6 +51,6 @@ public class CanDo extends RequestPacket {
     @Override
     public int getPayloadSize()
     {
-        return 0;
+        return functionName.get().length();
     }
 }

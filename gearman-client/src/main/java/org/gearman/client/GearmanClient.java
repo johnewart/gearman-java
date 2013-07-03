@@ -5,7 +5,7 @@ import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.JobCreated;
 import org.gearman.common.packets.response.StatusRes;
-import org.gearman.common.packets.response.WorkComplete;
+import org.gearman.common.packets.response.WorkCompleteResponse;
 import org.gearman.constants.JobPriority;
 import org.gearman.constants.PacketType;
 import org.gearman.net.Connection;
@@ -115,7 +115,7 @@ public class GearmanClient {
 
                     if(result.getType() == PacketType.WORK_COMPLETE)
                     {
-                        WorkComplete wc = (WorkComplete)result;
+                        WorkCompleteResponse wc = (WorkCompleteResponse)result;
 
                         System.err.println("Completed job " +  wc.getJobHandle());
                         return wc.data;

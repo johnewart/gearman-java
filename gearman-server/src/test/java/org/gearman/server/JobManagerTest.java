@@ -181,6 +181,20 @@ public class JobManagerTest {
     }
 
     @Test
+    public void handlesExceptionsWhenWakingWorkers() throws Exception
+    {
+        Job job = JobFactory.generateBackgroundJob("reverseString");
+        Worker mockWorker = mock(Worker.class);
+        //when(mockWorker.wakeUp()).thenThrow(new Exception("Can't send that packet"));
+        //jobManager.registerWorkerAbility("reverseString", spyWorker);
+        //jobManager.sleepingWorker(spyWorker);
+        //jobManager.storeJob(job);
+        //verify(spyWorker).wakeUp();
+    }
+
+
+
+    @Test
     public void checksAndUpdatesJobStatus() throws Exception
     {
         Job job = JobFactory.generateBackgroundJob("reverseString");
@@ -329,8 +343,8 @@ public class JobManagerTest {
         // Complete the job
         jobManager.workComplete(nextJob, result);
 
-        verify(mockClientOne).sendJobResults(jobOne.getJobHandle(), result);
-        verify(mockClientTwo).sendJobResults(jobOne.getJobHandle(), result);
+        verify(mockClientOne).sendWorkResults(jobOne.getJobHandle(), result);
+        verify(mockClientTwo).sendWorkResults(jobOne.getJobHandle(), result);
     }
 
     // TODO: Verify that it will coalesce results if a job is submitted while a worker is working on the same one
@@ -350,8 +364,7 @@ public class JobManagerTest {
         // Send back some data
         jobManager.workData(nextJob, data);
 
-        verify(mockClient).sendJobData(jobOne.getJobHandle(), data);
+        verify(mockClient).sendWorkData(jobOne.getJobHandle(), data);
     }
-
 
 }

@@ -5,23 +5,16 @@ import org.gearman.constants.PacketType;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 10:18 AM
- * To change this template use File | Settings | File Templates.
- */
-public class WorkFail extends RequestPacket implements WorkResponse {
+public class WorkFailResponse extends ResponsePacket implements WorkResponse {
     public AtomicReference<String> jobHandle;
 
-    public WorkFail(String jobhandle)
+    public WorkFailResponse(String jobhandle)
     {
         this.jobHandle = new AtomicReference<String>(jobhandle);
         this.type = PacketType.WORK_FAIL;
     }
 
-    public WorkFail(byte[] pktdata)
+    public WorkFailResponse(byte[] pktdata)
     {
         super(pktdata);
         this.jobHandle = new AtomicReference<String>();

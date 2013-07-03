@@ -3,19 +3,13 @@ package org.gearman.common.packets;
 import com.google.common.primitives.Ints;
 import org.gearman.common.packets.request.*;
 import org.gearman.common.packets.response.*;
+import org.gearman.constants.PacketMagic;
 import org.gearman.constants.PacketType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/1/12
- * Time: 1:11 AM
- * To change this template use File | Settings | File Templates.
- */
 public class PacketFactory {
     private static final Logger LOG = LoggerFactory.getLogger(PacketFactory.class);
 
@@ -23,6 +17,7 @@ public class PacketFactory {
     {
         byte[] sizebytes = Arrays.copyOfRange(packetBytes, 8, 12);
         byte[] typebytes = Arrays.copyOfRange(packetBytes, 4, 8);
+        byte[] magicbytes = Arrays.copyOfRange(packetBytes, 0, 4);
 
         int messagesize = Ints.fromByteArray(sizebytes);
         int messagetype = Ints.fromByteArray(typebytes);
@@ -34,17 +29,17 @@ public class PacketFactory {
             case JOB_CREATED:
                 return new JobCreated(packetBytes);
             case WORK_DATA:
-                return new WorkData(packetBytes);
+                return new WorkDataResponse(packetBytes);
             case WORK_WARNING:
-                return new WorkWarning(packetBytes);
+                return new WorkWarningResponse(packetBytes);
             case WORK_STATUS:
                 return new WorkStatus(packetBytes);
             case WORK_COMPLETE:
-                return new WorkComplete(packetBytes);
+                return new WorkCompleteResponse(packetBytes);
             case WORK_FAIL:
-                return new WorkFail(packetBytes);
+                return new WorkFailResponse(packetBytes);
             case WORK_EXCEPTION:
-                return new WorkException(packetBytes);
+                return new WorkExceptionResponse(packetBytes);
             case STATUS_RES:
                 return new StatusRes(packetBytes);
             case GET_STATUS:

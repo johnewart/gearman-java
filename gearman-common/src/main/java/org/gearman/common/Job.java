@@ -11,16 +11,16 @@ import java.util.Date;
 public class Job {
     private static Logger LOG = LoggerFactory.getLogger(Job.class);
 
-    protected JobPriority priority;
-    protected boolean background;
-    protected String functionName;
-    protected String uniqueID;
-    protected String jobHandle;
-    protected byte[] data;
-    protected int numerator;
-    protected int denominator;
-    protected long timeToRun;
-    protected JobState state = JobState.QUEUED;
+    private JobPriority priority;
+    private boolean background;
+    private String functionName;
+    private String uniqueID;
+    private String jobHandle;
+    private byte[] data;
+    private int numerator;
+    private int denominator;
+    private long timeToRun;
+    private JobState state = JobState.QUEUED;
 
     public Job()
     {
@@ -52,7 +52,7 @@ public class Job {
     {
         this.functionName = functionName;
         this.uniqueID = uniqueID;
-        this.data = data;
+        this.data = data.clone();
         this.priority = priority;
         this.timeToRun = timeToRun;
         this.background = isBackground;
@@ -68,7 +68,7 @@ public class Job {
     {
         this.functionName = functionName;
         this.uniqueID = uniqueID;
-        this.data = data;
+        this.data = data.clone();
         this.priority = priority;
         this.timeToRun = timeToRun;
         this.background = isBackground;
@@ -139,6 +139,7 @@ public class Job {
         this.state = JobState.COMPLETE;
     }
 
+    @JsonIgnore
     public String toString()
     {
         return this.getJobHandle();

@@ -1,14 +1,8 @@
 package org.gearman.common.packets.response;
 
 import org.gearman.common.packets.Packet;
+import org.gearman.constants.PacketMagic;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 8:33 AM
- * To change this template use File | Settings | File Templates.
- */
 public abstract class ResponsePacket extends Packet {
     public ResponsePacket()
     {
@@ -21,8 +15,7 @@ public abstract class ResponsePacket extends Packet {
 
     public byte[] getMagic()
     {
-        byte[] magic = { '\0', 'R', 'E', 'S' };
-        return magic;
+        return PacketMagic.RESPONSE;
     }
 
 

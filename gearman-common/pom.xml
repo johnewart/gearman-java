@@ -14,6 +14,7 @@
     <properties>
         <slf4j.version>1.7.2</slf4j.version>
         <logback.version>1.0.7</logback.version>
+        <jackson.version>2.1.1</jackson.version>
     </properties>
 
     <dependencies>
@@ -41,6 +42,16 @@
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.10</version>
         </dependency>
     </dependencies>
 

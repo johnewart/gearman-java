@@ -1,8 +1,9 @@
 package org.gearman.server.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
-import org.codehaus.jackson.map.ObjectMapper;
+
 import org.gearman.constants.JobPriority;
 import org.gearman.common.Job;
 import org.gearman.server.core.QueuedJob;
