@@ -1,7 +1,7 @@
-Gearman Java Server
-===================
+Gearman Java Implementation
+===========================
 
-An implementation of the [gearman protocol](http://www.gearman.org) server (and basic client) in Java. Features include:
+An implementation of the [gearman protocol](http://www.gearman.org) server, basic client, and soon-to-be worker in Java. Features include:
 
 * Pluggable persistent storage mechanism currently supporting:
     * PostgreSQL
