@@ -6,13 +6,6 @@ import org.gearman.constants.PacketType;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 8:00 AM
- * To change this template use File | Settings | File Templates.
- */
 public abstract class Packet {
     protected PacketType type;
     protected int size;

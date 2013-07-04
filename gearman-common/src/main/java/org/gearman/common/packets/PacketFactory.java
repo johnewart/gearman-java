@@ -78,9 +78,14 @@ public class PacketFactory {
             case SUBMIT_JOB_EPOCH:
                 return new SubmitJob(packetBytes);
 
+            case ECHO_REQ:
+                return new EchoRequest(packetBytes);
+
+            case ECHO_RES:
+                return new EchoResponse(packetBytes);
+
             /* TODO: Handle these. */
             case OPTION_RES:
-            case ECHO_RES:
             case ERROR:
             default:
                 LOG.error("Unhandled type: ", messagetype);

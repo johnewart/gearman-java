@@ -4,6 +4,9 @@ import com.google.common.primitives.Ints;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.PacketFactory;
 
+import org.gearman.common.packets.request.EchoRequest;
+import org.gearman.common.packets.response.EchoResponse;
+import org.gearman.constants.GearmanConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Date;
 
 
 public class Connection {
@@ -18,19 +22,17 @@ public class Connection {
     protected String hostname;
     protected int port;
     private Logger LOG = LoggerFactory.getLogger(Connection.class);
+    private Long lastTimeSeenAlive;
 
     public Connection()
     {	}
 
 
-    public Connection(String hostname, int port) throws IOException
+    public Connection(String hostname, int port)
     {
         this.hostname = hostname;
         this.port = port;
-
-        socket = new Socket(hostname, port);
     }
-
 
     public Connection(Socket socket)
     {
@@ -40,6 +42,7 @@ public class Connection {
 
     public void sendPacket(Packet p) throws IOException
     {
+        initializeConnection();
         socket.getOutputStream().write(p.toByteArray());
     }
 
@@ -54,8 +57,41 @@ public class Connection {
     }
 
 
+    public boolean isHealthy()
+    {
+        try {
+            initializeConnection();
+
+            this.sendPacket(new EchoRequest("OK"));
+            EchoResponse response = (EchoResponse)(this.getNextPacket());
+
+            if(response != null)
+            {
+                byte[] data = response.getData();
+                byte[] matchData = "OK".getBytes(GearmanConstants.CHARSET);
+                if(Arrays.equals(data, matchData))
+                {
+                    this.updateLastTimeSeenAlive();
+                    return true;
+                }
+            }
+
+        } catch (IOException ioe) {
+            LOG.error("Client unable to write to socket: " + ioe.toString());
+            try {
+                this.socket.close();
+            } catch (IOException closeException) {
+                LOG.error("Unable to close dead socket: " + closeException.toString());
+            }
+        }
+
+        return false;
+    }
+
     public Packet getNextPacket() throws IOException
     {
+        initializeConnection();
+
         int messagesize = -1;
 
         // Initialize to 12 bytes (header only), and resize later as needed
@@ -82,6 +118,8 @@ public class Connection {
                     packetBytes = header;
                 }
 
+                is.read(packetBytes, 12, messagesize);
+
                 return PacketFactory.packetFromBytes(packetBytes);
 
             } else if(numbytes == -1) {
@@ -94,6 +132,27 @@ public class Connection {
         }
 
         return null;
+    }
+
+    public Long getLastTimeSeenAlive() {
+        return lastTimeSeenAlive;
+    }
+
+    public void setLastTimeSeenAlive(Long lastTimeSeenAlive) {
+        this.lastTimeSeenAlive = lastTimeSeenAlive;
+    }
+
+    private void initializeConnection() throws IOException
+    {
+        if(socket == null ||
+           socket.isClosed())
+        {
+            socket = new Socket(hostname, port);
+        }
+    }
+
+    public void updateLastTimeSeenAlive() {
+        this.lastTimeSeenAlive = new Date().getTime();
     }
 }
 

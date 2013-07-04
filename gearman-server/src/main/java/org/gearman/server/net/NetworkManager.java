@@ -8,6 +8,7 @@ import org.gearman.common.JobStatus;
 import org.gearman.common.interfaces.Client;
 import org.gearman.common.interfaces.Worker;
 import org.gearman.common.packets.Packet;
+import org.gearman.common.packets.request.EchoRequest;
 import org.gearman.common.packets.request.GetStatus;
 import org.gearman.common.packets.request.SubmitJob;
 import org.gearman.common.packets.response.*;
@@ -270,4 +271,8 @@ public class NetworkManager {
         return ImmutableList.copyOf(workers.values());
     }
 
+    public void handleEchoRequest(EchoRequest request, Channel channel) {
+        EchoResponse response = new EchoResponse(request);
+        channel.write(response);
+    }
 }

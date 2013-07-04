@@ -1,10 +1,7 @@
 package org.gearman.server.net;
 
 import org.gearman.common.packets.Packet;
-import org.gearman.common.packets.request.CanDo;
-import org.gearman.common.packets.request.CantDo;
-import org.gearman.common.packets.request.GetStatus;
-import org.gearman.common.packets.request.SubmitJob;
+import org.gearman.common.packets.request.*;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.packets.response.WorkStatus;
 import org.jboss.netty.channel.*;
@@ -136,6 +133,9 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
 
             // Packets Not Yet Implemented
             case ECHO_REQ:
+                networkManager.handleEchoRequest((EchoRequest)packet, channel);
+                return;
+
             case OPTION_REQ:
             case RESET_ABILITIES:
             case ALL_YOURS:
