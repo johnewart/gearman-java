@@ -2,6 +2,7 @@ package org.gearman.example;
 
 import org.gearman.client.GearmanClient;
 import org.gearman.constants.JobPriority;
+import org.gearman.exceptions.NoServersAvailableException;
 
 import java.io.IOException;
 
@@ -24,6 +25,8 @@ public class ClientDemo {
             }
         } catch (IOException ioe) {
             System.err.println("Couldn't connect: " + ioe);
+        } catch (NoServersAvailableException nsae) {
+            System.err.println("Can't connect to any servers.");
         }
     }
 }
