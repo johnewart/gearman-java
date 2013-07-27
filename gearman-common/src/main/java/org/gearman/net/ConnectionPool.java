@@ -67,7 +67,6 @@ public class ConnectionPool {
         {
             checkDeadConnections();
         }
-        Connection result = null;
 
         synchronized (connectionLock) {
             Connection connection = null;
@@ -83,7 +82,6 @@ public class ConnectionPool {
 
                 connection = goodConnectionList.get(connectionIndex.getAndIncrement());
 
-                // TODO: mask this with a presumption about last-time-seen to avoid these checks.
                 if(connection.isHealthy())
                 {
                     return connection;

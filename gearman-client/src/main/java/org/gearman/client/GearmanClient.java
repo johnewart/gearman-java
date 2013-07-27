@@ -24,7 +24,7 @@ public class GearmanClient {
     private final Logger LOG = LoggerFactory.getLogger(GearmanClient.class);
     private final ConnectionPool connectionPool;
 
-    private GearmanClient()
+    public GearmanClient()
     {
         connectionPool = new ConnectionPool();
     }
@@ -38,6 +38,17 @@ public class GearmanClient {
     public GearmanClient(String host) throws IOException
     {
         this(host, 4730);
+    }
+
+    public GearmanClient(Connection conn)
+    {
+        this();
+        connectionPool.addConnection(conn);
+    }
+
+    public void addConnection(Connection conn)
+    {
+        connectionPool.addConnection(conn);
     }
 
     public void addHostToList(String host, int port) throws IOException
@@ -55,7 +66,7 @@ public class GearmanClient {
         connectionPool.cleanup();
     }
 
-    public ServerResponse sendJobPacket(SubmitJob jobPacket) throws NoServersAvailableException
+    private ServerResponse sendJobPacket(SubmitJob jobPacket) throws NoServersAvailableException
     {
         Packet result;
         Connection connection;
@@ -66,7 +77,7 @@ public class GearmanClient {
 
                 connection.sendPacket(jobPacket);
 
-                System.err.println("Sent job request to " + connection.toString());
+                LOG.debug("Sent job request to " + connection.toString());
 
                 // We need to get back a JOB_CREATED packet
                 result = connection.getNextPacket();
@@ -75,11 +86,11 @@ public class GearmanClient {
                 // otherwise try the next job manager
                 if (result != null && result.getType() == PacketType.JOB_CREATED)
                 {
-                    System.err.println("Created job " + ((JobCreated) result).getJobHandle());
+                    LOG.debug("Created job " + ((JobCreated) result).getJobHandle());
                     return new ServerResponse(connection, result);
                 }
             } catch (IOException ioe) {
-                System.err.println("Connection to " + connection.toString() + " flaky, marking as bad.");
+                LOG.error("Connection to " + connection.toString() + " flaky, marking as bad.");
             }
         }
 
@@ -106,23 +117,23 @@ public class GearmanClient {
                     {
                         WorkCompleteResponse wc = (WorkCompleteResponse)result;
 
-                        System.err.println("Completed job " +  wc.getJobHandle());
+                        LOG.debug("Completed job " +  wc.getJobHandle());
                         return wc.data;
                     }
                 }
             } else {
-                System.err.println("Unable to submit job to job severs...");
+                LOG.warn("Unable to submit job to job severs...");
             }
         } catch (IOException e) {
-            System.err.println("Error submitting job: " +  e.toString());
+            LOG.error("Error submitting job: ",   e);
         } catch (NoServersAvailableException nsae) {
-            System.err.println("No servers available to submit the job.");
+            LOG.error("No servers available to submit the job.");
         }
 
         return null;
     }
 
-    public String submitJobInBackground(String callback, byte[] data, JobPriority priority)
+    public String submitJobInBackground(String callback, byte[] data, JobPriority priority) throws NoServersAvailableException
     {
 
         String jobid = UUID.randomUUID().toString();
@@ -131,19 +142,20 @@ public class GearmanClient {
             if(response != null)
             {
 
-                System.err.println("Sent background job request to " + response.getConnection());
+                LOG.debug("Sent background job request to " + response.getConnection());
 
                 // If we get back a JOB_CREATED packet, we can continue,
                 // otherwise try the next job manager
                 if (response.getPacket().getType() == PacketType.JOB_CREATED)
                 {
                     String jobHandle =  ((JobCreated)response.getPacket()).getJobHandle();
-                    System.err.printf("Created background job %s, with priority %s\n", jobHandle, priority.toString());
+                    LOG.debug("Created background job %s, with priority %s\n", jobHandle, priority.toString());
                     return jobHandle;
                 }
             }
         } catch (NoServersAvailableException nsae) {
-            System.err.println("No servers available to submit the job.");
+            LOG.warn("No servers available to submit the job.");
+            throw nsae;
         }
 
         return null;
@@ -156,11 +168,11 @@ public class GearmanClient {
     {
         GetStatus statusPkt = new GetStatus(jobHandle);
 
-        Packet result = null;
+        Packet result;
 
         for (Connection conn : connectionPool.getGoodConnectionList())
         {
-            System.err.printf("Checking for status on %s on %s\n", jobHandle, conn);
+            LOG.debug("Checking for status on %s on %s\n", jobHandle, conn);
             try {
                 conn.sendPacket(statusPkt);
                 result = conn.getNextPacket();
@@ -175,7 +187,7 @@ public class GearmanClient {
                 }
             } catch (IOException ioe) {
                 // Do nothing, we don't really care much here.
-                System.err.println("Unable to send request to " + conn + ": " + ioe);
+                LOG.error("Unable to send request to " + conn + ": " + ioe);
             }
         }
 
