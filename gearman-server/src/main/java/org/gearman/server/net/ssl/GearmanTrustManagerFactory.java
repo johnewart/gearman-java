@@ -1,5 +1,8 @@
 package org.gearman.server.net.ssl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactorySpi;
@@ -13,6 +16,8 @@ import java.security.cert.X509Certificate;
 public class GearmanTrustManagerFactory extends TrustManagerFactorySpi {
 
     private static final TrustManager DUMMY_TRUST_MANAGER = new X509TrustManager() {
+        private final Logger LOG = LoggerFactory.getLogger(GearmanTrustManagerFactory.class);
+
         public X509Certificate[] getAcceptedIssuers() {
             return new X509Certificate[0];
         }
@@ -23,7 +28,7 @@ public class GearmanTrustManagerFactory extends TrustManagerFactorySpi {
             // You should do something in the real world.
             // You will reach here only if you enabled client certificate auth,
             // as described in SecureChatSslContextFactory.
-            System.err.println(
+            LOG.warn(
                     "UNKNOWN CLIENT CERTIFICATE: " + chain[0].getSubjectDN());
         }
 
@@ -31,7 +36,7 @@ public class GearmanTrustManagerFactory extends TrustManagerFactorySpi {
                 X509Certificate[] chain, String authType) throws CertificateException {
             // Always trust - it is an example.
             // You should do something in the real world.
-            System.err.println(
+            LOG.warn(
                     "UNKNOWN SERVER CERTIFICATE: " + chain[0].getSubjectDN());
         }
     };
