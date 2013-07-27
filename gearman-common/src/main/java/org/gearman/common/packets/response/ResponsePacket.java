@@ -17,6 +17,4 @@ public abstract class ResponsePacket extends Packet {
     {
         return PacketMagic.RESPONSE;
     }
-
-
 }
