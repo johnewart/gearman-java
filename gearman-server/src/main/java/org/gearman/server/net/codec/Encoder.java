@@ -11,13 +11,6 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/1/12
- * Time: 8:40 PM
- * To change this template use File | Settings | File Templates.
- */
 @ChannelHandler.Sharable
 public class Encoder extends OneToOneEncoder {
 
