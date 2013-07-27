@@ -18,14 +18,18 @@ import org.gearman.server.persistence.MemoryQueue;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.persistence.PostgresQueue;
 import org.gearman.server.persistence.RedisQueue;
+import org.gearman.server.util.JobHandleFactory;
 import org.gearman.server.util.JobQueueMonitor;
 import org.gearman.server.web.DashboardServlet;
 import org.gearman.server.web.GearmanServlet;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 public class GearmanDaemon {
 
-	private final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
+	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
 
 	public GearmanDaemon(int port,
                          int webport,
@@ -89,6 +93,13 @@ public class GearmanDaemon {
     {
         PersistenceEngine storageEngine;
         boolean jobMonitorEnabled = true;
+        String hostname;
+
+        try {
+            hostname = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            hostname = "localhost";
+        }
 
         Options options = new Options();
 
@@ -97,6 +108,7 @@ public class GearmanDaemon {
         options.addOption(null, "port", true, "Port to listen on (default: 4730)");
         options.addOption(null, "storage", true, "Storage engine to use (redis, postgresql), default is memory only");
         options.addOption(null, "web-port", true, "Port for the HTTP service (default: 8080)");
+        options.addOption(null, "hostname", true, "Hostname to use (default: " + hostname + ")");
 
         // PostgreSQL options
         options.addOption(null, "postgres-user", true, "PostgreSQL user");
@@ -216,6 +228,17 @@ public class GearmanDaemon {
                     default:
                         storageEngine = new MemoryQueue();
                 }
+
+                String newHostname = cmd.getOptionValue("hostname");
+
+                if(newHostname != null)
+                {
+                    hostname = newHostname;
+                }
+
+                JobHandleFactory.setHostName(hostname);
+
+                LOG.info("Hostname: " + hostname);
 
                 Logger root = (Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
                 if(debugging)

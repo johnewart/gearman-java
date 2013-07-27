@@ -17,7 +17,7 @@ Getting Started
 
 Quick start:
 
-1. Download the [latest version pre-built](http://code.johnewart.net/maven/org/gearman/gearman-server/0.6 .0/gearman-server-0.6.0.jar) from my Maven repository 
+1. Download the [latest version pre-built](http://code.johnewart.net/maven/org/gearman/gearman-server/0.6.0/gearman-server-0.6.0.jar) from my Maven repository 
 2. Run java -jar gearman-server-0.6.0.jar 
 3. This will default to port 4730 and memory-only persistence, with snapshotting and the web interface listening on port 8080
 

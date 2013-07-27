@@ -1,8 +1,10 @@
 package org.gearman.server.util;
 
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class JobHandleFactory {
+    private static AtomicLong jobHandleCounter = new AtomicLong(0L);
+    private static String hostName;
 
     /**
      * Returns the next available job handle
@@ -10,6 +12,12 @@ public class JobHandleFactory {
      * 		the next available job handle
      */
     public static final byte[] getNextJobHandle() {
-        return UUID.randomUUID().toString().getBytes();
+        String handle = "H:" + hostName + ":" + jobHandleCounter.incrementAndGet();
+        return handle.getBytes();
+    }
+
+    public static void setHostName(String hostName)
+    {
+        JobHandleFactory.hostName = hostName;
     }
 }
