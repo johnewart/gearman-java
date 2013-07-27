@@ -27,7 +27,7 @@
         <repository>
             <id>johnewart</id>
             <name>John Ewart</name>
-            <url>scp://jewart@meshugah.johnewart.net/home/jewart/Sites/code.johnewart.net/maven/</url>
+            <url>scp://jewart@mosrite.dreamhost.com/home/jewart/code.johnewart.net/maven/</url>
         </repository>
     </distributionManagement>
 
