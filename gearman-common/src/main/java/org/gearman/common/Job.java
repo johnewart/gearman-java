@@ -179,4 +179,40 @@ public class Job {
         result = 31 * result + (uniqueID != null ? uniqueID.hashCode() : 0);
         return result;
     }
+
+    public static class Builder {
+        private Job job;
+        public Builder() {
+            this.job = new Job();
+        }
+
+        public Job build() {
+            return job;
+        }
+
+        public Builder data(byte[] data) {
+            job.data = data;
+            return this;
+        }
+
+        public Builder jobHandle(String data) {
+            job.jobHandle = data;
+            return this;
+        }
+
+        public Builder uniqueID(String data) {
+            job.uniqueID = data;
+            return this;
+        }
+
+        public Builder background(boolean data) {
+            job.background = data;
+            return this;
+        }
+
+        public Builder functionName(String data) {
+            job.functionName = data;
+            return this;
+        }
+    }
 }

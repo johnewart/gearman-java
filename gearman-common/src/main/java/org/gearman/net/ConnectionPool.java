@@ -28,7 +28,6 @@ public class ConnectionPool {
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
         Runnable checkDeadServers = new ConnectionChecker(this);
         executor.scheduleAtFixedRate(checkDeadServers, 0, 30, TimeUnit.SECONDS);
-
     }
 
     public void addConnection(Connection connection)

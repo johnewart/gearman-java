@@ -44,6 +44,10 @@ public class Connection {
         this.socket = socket;
     }
 
+    public Connection(Connection c) {
+        this.hostname = c.hostname;
+        this.port = c.port;
+    }
 
     public void sendPacket(Packet p) throws IOException
     {

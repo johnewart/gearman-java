@@ -1,10 +1,12 @@
 package org.gearman.common.packets.response;
 
+import org.gearman.common.Job;
 import org.gearman.constants.PacketType;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
+// TODO: Refactor this class so that there's not so much repeated between this and JobAssign.
 public class JobAssignUniq extends ResponsePacket {
     private AtomicReference<String> jobHandle, functionName, uniqueId;
     private byte[] data;
@@ -62,5 +64,14 @@ public class JobAssignUniq extends ResponsePacket {
 
     public byte[] getData() {
         return data;
+    }
+
+    public Job getJob() {
+        return new Job.Builder()
+                .jobHandle(this.jobHandle.get())
+                .data(this.data)
+                .functionName(this.functionName.get())
+                .uniqueID(this.uniqueId.get())
+                .build();
     }
 }

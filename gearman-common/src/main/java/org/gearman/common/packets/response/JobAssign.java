@@ -1,13 +1,14 @@
 package org.gearman.common.packets.response;
 
+import org.gearman.common.Job;
 import org.gearman.constants.PacketType;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class JobAssign extends ResponsePacket {
-    private AtomicReference<String> jobHandle, functionName;
-    private byte[] data;
+    protected AtomicReference<String> jobHandle, functionName;
+    protected byte[] data;
 
     public JobAssign(byte[] pktdata)
     {
@@ -54,5 +55,13 @@ public class JobAssign extends ResponsePacket {
 
     public byte[] getData() {
         return data;
+    }
+
+    public Job getJob() {
+        return new Job.Builder()
+                .jobHandle(this.jobHandle.get())
+                .data(this.data)
+                .functionName(this.functionName.get())
+                .build();
     }
 }
