@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,7 +29,7 @@ public class JobQueueMonitor {
     {
         this.jobManager = jobManager;
         this.snapshots = new HashMap<>();
-        this.systemSnapshots = new ArrayList<>();
+        this.systemSnapshots = new LinkedList<>();
 
         ScheduledExecutorService executor =
                 Executors.newSingleThreadScheduledExecutor();
@@ -41,6 +42,7 @@ public class JobQueueMonitor {
 
                 try {
                     snapshotJobQueues();
+                    condenseDataPoints();
                 } finally {
                     context.stop();
                 }
@@ -48,6 +50,11 @@ public class JobQueueMonitor {
         };
 
         executor.scheduleAtFixedRate(periodicTask, 0, 30, TimeUnit.SECONDS);
+
+    }
+
+    private void condenseDataPoints() {
+        LOG.debug("Condensing data points");
 
     }
 
@@ -62,7 +69,7 @@ public class JobQueueMonitor {
             JobQueue jobQueue = jobManager.getJobQueues().get(jobQueueName);
             if(!snapshots.containsKey(jobQueueName))
             {
-                snapshots.put(jobQueueName, new ArrayList<JobQueueSnapshot>());
+                snapshots.put(jobQueueName, new LinkedList<JobQueueSnapshot>());
             }
 
             HashMap<String, ImmutableList<QueuedJob>> copyOfQueues = jobQueue.getCopyOfJobQueues();

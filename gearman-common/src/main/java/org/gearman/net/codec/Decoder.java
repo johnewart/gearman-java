@@ -1,24 +1,18 @@
-package org.gearman.server.net.codec;
+package org.gearman.net.codec;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/1/12
- * Time: 8:42 PM
- * To change this template use File | Settings | File Templates.
- */
 import com.google.common.primitives.Ints;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.ReplayingDecoder;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.PacketFactory;
 import org.gearman.util.ByteArray;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.replay.ReplayingDecoder;
+import io.netty.channel.ChannelHandlerContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
 
@@ -33,12 +27,11 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
     }
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel,
-                            ChannelBuffer buffer, DecodingState state)
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> decoded)
             throws Exception {
 
 
-        switch (state) {
+        switch (state()) {
             case HEADER:
                 byte[] header = new byte[12];
                 byte firstByte = buffer.readByte();
@@ -66,7 +59,7 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
                     try {
                         packet = PacketFactory.packetFromBytes(packetData);
                         LOG.debug("---> " + packet.getType());
-                        return packet;
+                        decoded.add(packet);
                     } finally {
                         this.reset();
                     }
@@ -81,15 +74,15 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
                     try {
                         String result = textCommand.toString().trim();
                         LOG.debug("Text command: " + result);
-                        return result;
+                        decoded.add(result);
                     } finally {
                         this.reset();
                     }
                 }
-
+                break;
 
             default:
-                throw new Exception("Unknown decoding state: " + state);
+                throw new Exception("Unknown decoding state: " + state());
         }
     }
 
@@ -103,6 +96,6 @@ public class Decoder extends ReplayingDecoder<Decoder.DecodingState> {
     public enum DecodingState {
         HEADER,
         PAYLOAD,
-        TEXT // Text ommand
+        TEXT // Text command
     }
 }

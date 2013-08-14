@@ -17,6 +17,5 @@ public interface Client {
     public void sendWorkStatus(JobStatus jobStatus);
 
     public void send(Packet packet);
-    public void send(WorkResponse packet);
 }
 

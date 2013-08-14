@@ -1,52 +1,55 @@
 package org.gearman.server.net;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.request.*;
 import org.gearman.common.packets.response.WorkResponse;
 import org.gearman.common.packets.response.WorkStatus;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.ChannelGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
 
-public class PacketHandler extends SimpleChannelUpstreamHandler {
+public class PacketHandler extends SimpleChannelInboundHandler<Object> {
 
     private static final Logger LOG = LoggerFactory.getLogger(PacketHandler.class);
     private final NetworkManager networkManager;
-    private final ChannelGroup channelGroup;
 
-    public PacketHandler(NetworkManager networkManager, ChannelGroup channelGroup)
+    public PacketHandler(NetworkManager networkManager)
     {
         LOG.debug("Creating new handler!");
         this.networkManager = networkManager;
-        this.channelGroup = channelGroup;
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        this.channelGroup.add(e.getChannel());
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+
     }
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        LOG.debug(" ---> " + e.toString());
-        if (e.getMessage() instanceof Packet) {
-            handlePacket((Packet)(e.getMessage()), e.getChannel());
-        } else if (e.getMessage() instanceof String) {
-            handleTextCommand((String)e.getMessage(), e.getChannel());
+    public void channelRead0(ChannelHandlerContext ctx, Object request)  throws Exception {
+        LOG.debug(" ---> " + request.toString());
+        if (request instanceof Packet) {
+            handlePacket((Packet)request, ctx.channel());
+        } else if (request instanceof String) {
+            handleTextCommand((String)request, ctx.channel());
         } else {
-            LOG.debug("Received un-handled message: " + e.getMessage());
-            super.messageReceived(ctx, e);
+            LOG.error("Received un-handled message: " + request);
         }
     }
 
     @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception
-    {
-        LOG.debug("Client closed channel: " + e.toString());
-        networkManager.channelDisconnected(e.getChannel());
+    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+        ctx.flush();
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        LOG.debug("Client closed channel: " + ctx.channel().toString());
+        networkManager.channelDisconnected(ctx.channel());
     }
 
     private void handleTextCommand(String message, Channel channel)
@@ -55,14 +58,14 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
             case "status":
                 String header = "FUNCTION\tTOTAL\tRUNNING\tAVAILABLE_WORKERS\n";
                 Set<String> jobQueueNames = networkManager.getJobManager().getJobQueues().keySet();
-                channel.write(header);
+                channel.writeAndFlush(header);
 
                 for(String jobQueueName : jobQueueNames)
                 {
-                    channel.write(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobManager().getJobQueue(jobQueueName).size(), 0, 0));
+                    channel.writeAndFlush(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobManager().getJobQueue(jobQueueName).size(), 0, 0));
                 }
 
-                channel.write(".\n");
+                channel.writeAndFlush(".\n");
                 break;
 
             case "workers":
@@ -151,11 +154,11 @@ public class PacketHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e)
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     {
         // Close the connection when an exception is raised.
-        LOG.warn("Unexpected exception from downstream.", e.getCause());
-        e.getChannel().close();
+        LOG.warn("Unexpected exception from downstream.", cause);
+        ctx.channel().close();
     }
 
 

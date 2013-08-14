@@ -17,7 +17,7 @@
         <slf4j.version>1.7.2</slf4j.version>
         <logback.version>1.0.7</logback.version>
         <metrics.version>2.1.2</metrics.version>
-        <netty.version>3.2.7.Final</netty.version>
+        <netty.version>4.0.7.Final</netty.version>
         <bonecp.version>0.7.1.RELEASE</bonecp.version>
     </properties>
 
@@ -109,8 +109,8 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.jboss.netty</groupId>
-            <artifactId>netty</artifactId>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
             <version>${netty.version}</version>
         </dependency>
         <dependency>

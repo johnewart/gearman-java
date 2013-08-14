@@ -15,9 +15,15 @@
         <slf4j.version>1.7.2</slf4j.version>
         <logback.version>1.0.7</logback.version>
         <jackson.version>2.1.1</jackson.version>
+        <netty.version>4.0.7.Final</netty.version>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

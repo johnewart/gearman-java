@@ -3,6 +3,7 @@ package org.gearman.server.net;
 import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
+import io.netty.channel.Channel;
 import org.gearman.common.JobState;
 import org.gearman.common.JobStatus;
 import org.gearman.common.interfaces.Client;
@@ -18,7 +19,6 @@ import org.gearman.server.exceptions.IllegalJobStateTransitionException;
 import org.gearman.common.Job;
 import org.gearman.server.storage.JobManager;
 import org.gearman.server.core.*;
-import org.jboss.netty.channel.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

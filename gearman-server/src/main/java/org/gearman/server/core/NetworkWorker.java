@@ -1,9 +1,10 @@
 package org.gearman.server.core;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.gearman.common.interfaces.Worker;
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.response.NoOp;
-import org.jboss.netty.channel.Channel;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -20,7 +21,7 @@ public class NetworkWorker implements Worker {
 
     public void send(Packet packet)
     {
-        channel.write(packet);
+        channel.writeAndFlush(packet);
     }
 
     @Override
@@ -37,7 +38,7 @@ public class NetworkWorker implements Worker {
     @Override
     public void wakeUp()
     {
-        channel.write(new NoOp());
+        send(new NoOp());
     }
 
 }

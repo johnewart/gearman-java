@@ -1,18 +1,17 @@
 package org.gearman.server.net;
 
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.gearman.server.persistence.PersistenceEngine;
 import org.gearman.server.storage.JobManager;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.Executors;
 
 public class ServerListener {
     private final int port;
@@ -21,14 +20,8 @@ public class ServerListener {
     private final NetworkManager networkManager;
     private final boolean enableSSL;
 
-    private final DefaultChannelGroup channelGroup;
-    private final ServerChannelFactory serverFactory;
-
     public ServerListener(int port, PersistenceEngine storageEngine, boolean enableSSL)
     {
-        this.channelGroup = new DefaultChannelGroup(this + "-channelGroup");
-        this.serverFactory =  new NioServerSocketChannelFactory(Executors.newCachedThreadPool(),
-                                                                Executors.newCachedThreadPool());
         this.port = port;
         this.enableSSL = enableSSL;
         this.jobManager = new JobManager(storageEngine);
@@ -49,40 +42,55 @@ public class ServerListener {
 
     public boolean start()
     {
-        ServerBootstrap bootstrap = new ServerBootstrap(serverFactory);
+        EventLoopGroup bossGroup = new NioEventLoopGroup();
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        try {
+            ServerBootstrap bootstrap = new ServerBootstrap();
+            bootstrap.group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new GearmanServerInitializer(networkManager, enableSSL))
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .option(ChannelOption.SO_REUSEADDR, true)
+                .option(ChannelOption.TCP_NODELAY, true);
 
-        // Set up the pipeline factory.
-        ChannelPipelineFactory pipelineFactory =
-                new GearmanPipelineFactory(networkManager, channelGroup, enableSSL);
+            bootstrap.bind(port).sync().channel().closeFuture().sync();
 
-        // Bind and start to accept incoming connections.
-        bootstrap.setOption("reuseAddress", true);
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
-        bootstrap.setPipelineFactory(pipelineFactory);
-
-        Channel channel = bootstrap.bind(new InetSocketAddress(this.port));
-        if (!channel.isBound()) {
-            this.stop();
-            return false;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
         }
 
-        this.channelGroup.add(channel);
         return true;
-
     }
 
     public void stop() {
         LOG.info("Stopping listener...");
-        if (this.channelGroup != null) {
-            this.channelGroup.close();
-        }
-        if (this.serverFactory != null) {
-            this.serverFactory.releaseExternalResources();
-        }
     }
 
     public JobManager getJobManager() {
         return jobManager;
     }
 }
+
+
+/**
+
+ // Bind and start to accept incoming connections.
+ bootstrap.setOption("reuseAddress", true);
+ bootstrap.setOption("child.tcpNoDelay", true);
+ bootstrap.setOption("child.keepAlive", true);
+ bootstrap.setPipelineFactory(pipelineFactory);
+
+ Channel channel = bootstrap.bind(new InetSocketAddress(this.port));
+ if (!channel.isBound()) {
+ this.stop();
+ return false;
+ }
+
+ this.channelGroup.add(channel);
+ return true;
+
+
+ **/

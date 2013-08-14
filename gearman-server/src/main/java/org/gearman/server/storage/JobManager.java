@@ -331,17 +331,23 @@ public class JobManager {
 
     public synchronized void workException(Job job, byte[] exception)
     {
-        if(job != null && !job.isBackground())
+        if(job != null)
         {
-            Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
-
-            if(!clients.isEmpty())
+            if(!job.isBackground())
             {
-                for(Client client : clients)
+                Set<Client> clients = getClientsForUniqueId(job.getUniqueID());
+
+                if(!clients.isEmpty())
                 {
-                    client.sendWorkException(job.getJobHandle(), exception);
+                    for(Client client : clients)
+                    {
+                        client.sendWorkException(job.getJobHandle(), exception);
+                    }
                 }
             }
+
+            job.complete();
+            removeJob(job);
         }
     }
 

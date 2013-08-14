@@ -1,5 +1,7 @@
 package org.gearman.server;
 
+import io.netty.channel.Channel;
+import io.netty.channel.Channel;
 import org.gearman.common.Job;
 import org.gearman.common.interfaces.Client;
 import org.gearman.common.interfaces.Worker;
@@ -13,7 +15,6 @@ import org.gearman.server.core.NetworkClient;
 import org.gearman.server.core.NetworkWorker;
 import org.gearman.server.net.NetworkManager;
 import org.gearman.server.storage.JobManager;
-import org.jboss.netty.channel.Channel;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -41,6 +42,7 @@ public class NetworkManagerTest {
     {
         mockJobManager = mock(JobManager.class);
         mockClientChannel = mock(Channel.class);
+
         mockWorkerChannel = mock(Channel.class);
 
         networkManager = new NetworkManager(mockJobManager);
@@ -62,7 +64,7 @@ public class NetworkManagerTest {
 
         networkManager.createJob(submitJobPacket, mockClientChannel);
 
-        verify(mockClientChannel).write(any(JobCreated.class));
+        verify(mockClientChannel).writeAndFlush(any(JobCreated.class));
 
     }
 
@@ -82,7 +84,7 @@ public class NetworkManagerTest {
         when(mockJobManager.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
         // When we get a JOB_CREATED packet, pull out the job handle
-        when(mockClientChannel.write(any(JobCreated.class))).thenAnswer(new Answer() {
+        when(mockClientChannel.writeAndFlush(any(JobCreated.class))).thenAnswer(new Answer() {
             public Object answer(InvocationOnMock invocation) {
                 Object[] args = invocation.getArguments();
                 if (args[0].getClass().equals(JobCreated.class)) {
@@ -96,19 +98,19 @@ public class NetworkManagerTest {
         // Submit a job as the client
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
         networkManager.createJob(submitJobPacket, mockClientChannel);
-        verify(mockClientChannel).write(any(JobCreated.class));
+        verify(mockClientChannel).writeAndFlush(any(JobCreated.class));
 
         // Register our worker
         networkManager.registerAbility(functionName, mockWorkerChannel);
 
         // Fetch the job as our worker
         networkManager.nextJobForWorker(mockWorkerChannel, false);
-        verify(mockWorkerChannel).write(any(JobAssign.class));
+        verify(mockWorkerChannel).writeAndFlush(any(JobAssign.class));
 
         byte[] resultdata = {'f','o', 'o'};
         WorkResponse workResponse = new WorkCompleteResponse(jobHandle[0], resultdata);
         networkManager.workResponse(workResponse, mockWorkerChannel);
-        verify(mockClientChannel).write(any(WorkCompleteResponse.class));
+        verify(mockClientChannel).writeAndFlush(any(WorkCompleteResponse.class));
     }
 
     @Test
@@ -127,7 +129,7 @@ public class NetworkManagerTest {
         when(mockJobManager.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
         // When we get a JOB_CREATED packet, pull out the job handle
-        when(mockClientChannel.write(any(JobCreated.class))).thenAnswer(new Answer() {
+        when(mockClientChannel.writeAndFlush(any(JobCreated.class))).thenAnswer(new Answer() {
             public Object answer(InvocationOnMock invocation) {
                 Object[] args = invocation.getArguments();
                 if (args[0].getClass().equals(JobCreated.class)) {
@@ -141,7 +143,7 @@ public class NetworkManagerTest {
         // Submit a job as the client
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
         networkManager.createJob(submitJobPacket, mockClientChannel);
-        verify(mockClientChannel).write(any(JobCreated.class));
+        verify(mockClientChannel).writeAndFlush(any(JobCreated.class));
 
         // Register our worker
         networkManager.registerAbility(functionName, mockWorkerChannel);
@@ -180,7 +182,7 @@ public class NetworkManagerTest {
         when(mockJobManager.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
         // When we get a JOB_CREATED packet, pull out the job handle
-        when(mockClientChannel.write(any(JobCreated.class))).thenAnswer(new Answer() {
+        when(mockClientChannel.writeAndFlush(any(JobCreated.class))).thenAnswer(new Answer() {
             public Object answer(InvocationOnMock invocation) {
                 Object[] args = invocation.getArguments();
                 if (args[0].getClass().equals(JobCreated.class)) {
@@ -194,7 +196,7 @@ public class NetworkManagerTest {
         // Submit a job as the client
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
         networkManager.createJob(submitJobPacket, mockClientChannel);
-        verify(mockClientChannel).write(any(JobCreated.class));
+        verify(mockClientChannel).writeAndFlush(any(JobCreated.class));
 
         // Register our worker
         networkManager.registerAbility(functionName, mockWorkerChannel);
@@ -234,7 +236,7 @@ public class NetworkManagerTest {
         when(mockJobManager.getCurrentJobForWorker(any(Worker.class))).thenReturn(job);
 
         // When we get a JOB_CREATED packet, pull out the job handle
-        when(mockClientChannel.write(any(JobCreated.class))).thenAnswer(new Answer() {
+        when(mockClientChannel.writeAndFlush(any(JobCreated.class))).thenAnswer(new Answer() {
             public Object answer(InvocationOnMock invocation) {
                 Object[] args = invocation.getArguments();
                 if (args[0].getClass().equals(JobCreated.class)) {
@@ -248,7 +250,7 @@ public class NetworkManagerTest {
         // Submit a job as the client
         SubmitJob submitJobPacket = new SubmitJob(functionName, uniqueID, submitData, false);
         networkManager.createJob(submitJobPacket, mockClientChannel);
-        verify(mockClientChannel).write(any(JobCreated.class));
+        verify(mockClientChannel).writeAndFlush(any(JobCreated.class));
 
         // Register our worker
         networkManager.registerAbility(functionName, mockWorkerChannel);

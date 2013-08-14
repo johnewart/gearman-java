@@ -1,8 +1,7 @@
-package org.gearman.server.net.codec;
+package org.gearman.net.codec;
 
 import org.gearman.common.packets.Packet;
 import org.gearman.common.packets.request.EchoRequest;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -14,9 +13,7 @@ public class EncoderTest {
     public void encodesPacketProperly()
     {
         Packet p = new EchoRequest("ok");
-        byte[] channelDataBytes = new byte[p.toByteArray().length];
-        ChannelBuffer buffer = Encoder.encodePacket(p);
-        buffer.getBytes(0, channelDataBytes);
+        byte[] channelDataBytes = Encoder.encodePacket(p);
         assertTrue(Arrays.equals(p.toByteArray(), channelDataBytes));
     }
 
@@ -24,9 +21,7 @@ public class EncoderTest {
     public void encodesStringProperly()
     {
         String stringToEncode = "gearman";
-        byte[] channelDataBytes = new byte[stringToEncode.length()];
-        ChannelBuffer buffer = Encoder.encodeString(stringToEncode);
-        buffer.getBytes(0, channelDataBytes);
+        byte[] channelDataBytes = Encoder.encodeString(stringToEncode);
         assertTrue(Arrays.equals(stringToEncode.getBytes(), channelDataBytes));
     }
 }

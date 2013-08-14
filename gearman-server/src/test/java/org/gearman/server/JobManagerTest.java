@@ -1,5 +1,7 @@
 package org.gearman.server;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import org.gearman.common.Job;
 import org.gearman.common.JobStatus;
 import org.gearman.common.interfaces.Client;
@@ -9,7 +11,6 @@ import org.gearman.server.factories.JobFactory;
 import org.gearman.server.persistence.MemoryQueue;
 import org.gearman.server.storage.JobQueue;
 import org.gearman.server.storage.JobManager;
-import org.jboss.netty.channel.Channel;
 import org.junit.Before;
 import org.junit.Test;
 
