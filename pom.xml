@@ -4,10 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.gearman</groupId>
+    <groupId>net.johnewart.gearman</groupId>
     <artifactId>gearman-java</artifactId>
     <packaging>pom</packaging>
-    <version>0.6.2</version>
+    <version>0.7.0-SNAPSHOT</version>
     <modules>
         <module>gearman-client</module>
         <module>gearman-server</module>
@@ -24,10 +24,20 @@
     </developers>
 
     <distributionManagement>
-        <repository>
+        <!--<repository>
             <id>johnewart</id>
             <name>John Ewart</name>
             <url>scp://jewart@mosrite.dreamhost.com/home/jewart/code.johnewart.net/maven/</url>
+        </repository>-->
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <name>Sonatype Nexus Snapshots</name>
+            <url>http://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <name>Nexus Release Repository</name>
+            <url>http://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 
@@ -45,6 +55,19 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>sonar-maven-plugin</artifactId>
