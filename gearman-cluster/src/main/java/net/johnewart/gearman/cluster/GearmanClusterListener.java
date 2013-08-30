@@ -1,4 +1,4 @@
-package org.gearman.cluster;
+package net.johnewart.gearman.cluster;
 
 import akka.actor.UntypedActor;
 import akka.cluster.ClusterEvent.ClusterDomainEvent;

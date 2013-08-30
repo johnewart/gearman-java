@@ -1,10 +1,6 @@
-package org.gearman.cluster;
+package net.johnewart.gearman.cluster;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.cluster.Cluster;
-import akka.cluster.ClusterEvent.ClusterDomainEvent;
 
 
 public class GearmanClusterServer {
@@ -19,7 +15,7 @@ public class GearmanClusterServer {
 
 
         // Create an actor that handles cluster domain events
-        ActorRef clusterListener = system.actorOf(
+        /*ActorRef clusterListener = system.actorOf(
                 Props.create(GearmanClusterListener.class, "id"),
                 "clusterListener"
         );
@@ -27,5 +23,6 @@ public class GearmanClusterServer {
         // Add subscription of cluster events
         Cluster.get(system).subscribe(clusterListener,
                 ClusterDomainEvent.class);
+        */
     }
 }
