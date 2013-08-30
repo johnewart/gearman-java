@@ -9,10 +9,10 @@ import akka.cluster.ClusterEvent.UnreachableMember;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
-public class SimpleClusterListener extends UntypedActor {
+public class GearmanClusterListener extends UntypedActor {
     LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
-    public SimpleClusterListener(String identifier)
+    public GearmanClusterListener(String identifier)
     { }
 
     @Override

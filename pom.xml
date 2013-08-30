@@ -13,7 +13,6 @@
         <module>gearman-server</module>
         <module>gearman-common</module>
         <module>gearman-example</module>
-        <module>gearman-cluster</module>
     </modules>
 
     <developers>
@@ -25,11 +24,6 @@
     </developers>
 
     <distributionManagement>
-        <!--<repository>
-            <id>johnewart</id>
-            <name>John Ewart</name>
-            <url>scp://jewart@mosrite.dreamhost.com/home/jewart/code.johnewart.net/maven/</url>
-        </repository>-->
         <snapshotRepository>
             <id>sonatype-nexus-snapshots</id>
             <name>Sonatype Nexus Snapshots</name>

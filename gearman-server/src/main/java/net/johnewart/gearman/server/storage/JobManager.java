@@ -432,8 +432,8 @@ public class JobManager {
                 LOG.debug("Error loading persistent data: " + ex.toString());
             }
 
-            if(jobs==null) return;
-            for(QueuedJob job : jobs) {
+            if (jobs == null) return;
+            for (QueuedJob job : jobs) {
                 String functionName = job.getFunctionName();
                 if(functionName == null) {
                     // TODO log
