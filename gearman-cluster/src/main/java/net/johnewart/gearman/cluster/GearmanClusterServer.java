@@ -1,28 +1,43 @@
 package net.johnewart.gearman.cluster;
 
-import akka.actor.ActorSystem;
+import net.johnewart.gearman.cluster.config.ClusterConfiguration;
+import net.johnewart.gearman.server.net.ServerListener;
+import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class GearmanClusterServer {
-        public static void main(String[] args) {
-        // Override the configuration of the port
-        // when specified as program argument
-        if (args.length > 0)
-            System.setProperty("akka.remote.netty.tcp.port", args[0]);
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanClusterServer.class);
 
-        // Create an Akka system
-        ActorSystem system = ActorSystem.create("ClusterSystem");
+    public static void main(String... args)  throws IOException {
+        final String configFile;
 
+        if (args.length != 1) {
+            configFile = "config.yml";
+        } else {
+            configFile = args[0];
+        }
 
-        // Create an actor that handles cluster domain events
-        /*ActorRef clusterListener = system.actorOf(
-                Props.create(GearmanClusterListener.class, "id"),
-                "clusterListener"
-        );
+        Yaml yaml = new Yaml();
 
-        // Add subscription of cluster events
-        Cluster.get(system).subscribe(clusterListener,
-                ClusterDomainEvent.class);
-        */
+        try (InputStream in = Files.newInputStream(Paths.get(configFile))) {
+            final ClusterConfiguration clusterConfiguration
+                    = yaml.loadAs(in, ClusterConfiguration.class);
+            System.out.println(clusterConfiguration.toString());
+
+            LOG.info("Starting Gearman Cluster Server...");
+
+            final ServerListener serverListener = new ServerListener(clusterConfiguration);
+
+            serverListener.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOG.error(e.toString());
+        }
     }
+
 }

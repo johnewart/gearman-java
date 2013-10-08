@@ -1,11 +1,11 @@
 package net.johnewart.gearman.server.web;
 
-import net.johnewart.gearman.server.storage.JobManager;
-import net.johnewart.gearman.server.util.JobQueueMonitor;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 
 public class SystemStatusView extends StatusView {
 
-    public SystemStatusView(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
+    public SystemStatusView(SnapshottingJobQueueMonitor jobQueueMonitor, JobManager jobManager)
     {
         super(jobQueueMonitor, jobManager);
     }

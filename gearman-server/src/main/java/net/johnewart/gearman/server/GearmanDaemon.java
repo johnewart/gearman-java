@@ -1,6 +1,6 @@
 package net.johnewart.gearman.server;
 
-import net.johnewart.gearman.server.config.ServerConfiguration;
+import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
 import net.johnewart.gearman.server.web.WebListener;
 import org.apache.commons.cli.ParseException;
@@ -13,13 +13,13 @@ public class GearmanDaemon {
 
     public static void main(String... args)
     {
-        final ServerConfiguration serverConfiguration;
+        final GearmanServerConfiguration serverConfiguration;
 
         if (args.length == 1) {
             // File name?
             File configFile = new File(args[0]);
             if (configFile.exists() && configFile.canRead()) {
-                serverConfiguration = new ServerConfiguration(configFile);
+                serverConfiguration = new GearmanServerConfiguration(configFile);
             } else {
                 serverConfiguration = parseCommandLine(args);
             }
@@ -34,7 +34,7 @@ public class GearmanDaemon {
                 final ServerListener serverListener = new ServerListener(serverConfiguration);
                 final WebListener webListener = new WebListener(serverConfiguration);
 
-                webListener.start();
+//                webListener.start();
                 serverListener.start();
             } catch (Exception e) {
                 e.printStackTrace();
@@ -44,9 +44,9 @@ public class GearmanDaemon {
         }
     }
 
-    private static ServerConfiguration parseCommandLine(String... args) {
+    private static GearmanServerConfiguration parseCommandLine(String... args) {
         try {
-            return new ServerConfiguration(args);
+            return new GearmanServerConfiguration(args);
         } catch (ParseException e) {
             return null;
         }

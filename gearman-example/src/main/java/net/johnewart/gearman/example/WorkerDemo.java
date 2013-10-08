@@ -1,8 +1,8 @@
 package net.johnewart.gearman.example;
 
+import net.johnewart.gearman.client.NetworkGearmanWorker;
 import org.apache.commons.lang3.ArrayUtils;
-import net.johnewart.gearman.client.GearmanFunction;
-import net.johnewart.gearman.client.GearmanWorker;
+import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.net.Connection;
 import org.slf4j.Logger;
@@ -27,7 +27,7 @@ public class WorkerDemo {
     {
         try {
             byte data[] = "This is a test".getBytes();
-            GearmanWorker worker = new GearmanWorker.Builder()
+            NetworkGearmanWorker worker = new NetworkGearmanWorker.Builder()
                                         .withConnection(new Connection("localhost", 4730))
                                         .build();
 

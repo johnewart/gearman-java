@@ -24,18 +24,18 @@ public class WebListener {
     }
 
     public void start() throws Exception {
-        LOG.info("Listening on " + ":" + serverConfiguration.httpPort);
+        LOG.info("Listening on " + ":" + serverConfiguration.getHttpPort());
 
-        final Server httpServer = new Server(serverConfiguration.httpPort);
+        final Server httpServer = new Server(serverConfiguration.getHttpPort());
         final HandlerList handlerList = new HandlerList();
         final MetricsServlet metricsServlet = new MetricsServlet(true);
         //final HealthCheckRegistry healthChecks = new HealthCheckRegistry();
 
         final AdminServlet adminServlet = new AdminServlet();
         final GearmanServlet gearmanServlet =
-                new GearmanServlet(serverConfiguration.jobQueueMonitor, serverConfiguration.jobManager);
+                new GearmanServlet(serverConfiguration.getJobQueueMonitor(), serverConfiguration.getJobManager());
         final DashboardServlet dashboardServlet =
-                new DashboardServlet(serverConfiguration.jobQueueMonitor, serverConfiguration.jobManager);
+                new DashboardServlet(serverConfiguration.getJobQueueMonitor(), serverConfiguration.getJobManager());
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         final URL templateURL = classLoader.getResource(TEMPLATE_PATH);

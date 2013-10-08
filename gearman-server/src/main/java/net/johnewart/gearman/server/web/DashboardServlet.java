@@ -1,11 +1,9 @@
 package net.johnewart.gearman.server.web;
 
-import java.io.*;
-
 import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateException;
-import net.johnewart.gearman.server.storage.JobManager;
+import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +12,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-/**
- *
- */
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 
 public class DashboardServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "text/html";

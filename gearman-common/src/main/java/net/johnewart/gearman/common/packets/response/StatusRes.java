@@ -1,5 +1,6 @@
 package net.johnewart.gearman.common.packets.response;
 
+import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.constants.PacketType;
 
@@ -123,5 +124,14 @@ public class StatusRes extends ResponsePacket {
     public String toString()
     {
         return jobHandle.get() + ":" + statusKnown + ":" + running + ":" + numerator + ":" + denominator;
+    }
+
+    public JobStatus toJobStatus() {
+        return new JobStatus(
+                numerator,
+                denominator,
+                this.running ? JobState.WORKING : JobState.QUEUED,
+                getJobHandle()
+        );
     }
 }

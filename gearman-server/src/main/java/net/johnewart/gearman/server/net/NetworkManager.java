@@ -4,8 +4,13 @@ import com.google.common.collect.ImmutableList;
 import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
 import io.netty.channel.Channel;
-import net.johnewart.gearman.common.JobState;
-import net.johnewart.gearman.common.interfaces.Client;
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.JobStatus;
+import net.johnewart.gearman.common.interfaces.EngineClient;
+import net.johnewart.gearman.common.packets.Packet;
+import net.johnewart.gearman.common.packets.request.EchoRequest;
+import net.johnewart.gearman.common.packets.request.GetStatus;
+import net.johnewart.gearman.common.packets.request.SubmitJob;
 import net.johnewart.gearman.common.packets.response.EchoResponse;
 import net.johnewart.gearman.common.packets.response.JobAssign;
 import net.johnewart.gearman.common.packets.response.JobAssignUniq;
@@ -18,19 +23,10 @@ import net.johnewart.gearman.common.packets.response.WorkExceptionResponse;
 import net.johnewart.gearman.common.packets.response.WorkResponse;
 import net.johnewart.gearman.common.packets.response.WorkStatus;
 import net.johnewart.gearman.common.packets.response.WorkWarningResponse;
-import net.johnewart.gearman.server.core.NetworkClient;
-import net.johnewart.gearman.server.core.NetworkWorker;
-import net.johnewart.gearman.server.storage.JobManager;
-import net.johnewart.gearman.common.JobStatus;
-import net.johnewart.gearman.common.interfaces.Worker;
-import net.johnewart.gearman.common.packets.Packet;
-import net.johnewart.gearman.common.packets.request.EchoRequest;
-import net.johnewart.gearman.common.packets.request.GetStatus;
-import net.johnewart.gearman.common.packets.request.SubmitJob;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.constants.PacketType;
-import net.johnewart.gearman.server.exceptions.IllegalJobStateTransitionException;
-import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class NetworkManager {
     private final JobManager jobManager;
-    private final ConcurrentHashMap<Channel, NetworkWorker> workers;
-    private final ConcurrentHashMap<Channel, NetworkClient> clients;
+    private final ConcurrentHashMap<Channel, NetworkEngineWorker> workers;
+    private final ConcurrentHashMap<Channel, NetworkEngineClient> clients;
     private static Logger LOG = LoggerFactory.getLogger(NetworkManager.class);
 
     public NetworkManager(JobManager jobManager)
@@ -60,11 +56,11 @@ public class NetworkManager {
     {
         if(workers.containsKey(channel))
         {
-            Worker worker = workers.get(channel);
+            NetworkEngineWorker worker = workers.get(channel);
             jobManager.unregisterWorker(worker);
             workers.remove(channel);
         } else if (clients.containsKey(channel)) {
-            Client client = clients.get(channel);
+            EngineClient client = clients.get(channel);
             jobManager.unregisterClient(client);
             clients.remove(channel);
         }
@@ -75,13 +71,13 @@ public class NetworkManager {
         // Remove from any worker lists
         if(workers.containsKey(channel))
         {
-            Worker worker = workers.get(channel);
+            NetworkEngineWorker worker = workers.get(channel);
             jobManager.sleepingWorker(worker);
         }
     }
 
     public void registerAbility(String functionName, Channel channel) {
-        Worker worker = findOrCreateWorker(channel);
+        NetworkEngineWorker worker = findOrCreateWorker(channel);
         worker.addAbility(functionName);
         jobManager.registerWorkerAbility(functionName, worker);
     }
@@ -89,7 +85,7 @@ public class NetworkManager {
     public void unregisterAbility(String functionName, Channel channel) {
         if(workers.containsKey(channel))
         {
-            Worker worker = workers.get(channel);
+            NetworkEngineWorker worker = workers.get(channel);
             jobManager.unregisterWorkerAbility(functionName, worker);
         }
     }
@@ -97,7 +93,7 @@ public class NetworkManager {
     public void nextJobForWorker(Channel channel, boolean uniqueID) {
         if(workers.containsKey(channel))
         {
-            NetworkWorker worker = workers.get(channel);
+            NetworkEngineWorker worker = workers.get(channel);
             Job nextJob = jobManager.nextJobForWorker(worker);
 
             if(nextJob != null)
@@ -131,7 +127,7 @@ public class NetworkManager {
     @Timed
     @Metered
     public void createJob(SubmitJob packet, Channel channel) {
-        Client client = findOrCreateClient(channel);
+        EngineClient client = findOrCreateClient(channel);
         String funcName = packet.getFunctionName();
         String uniqueID = packet.getUniqueId();
         byte[] data = packet.getData();
@@ -160,7 +156,7 @@ public class NetworkManager {
     }
 
     public void checkJobStatus(GetStatus getStatus, Channel channel) {
-        Client client = findOrCreateClient(channel);
+        EngineClient client = findOrCreateClient(channel);
         JobStatus jobStatus =  jobManager.checkJobStatus(getStatus.jobHandle.get());
 
         StatusRes result = new StatusRes(jobStatus);
@@ -169,35 +165,35 @@ public class NetworkManager {
 
     public void updateJobStatus(WorkStatus workStatus) {
         String jobHandle = workStatus.getJobHandle();
-        int completeNumerator = workStatus.getCompletenumerator();
-        int completeDenominator = workStatus.getCompletedenominator();
+        int completeNumerator = workStatus.getCompleteNumerator();
+        int completeDenominator = workStatus.getCompleteDenominator();
         jobManager.updateJobStatus(jobHandle, completeNumerator, completeDenominator);
     }
 
-    private Client findOrCreateClient(Channel channel)
+    private EngineClient findOrCreateClient(Channel channel)
     {
-        NetworkClient client;
+        NetworkEngineClient client;
 
         if(clients.containsKey(channel))
         {
             client = clients.get(channel);
         } else {
-            client = new NetworkClient(channel);
+            client = new NetworkEngineClient(channel);
             clients.put(channel, client);
         }
 
         return client;
     }
 
-    private Worker findOrCreateWorker(Channel channel)
+    private NetworkEngineWorker findOrCreateWorker(Channel channel)
     {
-        NetworkWorker worker;
+        NetworkEngineWorker worker;
 
         if(workers.containsKey(channel))
         {
             worker = workers.get(channel);
         } else {
-            worker = new NetworkWorker(channel);
+            worker = new NetworkEngineWorker(channel);
             workers.put(channel, worker);
         }
 
@@ -207,7 +203,7 @@ public class NetworkManager {
     public void workResponse(WorkResponse packet, Channel channel) {
         if(workers.containsKey(channel))
         {
-            Worker worker = workers.get(channel);
+            NetworkEngineWorker worker = workers.get(channel);
             Job currentJob = jobManager.getCurrentJobForWorker(worker);
 
             switch(packet.getType())
@@ -258,7 +254,7 @@ public class NetworkManager {
     }
 
     public final Packet createStatusResponsePacket(Job job) {
-        boolean isRunning = job.getState() == JobState.WORKING;
+        boolean isRunning = job.isRunning();
         boolean knownState = true;
         int numerator = job.getNumerator();
         int denominator = job.getDenominator();
@@ -273,12 +269,12 @@ public class NetworkManager {
     }
 
 
-    public ImmutableList<NetworkClient> getClientList()
+    public ImmutableList<NetworkEngineClient> getClientList()
     {
         return ImmutableList.copyOf(clients.values());
     }
 
-    public ImmutableList<NetworkWorker> getWorkerList()
+    public ImmutableList<NetworkEngineWorker> getWorkerList()
     {
         return ImmutableList.copyOf(workers.values());
     }

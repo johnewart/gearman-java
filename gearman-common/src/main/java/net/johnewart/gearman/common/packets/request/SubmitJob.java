@@ -46,6 +46,14 @@ public class SubmitJob extends RequestPacket {
 
     public SubmitJob(String function, String unique_id, byte[] data, boolean background, JobPriority priority)
     {
+        this(function, unique_id, data, background, priority, null);
+    }
+
+    public SubmitJob(String function, String uniqueID, byte[] data, Date when) {
+        this(function, uniqueID, data, true, JobPriority.NORMAL, when);
+    }
+
+    public SubmitJob(String function, String unique_id, byte[] data, boolean background, JobPriority priority, Date when) {
         this.taskName = new AtomicReference<>(function);
         this.uniqueId = new AtomicReference<>(unique_id);
         this.epochString = new AtomicReference<>();
@@ -67,7 +75,12 @@ public class SubmitJob extends RequestPacket {
                 break;
         }
 
-        this.size = function.length() + 1 + unique_id.length() + 1 + data.length;
+        if(when != null) {
+            this.epochString.set(String.valueOf(when.getTime()));
+            this.size = function.length() + 1 + unique_id.length() + 1 + epochString.get().length() + 1 + data.length;
+        } else {
+            this.size = function.length() + 1 + unique_id.length() + 1 + data.length;
+        }
     }
 
     public Date getWhen()

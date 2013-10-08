@@ -15,6 +15,8 @@ public class DateFormatter {
     public final static long ONE_DAY = ONE_HOUR * 24;
     public final static long DAYS_IN_A_YEAR = 365;
 
+    private DateFormatter() { }
+
     public static TimeMap buildTimeMap(Number n) {
         TimeMap res = null;
 

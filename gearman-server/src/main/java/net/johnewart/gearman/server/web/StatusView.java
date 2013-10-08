@@ -1,7 +1,7 @@
 package net.johnewart.gearman.server.web;
 
-import net.johnewart.gearman.server.storage.JobManager;
-import net.johnewart.gearman.server.storage.JobQueue;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
@@ -12,13 +12,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 4/30/13
- * Time: 6:22 PM
- * To change this template use File | Settings | File Templates.
- */
 public class StatusView {
     protected final JobQueueMonitor jobQueueMonitor;
     protected final JobManager jobManager;
@@ -37,16 +30,12 @@ public class StatusView {
     public long getUptimeInSeconds()
     {
         Date now = new Date();
-        Date startTime = JobManager.timeStarted;
-        long uptimeMilliseconds = now.getTime() - JobManager.timeStarted.getTime();
-        long uptimeSeconds = uptimeMilliseconds / 1000;
-
-        return uptimeSeconds;
+        return now.getTime() - JobManager.timeStarted.getTime() / 1000;
     }
 
     public Integer getUptimeInDays()
     {
-        return new Long(getUptimeInSeconds() / 86400).intValue();
+        return (Long.valueOf(getUptimeInSeconds() / 86400)).intValue();
 
     }
 
@@ -54,7 +43,7 @@ public class StatusView {
     {
         TimeMap timeMap = DateFormatter.buildTimeMap(this.getUptimeInSeconds() * 1000);
 
-        String res = "";
+        String res;
 
         if (timeMap.DAYS == 0) {
             if(timeMap.HOURS == 0)
@@ -64,15 +53,10 @@ public class StatusView {
         } else if (timeMap.YEARS == 0) {
             res = String.format("%ddays", timeMap.DAYS);
         } else {
-            res = String.format("> 1yr.", timeMap.YEARS);
+            res = "> 1yr.";
         }
 
         return res;
-    }
-
-    public String getPersistenceEngineInfo()
-    {
-        return jobManager.getPersistenceEngine().getIdentifier();
     }
 
     public Long getTotalJobsPending()
@@ -151,7 +135,7 @@ public class StatusView {
 
     public Integer getMemoryUsage()
     {
-        return new Float((new Float(getUsedMemory()) / new Float(getMaxMemory())) * 100).intValue();
+        return new Float(((float) getUsedMemory() / (float) getMaxMemory()) * 100).intValue();
     }
 
     public NumberFormatter getNumberFormatter()

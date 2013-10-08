@@ -19,13 +19,13 @@ public class ServerListener {
     }
 
     public boolean start() {
-        LOG.info("Listening on " + serverConfiguration.hostName + ":" + serverConfiguration.port);
+        LOG.info("Listening on " + serverConfiguration.getHostName() + ":" + serverConfiguration.getPort());
 
         LOG.info("Loading existing jobs...");
         // Load up jobs
-        serverConfiguration.jobManager.loadAllJobs();
+        //serverConfiguration.jobManager.loadAllJobs();
 
-        final NetworkManager networkManager = new NetworkManager(serverConfiguration.jobManager);
+        final NetworkManager networkManager = new NetworkManager(serverConfiguration.getJobManager());
 
         EventLoopGroup bossGroup = new NioEventLoopGroup();
         EventLoopGroup workerGroup = new NioEventLoopGroup();
@@ -33,12 +33,12 @@ public class ServerListener {
             ServerBootstrap bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new GearmanServerInitializer(networkManager, serverConfiguration.enableSSL))
+                .childHandler(new GearmanServerInitializer(networkManager, serverConfiguration.isSSLEnabled()))
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.TCP_NODELAY, true);
 
-            bootstrap.bind(serverConfiguration.port).sync().channel().closeFuture().sync();
+            bootstrap.bind(serverConfiguration.getPort()).sync().channel().closeFuture().sync();
 
         } catch (InterruptedException e) {
             e.printStackTrace();

@@ -22,5 +22,10 @@
             <artifactId>gearman-client</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>net.johnewart.gearman</groupId>
+            <artifactId>gearman-embedded-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

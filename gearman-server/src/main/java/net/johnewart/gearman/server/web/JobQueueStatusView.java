@@ -1,6 +1,6 @@
 package net.johnewart.gearman.server.web;
 
-import net.johnewart.gearman.server.storage.JobManager;
+import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
 
@@ -9,7 +9,9 @@ import java.util.List;
 public class JobQueueStatusView extends StatusView {
     private final String jobQueueName;
 
-    public JobQueueStatusView(JobQueueMonitor jobQueueMonitor, JobManager jobManager, String jobQueueName)
+    public JobQueueStatusView(final JobQueueMonitor jobQueueMonitor,
+                              final JobManager jobManager,
+                              final String jobQueueName)
     {
         super(jobQueueMonitor, jobManager);
         this.jobQueueName = jobQueueName;
@@ -30,8 +32,8 @@ public class JobQueueStatusView extends StatusView {
         return snapshots.get(snapshots.size()-1);
     }
 
-    public Integer getNumberOfConnectedWorkers()
+    public Long getNumberOfConnectedWorkers()
     {
-        return jobManager.getJobQueue(jobQueueName).getNumberOfConnectedWorkers();
+        return jobManager.getWorkerPool(jobQueueName).getNumberOfConnectedWorkers();
     }
 }

@@ -1,23 +1,22 @@
 package net.johnewart.gearman.server.util;
 
-import java.util.Date;
-import java.util.HashMap;
+import com.google.common.collect.ImmutableMap;
+import net.johnewart.gearman.constants.JobPriority;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 12/23/12
- * Time: 10:24 PM
- * To change this template use File | Settings | File Templates.
- */
+import java.util.Date;
+
 public class JobQueueSnapshot {
     private Date timestamp;
     private long immediate;
     private long future;
-    private HashMap<Integer, Long> futureJobCounts;
-    private HashMap<String, Long> priorityCounts;
+    private ImmutableMap<Integer, Long> futureJobCounts;
+    private ImmutableMap<JobPriority, Long> priorityCounts;
 
-    public JobQueueSnapshot(Date timestamp, long immediate, long future, HashMap futureJobCounts, HashMap priorityCounts)
+    public JobQueueSnapshot(Date timestamp,
+                            long immediate,
+                            long future,
+                            ImmutableMap<Integer, Long> futureJobCounts,
+                            ImmutableMap<JobPriority, Long> priorityCounts)
     {
         this.timestamp = timestamp;
         this.immediate = immediate;
@@ -38,11 +37,11 @@ public class JobQueueSnapshot {
         return future;
     }
 
-    public HashMap<Integer, Long> getFutureJobCounts() {
+    public ImmutableMap<Integer, Long> getFutureJobCounts() {
         return futureJobCounts;
     }
 
-    public HashMap<String, Long> getPriorityCounts() {
+    public ImmutableMap<JobPriority, Long> getPriorityCounts() {
         return priorityCounts;
     }
 }

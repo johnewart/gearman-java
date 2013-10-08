@@ -161,7 +161,10 @@ public class Connection {
     }
 
     public Long getLastTimeSeenAlive() {
-        return lastTimeSeenAlive;
+        if(lastTimeSeenAlive != null)
+            return lastTimeSeenAlive;
+        else
+            return 0L;
     }
 
     public void setLastTimeSeenAlive(Long lastTimeSeenAlive) {

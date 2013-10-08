@@ -1,5 +1,6 @@
 package net.johnewart.gearman.common.packets.response;
 
+import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.constants.PacketType;
 
@@ -75,11 +76,20 @@ public class WorkStatus extends ResponsePacket
         return jobHandle.get();
     }
 
-    public int getCompletenumerator() {
+    public int getCompleteNumerator() {
         return completenumerator;
     }
 
-    public int getCompletedenominator() {
+    public int getCompleteDenominator() {
         return completedenominator;
+    }
+
+    public JobStatus toJobStatus() {
+        return new JobStatus(
+            completenumerator,
+            completedenominator,
+            JobState.WORKING,
+            getJobHandle()
+        );
     }
 }

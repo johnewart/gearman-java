@@ -5,10 +5,11 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.johnewart.gearman.server.storage.JobManager;
-import net.johnewart.gearman.server.storage.JobQueue;
-import net.johnewart.gearman.server.core.QueuedJob;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.QueuedJob;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
@@ -22,8 +23,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GearmanServlet extends HttpServlet {
@@ -106,9 +107,14 @@ public class GearmanServlet extends HttpServlet {
     public void writeAllJobQueueStats(JsonGenerator json) throws IOException {
 
         ConcurrentHashMap<String, JobQueue> jobQueues = jobManager.getJobQueues();
-        for(String jobQueueName : jobQueues.keySet())
+        for(Map.Entry<String, JobQueue> entry : jobQueues.entrySet())
         {
-            json.writeNumberField(jobQueueName, jobQueues.get(jobQueueName).size());
+            final String jobQueueName = entry.getKey();
+            final JobQueue jobQueue = entry.getValue();
+
+            if(jobQueue != null) {
+                json.writeNumberField(jobQueueName, jobQueue.size());
+            }
         }
     }
 
@@ -116,7 +122,7 @@ public class GearmanServlet extends HttpServlet {
     {
         if(jobQueueMonitor != null)
         {
-            HashMap<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
+            ImmutableMap<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
             if( snapshotMap != null && snapshotMap.containsKey(jobQueueName))
             {
                 List<JobQueueSnapshot> snapshotList = ImmutableList.copyOf(jobQueueMonitor.getSnapshots().get(jobQueueName));

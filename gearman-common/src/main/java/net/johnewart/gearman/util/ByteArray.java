@@ -25,11 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.johnewart.util;
+package net.johnewart.gearman.util;
+
+import net.johnewart.gearman.constants.GearmanConstants;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import net.johnewart.gearman.constants.GearmanConstants;
 
 /**
  * Almost Immutable byte bytes

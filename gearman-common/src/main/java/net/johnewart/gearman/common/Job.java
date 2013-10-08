@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.UUID;
 
 public class Job {
     private static Logger LOG = LoggerFactory.getLogger(Job.class);
@@ -75,6 +76,17 @@ public class Job {
         this.jobHandle = new String(jobHandle);
     }
 
+    protected Job(Job otherJob) {
+        this.priority = otherJob.priority;
+        this.data = otherJob.data;
+        this.background = otherJob.background;
+        this.timeToRun = otherJob.timeToRun;
+        this.uniqueID = otherJob.uniqueID;
+        this.jobHandle = otherJob.jobHandle;
+        this.functionName = otherJob.functionName;
+        this.numerator = otherJob.numerator;
+        this.denominator = otherJob.denominator;
+    }
 
     public String getFunctionName() {
         return functionName;
@@ -101,7 +113,7 @@ public class Job {
         return this.state;
     }
 
-    public void setState(JobState state)
+    public void setState(final JobState state)
     {
         this.state = state;
     }
@@ -180,6 +192,14 @@ public class Job {
         return result;
     }
 
+    public void markInProgress() {
+        this.state = JobState.WORKING;
+    }
+
+    public boolean isRunning() {
+        return this.state == JobState.WORKING;
+    }
+
     public static class Builder {
         private Job job;
         public Builder() {
@@ -187,7 +207,20 @@ public class Job {
         }
 
         public Job build() {
-            return job;
+            if(job.uniqueID == null) {
+                job.uniqueID = UUID.randomUUID().toString();
+            }
+
+            if(job.priority == null) {
+                job.priority = JobPriority.NORMAL;
+            }
+
+            return new Job(job);
+        }
+
+        public Builder priority(JobPriority value) {
+            job.priority = value;
+            return this;
         }
 
         public Builder data(byte[] data) {
