@@ -30,7 +30,8 @@ public class StatusView {
     public long getUptimeInSeconds()
     {
         Date now = new Date();
-        return now.getTime() - JobManager.timeStarted.getTime() / 1000;
+        Date started = jobManager.timeStarted;
+        return (now.getTime() - started.getTime()) / 1000;
     }
 
     public Integer getUptimeInDays()
