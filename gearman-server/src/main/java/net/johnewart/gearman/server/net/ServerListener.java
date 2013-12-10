@@ -5,9 +5,15 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.QueuedJob;
+import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.server.config.ServerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
 
 public class ServerListener {
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
@@ -23,7 +29,18 @@ public class ServerListener {
 
         LOG.info("Loading existing jobs...");
         // Load up jobs
-        //serverConfiguration.jobManager.loadAllJobs();
+        JobQueueFactory jobQueueFactory = serverConfiguration.getJobQueueFactory();
+        Collection<QueuedJob> queuedJobs =  jobQueueFactory.loadPersistedJobs();
+        JobManager jobManager = serverConfiguration.getJobManager();
+
+        int imported = 0;
+        for(QueuedJob queuedJob : queuedJobs) {
+            boolean added = jobManager.getJobQueue(queuedJob.functionName).add(queuedJob);
+            if(added) {
+                imported += 1;
+            }
+        }
+        LOG.info("Imported " + imported + " persisted jobs.");
 
         final NetworkManager networkManager = new NetworkManager(serverConfiguration.getJobManager());
 

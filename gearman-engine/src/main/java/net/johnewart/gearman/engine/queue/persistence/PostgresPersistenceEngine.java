@@ -252,12 +252,12 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st.setFetchSize(JOBS_PER_PAGE);
-                st.setMaxRows(JOBS_PER_PAGE);
 
                 LOG.debug("Reading all job data from PostgreSQL");
+                final String countQuery = "SELECT COUNT(*) AS jobCount FROM jobs";
+                st = conn.prepareStatement(countQuery);
+                rs = st.executeQuery();
 
-                rs = st.executeQuery("SELECT COUNT(*) AS jobCount FROM jobs");
                 if(rs.next())
                 {
                     int totalJobs = rs.getInt("jobCount");
@@ -270,11 +270,14 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                                 " LIMIT ? " +
                                 "OFFSET ?";
 
+                        st.setFetchSize(JOBS_PER_PAGE);
+                        st.setMaxRows(JOBS_PER_PAGE);
+
                         st = conn.prepareStatement(readQuery);
                         st.setInt(1, JOBS_PER_PAGE);
                         st.setInt(2, (pageNum * JOBS_PER_PAGE));
 
-                        rs = st.executeQuery(readQuery);
+                        rs = st.executeQuery();
 
                         while(rs.next())
                         {

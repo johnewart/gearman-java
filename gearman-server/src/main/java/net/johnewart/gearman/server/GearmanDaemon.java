@@ -1,55 +1,66 @@
 package net.johnewart.gearman.server;
 
+import net.johnewart.gearman.server.config.DefaultServerConfiguration;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
+import net.johnewart.gearman.server.config.ServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
 import net.johnewart.gearman.server.web.WebListener;
-import org.apache.commons.cli.ParseException;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class GearmanDaemon {
 	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
 
     public static void main(String... args)
     {
-        final GearmanServerConfiguration serverConfiguration;
+        final String configFile;
 
-        if (args.length == 1) {
-            // File name?
-            File configFile = new File(args[0]);
-            if (configFile.exists() && configFile.canRead()) {
-                serverConfiguration = new GearmanServerConfiguration(configFile);
-            } else {
-                serverConfiguration = parseCommandLine(args);
-            }
+        if (args.length != 1) {
+            configFile = "config.yml";
         } else {
-            serverConfiguration = parseCommandLine(args);
+            configFile = args[0];
         }
 
-        if (serverConfiguration != null) {
-            try {
-                LOG.info("Starting ServerListener...");
 
-                final ServerListener serverListener = new ServerListener(serverConfiguration);
-                final WebListener webListener = new WebListener(serverConfiguration);
+        final ServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(configFile);
+        final ServerListener serverListener = new ServerListener(serverConfiguration);
+        final WebListener webListener = new WebListener(serverConfiguration);
 
-//                webListener.start();
-                serverListener.start();
-            } catch (Exception e) {
-                e.printStackTrace();
-                LOG.error(e.toString());
-            }        } else {
-            LOG.error("Unable to configure Gearman system. Check command-line options or config file.");
-        }
-    }
-
-    private static GearmanServerConfiguration parseCommandLine(String... args) {
         try {
-            return new GearmanServerConfiguration(args);
-        } catch (ParseException e) {
-            return null;
+            webListener.start();
+            serverListener.start();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+
+    private static ServerConfiguration loadFromConfigOrGenerateDefaultConfig(final String configFile) {
+        ServerConfiguration serverConfiguration = null;
+        try (InputStream in = Files.newInputStream(Paths.get(configFile))) {
+            Yaml yaml = new Yaml();
+
+            serverConfiguration
+                    = yaml.loadAs(in, GearmanServerConfiguration.class);
+
+            System.out.println(serverConfiguration.toString());
+
+            LOG.info("Starting Gearman Server with settings from " + configFile + "...");
+
+        } catch (Exception e) {
+            LOG.error("Can't load " + configFile + ": ", e);
+        }
+
+        if (serverConfiguration == null) {
+            LOG.info("Starting Gearman Server with default settings ...");
+            serverConfiguration = new DefaultServerConfiguration();
+        }
+
+        return serverConfiguration;
+    }
+
 
 }

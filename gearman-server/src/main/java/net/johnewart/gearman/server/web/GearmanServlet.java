@@ -86,7 +86,9 @@ public class GearmanServlet extends HttpServlet {
 
     public void writeSystemSnapshots(JsonGenerator json) throws IOException {
         List<SystemSnapshot> snapshots = new ArrayList<>();
-        snapshots.addAll(jobQueueMonitor.getSystemSnapshots());
+        if (jobQueueMonitor != null) {
+            snapshots.addAll(jobQueueMonitor.getSystemSnapshots());
+        }
         json.writeStartArray();
         for(SystemSnapshot snapshot : snapshots)
         {

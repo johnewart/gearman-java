@@ -51,4 +51,5 @@ public interface JobQueue {
 
     ImmutableMap<Integer, Long> futureCounts();
 
+    boolean add(QueuedJob queuedJob);
 }

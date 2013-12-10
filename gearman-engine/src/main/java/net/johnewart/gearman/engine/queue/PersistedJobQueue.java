@@ -51,46 +51,51 @@ public class PersistedJobQueue implements JobQueue {
     }
 
     @Override
+    public boolean add(final QueuedJob queuedJob) {
+        synchronized (this.allJobs) {
+
+            if(this.maxQueueSize.intValue() > 0 && maxQueueSize.intValue() <= size()) {
+                return false;
+            }
+
+            if(allJobs.contains(queuedJob.getUniqueID()))
+            {
+                return false;
+            } else {
+                final boolean enqueued;
+                allJobs.add(queuedJob.getUniqueID());
+
+                switch (queuedJob.getPriority()) {
+                    case LOW:
+                        enqueued = low.add(queuedJob);
+                        break;
+                    case NORMAL:
+                        enqueued = mid.add(queuedJob);
+                        break;
+                    case HIGH:
+                        enqueued = high.add(queuedJob);
+                        break;
+                    default:
+                        enqueued = false;
+                }
+
+                if (enqueued) {
+                    incrementJobCounter(queuedJob.getPriority());
+                }
+
+                return enqueued;
+            }
+        }
+    }
+
+    @Override
     public final boolean enqueue(final Job job) {
         LOG.debug("Enqueueing " + job.toString());
 
         QueuedJob queuedJob = new QueuedJob(job);
 
         if(persistenceEngine.write(job)) {
-            synchronized (this.allJobs) {
-
-                if(this.maxQueueSize.intValue() > 0 && maxQueueSize.intValue() <= size()) {
-                    return false;
-                }
-
-                if(allJobs.contains(job.getUniqueID()))
-                {
-                    return false;
-                } else {
-                    final boolean enqueued;
-                    allJobs.add(job.getUniqueID());
-
-                    switch (job.getPriority()) {
-                        case LOW:
-                            enqueued = low.add(queuedJob);
-                            break;
-                        case NORMAL:
-                            enqueued = mid.add(queuedJob);
-                            break;
-                        case HIGH:
-                            enqueued = high.add(queuedJob);
-                            break;
-                        default:
-                            enqueued = false;
-                    }
-
-                    if (enqueued) {
-                        incrementJobCounter(job.getPriority());
-                    }
-
-                    return enqueued;
-                }
-            }
+            return add(queuedJob);
         } else {
             // ! written to persistent store
             LOG.error("Unable to save job to persistent store");
@@ -296,6 +301,8 @@ public class PersistedJobQueue implements JobQueue {
 
         return ImmutableMap.copyOf(hourCounts);
     }
+
+
 
     private void decrementJobCounter(final JobPriority jobPriority) {
         switch(jobPriority) {
