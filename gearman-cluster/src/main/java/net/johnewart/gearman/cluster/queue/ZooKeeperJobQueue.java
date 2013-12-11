@@ -7,23 +7,13 @@ import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.persistence.PersistenceEngine;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
@@ -65,23 +55,8 @@ public class ZooKeeperJobQueue implements JobQueue, Watcher {
         LOG.debug("Enqueueing " + job.toString());
 
         if(persistenceEngine.write(job)) {
-            try {
-                byte[] uniqueIdBytes = Bytes.toBytes(job.getUniqueID());
-                final String jobPath = pathForJob(job);
-                final String createdPath =
-                        zooKeeper.create(jobPath, uniqueIdBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
-                final String uniqueIdPath =
-                        zooKeeper.create(uidPath(job.getUniqueID()), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                LOG.debug("Added job as " + createdPath);
-                return true;
-            } catch (InterruptedException e) {
-                LOG.error("Interrupted while storing: ", e);
-                return false;
-            } catch (KeeperException e) {
-                LOG.error("Keeper error: ", e);
-                return false;
-            }
-
+            QueuedJob queuedJob = new QueuedJob(job);
+            return add(queuedJob);
         } else {
             // ! written to persistent store
             LOG.error("Unable to save job to persistent store");
@@ -248,6 +223,26 @@ public class ZooKeeperJobQueue implements JobQueue, Watcher {
     }
 
     @Override
+    public boolean add(QueuedJob queuedJob) {
+        try {
+            byte[] uniqueIdBytes = Bytes.toBytes(queuedJob.getUniqueID());
+            final String jobPath = pathForJob(queuedJob);
+            final String createdPath =
+                    zooKeeper.create(jobPath, uniqueIdBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+            final String uniqueIdPath =
+                    zooKeeper.create(uidPath(queuedJob.getUniqueID()), new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            LOG.debug("Added job as " + createdPath);
+            return true;
+        } catch (InterruptedException e) {
+            LOG.error("Interrupted while storing: ", e);
+            return false;
+        } catch (KeeperException e) {
+            LOG.error("Keeper error: ", e);
+            return false;
+        }
+    }
+
+    @Override
     public void process(WatchedEvent watchedEvent) {
     }
 
@@ -288,7 +283,7 @@ public class ZooKeeperJobQueue implements JobQueue, Watcher {
         }
     }
 
-    private String pathForJob(final Job job) {
+    private String pathForJob(final QueuedJob job) {
         final String parentPath;
 
         switch(job.getPriority()) {

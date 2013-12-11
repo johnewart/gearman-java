@@ -1,6 +1,7 @@
 package net.johnewart.gearman.cluster.queue.factories;
 
 import net.johnewart.gearman.cluster.queue.ZooKeeperJobQueue;
+import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
@@ -10,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 
 public class ZooKeeperJobQueueFactory implements JobQueueFactory {
     private final Logger LOG = LoggerFactory.getLogger(ZooKeeperJobQueueFactory.class);
@@ -28,5 +31,10 @@ public class ZooKeeperJobQueueFactory implements JobQueueFactory {
             throw new JobQueueFactoryException();
         }
 
+    }
+
+    @Override
+    public Collection<QueuedJob> loadPersistedJobs() {
+        return new HashSet<QueuedJob>();
     }
 }
