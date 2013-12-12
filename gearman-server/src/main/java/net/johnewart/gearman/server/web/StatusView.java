@@ -1,16 +1,16 @@
 package net.johnewart.gearman.server.web;
 
-import net.johnewart.gearman.engine.core.JobManager;
-import net.johnewart.gearman.engine.queue.JobQueue;
-import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.JobQueueSnapshot;
-import net.johnewart.gearman.server.util.SystemSnapshot;
-
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.queue.JobQueue;
+import net.johnewart.gearman.server.util.JobQueueMonitor;
+import net.johnewart.gearman.server.util.JobQueueSnapshot;
+import net.johnewart.gearman.server.util.SystemSnapshot;
 
 public class StatusView {
     protected final JobQueueMonitor jobQueueMonitor;
@@ -84,6 +84,10 @@ public class StatusView {
     public Integer getWorkerCount()
     {
         return jobManager.getWorkerCount();
+    }
+
+    public Long getWorkerCount(String jobQueueName) {
+        return jobManager.getWorkerPool(jobQueueName).getNumberOfConnectedWorkers();
     }
 
     public String getHostname()

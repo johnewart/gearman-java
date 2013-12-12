@@ -13,7 +13,7 @@
     <#list jobQueues as jobQueue>
         <tr>
             <td>${jobQueue.name!"N/A"}</td>
-            <td>${jobQueue.numberOfConnectedWorkers}</td>
+            <td>${getWorkerCount(jobQueue.name)!"Unknown"}</td>
             <td>${jobQueue.size()}</td>
             <td><a href="/status/?jobQueue=${jobQueue.name}">Show</a></td>
         </tr>
