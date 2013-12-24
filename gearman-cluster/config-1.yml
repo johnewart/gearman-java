@@ -2,7 +2,7 @@ port: 4740
 httpPort: 9005
 enableSSL: false
 debugging: true
-hostName: localhost
+hostName: node1
 
 
 

@@ -1,19 +1,6 @@
-port: 4730
-httpPort: 8080
+port: 4741
+httpPort: 9006
 enableSSL: false
 debugging: true
-hostName: localhost
-jobQueuePersistenceEngine: hbase
-
-zooKeeper:
-  hosts:
-  - localhost:2181
-
-HBase:
-  hosts:
-  -  localhost
-  port:
-    2181
-
-
+hostName: node2
 
