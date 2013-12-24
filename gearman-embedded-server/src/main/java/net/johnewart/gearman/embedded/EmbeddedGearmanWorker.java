@@ -50,6 +50,14 @@ public class EmbeddedGearmanWorker implements EngineWorker, GearmanWorker, Runna
     }
 
     @Override
+    public void stopWork() {
+        this.running = false;
+        synchronized(runLock) {
+            runLock.notify();
+        }
+    }
+
+    @Override
     public void run() {
         while(running) {
             LOG.debug("Doing work...");
@@ -81,10 +89,4 @@ public class EmbeddedGearmanWorker implements EngineWorker, GearmanWorker, Runna
         }
     }
 
-    public void stop() {
-        this.running = false;
-        synchronized(runLock) {
-            runLock.notify();
-        }
-    }
 }

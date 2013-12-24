@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A multi-threaded network-connected worker pool.
@@ -18,12 +19,18 @@ public class NetworkGearmanWorkerPool implements GearmanWorker {
     private int threadCount;
     private final List<Connection> connectionList;
     private final Set<GearmanWorkerThread> threadSet;
+    private final Set<GearmanWorker> workerSet;
+
+    private final AtomicBoolean isActive;
+
     private static Logger LOG = LoggerFactory.getLogger(NetworkGearmanWorkerPool.class);
 
     private NetworkGearmanWorkerPool() {
         this.threadCount = 1;
-        this.connectionList = new LinkedList();
-        this.threadSet = new HashSet();
+        this.connectionList = new LinkedList<>();
+        this.threadSet = new HashSet<>();
+        this.workerSet = new HashSet<>();
+        this.isActive = new AtomicBoolean(true);
     }
 
     private void initialize() {
@@ -34,7 +41,9 @@ public class NetworkGearmanWorkerPool implements GearmanWorker {
                 workerBuilder.withConnection(new Connection(c));
             }
 
-            threadSet.add(new GearmanWorkerThread(workerBuilder.build()));
+            NetworkGearmanWorker worker = workerBuilder.build();
+            threadSet.add(new GearmanWorkerThread(worker));
+            workerSet.add(worker);
         }
     }
 
@@ -49,11 +58,19 @@ public class NetworkGearmanWorkerPool implements GearmanWorker {
         for(GearmanWorkerThread t : threadSet) {
             try {
                 t.join();
+                LOG.debug("Thread " + t.getId() + " joined.");
             } catch (InterruptedException e) {
                 LOG.error("Error waiting for worker thread: ", e);
             }
         }
 
+    }
+
+    @Override
+    public void stopWork() {
+        for(GearmanWorker worker : workerSet) {
+            worker.stopWork();
+        }
     }
 
     @Override

@@ -1,38 +1,45 @@
 package net.johnewart.gearman.client;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.common.interfaces.GearmanWorker;
-import net.johnewart.gearman.common.packets.request.CanDo;
-import net.johnewart.gearman.net.Connection;
 import net.johnewart.gearman.common.packets.Packet;
+import net.johnewart.gearman.common.packets.request.CanDo;
 import net.johnewart.gearman.common.packets.request.GrabJob;
 import net.johnewart.gearman.common.packets.request.PreSleep;
 import net.johnewart.gearman.common.packets.response.JobAssign;
 import net.johnewart.gearman.common.packets.response.JobAssignUniq;
 import net.johnewart.gearman.common.packets.response.WorkCompleteResponse;
+import net.johnewart.gearman.constants.PacketType;
+import net.johnewart.gearman.net.Connection;
 import net.johnewart.gearman.net.ConnectionPool;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class NetworkGearmanWorker implements GearmanWorker, Runnable {
     private final ConnectionPool connectionPool;
     private final Map<String, GearmanFunction> callbacks;
+    private final AtomicBoolean isActive;
+
     private static Logger LOG = LoggerFactory.getLogger(NetworkGearmanWorker.class);
 
     private NetworkGearmanWorker()
     {
         this.connectionPool = new ConnectionPool();
         this.callbacks = new HashMap<>();
+        this.isActive = new AtomicBoolean(true);
     }
 
     private NetworkGearmanWorker(NetworkGearmanWorker other)
     {
         this.connectionPool = other.connectionPool;
         this.callbacks = other.callbacks;
+        this.isActive = new AtomicBoolean(true);
     }
 
     @Override
@@ -45,7 +52,7 @@ public class NetworkGearmanWorker implements GearmanWorker, Runnable {
     @Override
     public void doWork()
     {
-        while(true) {
+        while(isActive.get()) {
             for(Connection c : connectionPool.getGoodConnectionList()) {
                 LOG.debug("Trying " + c.toString());
                 try {
@@ -66,10 +73,9 @@ public class NetworkGearmanWorker implements GearmanWorker, Runnable {
                         case NO_JOB:
                             LOG.info("Worker sending PRE_SLEEP and sleeping for 30 seconds...");
                             c.sendPacket(new PreSleep());
-                            try {
-                                Thread.sleep(30 * 1000);
-                            } catch (InterruptedException e) {
-                                LOG.error("Error sleeping: ", e);
+                            Packet noop = c.getNextPacket(30 * 1000);
+                            if(noop.getType() != PacketType.NOOP) {
+                                LOG.error("Received invalid packet. Expeced NOOP, received " + noop.getType());
                             }
                             break;
                     }
@@ -78,7 +84,13 @@ public class NetworkGearmanWorker implements GearmanWorker, Runnable {
                 }
             }
         }
+        LOG.debug("Worker has been stopped.");
+    }
 
+    @Override
+    public void stopWork() {
+        isActive.set(false);
+        this.connectionPool.shutdown();
     }
 
     private void broadcastAbility(String functionName)

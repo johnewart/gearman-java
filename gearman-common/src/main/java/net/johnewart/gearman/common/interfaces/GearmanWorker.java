@@ -6,4 +6,5 @@ package net.johnewart.gearman.common.interfaces;
 public interface GearmanWorker {
     void registerCallback(String method, GearmanFunction function);
     void doWork();
+    void stopWork();
 }
