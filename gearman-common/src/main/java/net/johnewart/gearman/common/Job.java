@@ -76,7 +76,11 @@ public class Job {
         this.jobHandle = new String(jobHandle);
     }
 
-    protected Job(Job otherJob) {
+    public Job(Job otherJob) {
+        this.cloneOtherJob(otherJob);
+    }
+
+    protected void cloneOtherJob(Job otherJob) {
         this.priority = otherJob.priority;
         this.data = otherJob.data;
         this.background = otherJob.background;
@@ -196,6 +200,7 @@ public class Job {
         this.state = JobState.WORKING;
     }
 
+    @JsonIgnore
     public boolean isRunning() {
         return this.state == JobState.WORKING;
     }
