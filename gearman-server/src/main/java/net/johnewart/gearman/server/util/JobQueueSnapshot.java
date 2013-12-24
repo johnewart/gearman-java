@@ -1,9 +1,10 @@
 package net.johnewart.gearman.server.util;
 
-import com.google.common.collect.ImmutableMap;
-import net.johnewart.gearman.constants.JobPriority;
-
 import java.util.Date;
+
+import com.google.common.collect.ImmutableMap;
+
+import net.johnewart.gearman.constants.JobPriority;
 
 public class JobQueueSnapshot {
     private Date timestamp;
@@ -11,6 +12,14 @@ public class JobQueueSnapshot {
     private long future;
     private ImmutableMap<Integer, Long> futureJobCounts;
     private ImmutableMap<JobPriority, Long> priorityCounts;
+
+    public JobQueueSnapshot() {
+        this.timestamp = new Date();
+        this.immediate = 0;
+        this.future = 0;
+        this.futureJobCounts = ImmutableMap.of();
+        this.priorityCounts = ImmutableMap.of();
+    }
 
     public JobQueueSnapshot(Date timestamp,
                             long immediate,
