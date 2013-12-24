@@ -1,17 +1,24 @@
 package net.johnewart.gearman.engine;
 
-import net.johnewart.gearman.engine.util.JobHandleFactory;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import org.hamcrest.core.Is;
 import org.hamcrest.core.IsNot;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class JobHandleFactoryTest {
+    private final JobHandleFactory jobHandleFactory;
+    private final String hostname = "foobar.quiddle.com";
+
+    public JobHandleFactoryTest() {
+        jobHandleFactory = new LocalJobHandleFactory(hostname);
+    }
+
     @Test
     public void testHandleGenerationWorks()
     {
-        JobHandleFactory.setHostName("foobar.quiddle.com");
-        String jobHandle = new String(JobHandleFactory.getNextJobHandle());
+        String jobHandle = new String(jobHandleFactory.getNextJobHandle());
         String[] parts = jobHandle.split(":");
 
         Assert.assertThat("There are three parts to the handle",

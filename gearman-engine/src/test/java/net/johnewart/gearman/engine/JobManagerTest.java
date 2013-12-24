@@ -5,29 +5,31 @@ import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.factories.JobFactory;
+import net.johnewart.gearman.engine.factories.TestJobHandleFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class JobManagerTest {
     private JobManager jobManager;
     private EngineWorker worker;
+    private JobHandleFactory jobHandleFactory;
 
     public JobManagerTest()
     {
+        jobHandleFactory = new TestJobHandleFactory();
     }
 
     @Before
     public void initialize() {
-        jobManager = new JobManager(new MemoryJobQueueFactory());
+        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory);
         final ImmutableSet<String> abilities = ImmutableSet.of("reverseString", "computeBigStuff");
         worker = mock(EngineWorker.class);
         when(worker.getAbilities()).thenReturn(abilities);

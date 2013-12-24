@@ -2,8 +2,10 @@ package net.johnewart.gearman.server.config;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
+import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 import org.slf4j.LoggerFactory;
 
@@ -113,7 +115,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobManager getJobManager() {
         if(jobManager == null) {
-            jobManager = new JobManager(getJobQueueFactory());
+            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory());
         }
 
         return jobManager;
@@ -126,5 +128,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         }
 
         return jobQueueMonitor;
+    }
+
+    @Override
+    public JobHandleFactory getJobHandleFactory() {
+        return new LocalJobHandleFactory(getHostName());
     }
 }

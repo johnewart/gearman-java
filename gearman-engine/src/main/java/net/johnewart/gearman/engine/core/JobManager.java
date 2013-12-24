@@ -9,13 +9,13 @@ import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.constants.GearmanConstants;
 import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.util.EqualsLock;
-import net.johnewart.gearman.engine.util.JobHandleFactory;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,9 +26,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-/**
- *
- */
 public class JobManager {
     public static final Date timeStarted = new Date();
 
@@ -49,14 +46,15 @@ public class JobManager {
     private final Set<EngineWorker> workers;
     private final EqualsLock lock = new EqualsLock();
     private final JobQueueFactory jobQueueFactory;
+    private final JobHandleFactory jobHandleFactory;
 
     private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
     private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
     private final Counter completedJobsCounter = Metrics.newCounter(JobManager.class, "completed-jobs");
     private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
 
-    public JobManager(JobQueueFactory jobQueueFactory)
-    {
+
+    public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory) {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
         this.uniqueIdClients = new ConcurrentHashMap<>();
@@ -67,6 +65,7 @@ public class JobManager {
         this.workerPools = new ConcurrentHashMap<>();
 
         this.jobQueueFactory = jobQueueFactory;
+        this.jobHandleFactory = jobHandleFactory;
 
         // Initialize counters to zero
         this.pendingJobsCounter.clear();
@@ -219,7 +218,7 @@ public class JobManager {
                 // New job, store it in the queue and storage
                 if(job.getJobHandle() == null || job.getJobHandle().isEmpty())
                 {
-                    job.setJobHandle(new String(JobHandleFactory.getNextJobHandle()));
+                    job.setJobHandle(new String(jobHandleFactory.getNextJobHandle()));
                 }
 
                 // Client is submitting a job whose unique ID is in use

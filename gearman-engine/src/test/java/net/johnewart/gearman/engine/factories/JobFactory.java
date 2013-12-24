@@ -1,21 +1,23 @@
 package net.johnewart.gearman.engine.factories;
 
-import net.johnewart.gearman.engine.util.JobHandleFactory;
-import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.constants.JobPriority;
 import org.joda.time.DateTime;
 import org.joda.time.Seconds;
 
 import java.util.UUID;
 
 public class JobFactory {
+    static JobHandleFactory jobHandleFactory = new TestJobHandleFactory();
+
     public static Job generateForegroundJob(String functionName)
     {
         String uuid = UUID.randomUUID().toString();
         byte[] data = {'f','o','o'};
         JobPriority priority = JobPriority.NORMAL;
         boolean isBackground = false;
-        return new Job(functionName, uuid, data, JobHandleFactory.getNextJobHandle(),  priority, isBackground, -1);
+        return new Job(functionName, uuid, data, jobHandleFactory.getNextJobHandle(),  priority, isBackground, -1);
     }
 
     public static Job generateBackgroundJob(String functionName)
@@ -24,7 +26,7 @@ public class JobFactory {
         byte[] data = {'b','a','r'};
         JobPriority priority = JobPriority.NORMAL;
         boolean isBackground = true;
-        return new Job(functionName, uuid, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, -1);
+        return new Job(functionName, uuid, data, jobHandleFactory.getNextJobHandle(), priority, isBackground, -1);
     }
 
     public static Job generateFutureJob(String functionName, Seconds seconds) {
@@ -33,7 +35,7 @@ public class JobFactory {
         JobPriority priority = JobPriority.NORMAL;
         boolean isBackground = true;
         long whenToRun = new DateTime().plus(seconds).toDate().getTime() / 1000;
-        return new Job(functionName, uuid, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, whenToRun);
+        return new Job(functionName, uuid, data, jobHandleFactory.getNextJobHandle(), priority, isBackground, whenToRun);
     }
 
     public static Job generateHighPriorityBackgroundJob(String functionName)
@@ -42,7 +44,7 @@ public class JobFactory {
         byte[] data = {'s','u','p','e','r'};
         JobPriority priority = JobPriority.HIGH;
         boolean isBackground = true;
-        return new Job(functionName, uuid, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, -1);    }
+        return new Job(functionName, uuid, data, jobHandleFactory.getNextJobHandle(), priority, isBackground, -1);    }
 
     public static Job generateLowPriorityBackgroundJob(String functionName)
     {
@@ -50,7 +52,7 @@ public class JobFactory {
         byte[] data = {'s','u','p','e','r'};
         JobPriority priority = JobPriority.LOW;
         boolean isBackground = true;
-        return new Job(functionName, uuid, data, JobHandleFactory.getNextJobHandle(), priority, isBackground, -1);
+        return new Job(functionName, uuid, data, jobHandleFactory.getNextJobHandle(), priority, isBackground, -1);
     }
 }
 

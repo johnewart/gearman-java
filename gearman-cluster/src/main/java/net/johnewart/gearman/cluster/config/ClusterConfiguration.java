@@ -1,7 +1,12 @@
 package net.johnewart.gearman.cluster.config;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
 import net.johnewart.gearman.cluster.persistence.HBasePersistenceEngine;
-import net.johnewart.gearman.cluster.queue.factories.ZooKeeperJobQueueFactory;
+import net.johnewart.gearman.cluster.queue.factories.HazelcastJobQueueFactory;
+import net.johnewart.gearman.cluster.util.HazelcastJobHandleFactory;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.persistence.PersistenceEngine;
@@ -20,11 +25,15 @@ public class ClusterConfiguration implements ServerConfiguration {
     private JobQueueMonitor jobQueueMonitor;
     private String jobQueuePersistenceEngine;
     private PersistenceEngine persistenceEngine;
+    private HazelcastInstance hazelcast;
 
     private ZooKeeperConfiguration zooKeeperConfiguration;
     private HBaseConfiguration hBaseConfiguration;
 
-    public ClusterConfiguration() {    }
+    public ClusterConfiguration() {
+        Config cfg = new Config();
+        hazelcast = Hazelcast.newHazelcastInstance(cfg);
+    }
 
     @Override
     public int getPort() {
@@ -54,7 +63,7 @@ public class ClusterConfiguration implements ServerConfiguration {
     @Override
     public JobQueueFactory getJobQueueFactory() {
         if (jobQueueFactory == null) {
-            jobQueueFactory = new ZooKeeperJobQueueFactory(persistenceEngine);
+            jobQueueFactory = new HazelcastJobQueueFactory(persistenceEngine, hazelcast);
         }
 
         return jobQueueFactory;
@@ -63,7 +72,7 @@ public class ClusterConfiguration implements ServerConfiguration {
     @Override
     public JobManager getJobManager() {
         if (jobManager == null) {
-            jobManager = new JobManager(getJobQueueFactory());
+            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory());
         }
         return jobManager;
     }
@@ -71,6 +80,11 @@ public class ClusterConfiguration implements ServerConfiguration {
     @Override
     public JobQueueMonitor getJobQueueMonitor() {
         return jobQueueMonitor;
+    }
+
+    @Override
+    public JobHandleFactory getJobHandleFactory() {
+        return new HazelcastJobHandleFactory(hazelcast, getHostName());
     }
 
     public void setPort(int port) {

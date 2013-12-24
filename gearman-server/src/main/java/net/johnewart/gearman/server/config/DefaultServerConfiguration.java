@@ -1,8 +1,10 @@
 package net.johnewart.gearman.server.config;
 
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
+import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 
@@ -15,10 +17,12 @@ public class DefaultServerConfiguration implements ServerConfiguration {
     private final JobManager jobManager;
     private final JobQueueFactory jobQueueFactory;
     private final JobQueueMonitor jobQueueMonitor;
+    private final JobHandleFactory jobHandleFactory;
 
     public DefaultServerConfiguration() {
+        this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
-        this.jobManager = new JobManager(jobQueueFactory);
+        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory);
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
     }
 
@@ -64,5 +68,10 @@ public class DefaultServerConfiguration implements ServerConfiguration {
     @Override
     public JobQueueMonitor getJobQueueMonitor() {
         return jobQueueMonitor;
+    }
+
+    @Override
+    public JobHandleFactory getJobHandleFactory() {
+        return jobHandleFactory;
     }
 }
