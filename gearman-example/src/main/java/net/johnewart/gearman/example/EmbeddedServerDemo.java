@@ -48,7 +48,7 @@ public class EmbeddedServerDemo {
             Thread.sleep(45000);
             System.err.println("Job should be complete...");
 
-            worker.stop();
+            worker.stopWork();
             workerThread.join();
         } catch (JobSubmissionException e) {
             e.printStackTrace();
