@@ -1,12 +1,5 @@
 package net.johnewart.gearman.constants;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jewart
- * Date: 11/30/12
- * Time: 9:43 AM
- * To change this template use File | Settings | File Templates.
- */
 public enum JobPriority {
         HIGH,
         NORMAL,
