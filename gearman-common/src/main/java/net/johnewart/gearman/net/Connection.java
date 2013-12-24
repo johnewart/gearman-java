@@ -1,8 +1,8 @@
 package net.johnewart.gearman.net;
 
 import com.google.common.primitives.Ints;
-import net.johnewart.gearman.common.packets.PacketFactory;
 import net.johnewart.gearman.common.packets.Packet;
+import net.johnewart.gearman.common.packets.PacketFactory;
 import net.johnewart.gearman.common.packets.request.EchoRequest;
 import net.johnewart.gearman.common.packets.response.EchoResponse;
 import net.johnewart.gearman.constants.GearmanConstants;
@@ -110,7 +110,11 @@ public class Connection {
         }
     }
 
-    public Packet getNextPacket() throws IOException
+    public Packet getNextPacket() throws IOException {
+        return getNextPacket(0);
+    }
+
+    public Packet getNextPacket(int socketTimeout) throws IOException
     {
         try {
             initializeConnection();
@@ -126,6 +130,7 @@ public class Connection {
         byte[] packetBytes;
 
         try {
+            socket.setSoTimeout(socketTimeout);
             InputStream is = socket.getInputStream();
 
             int numbytes = is.read(header, 0, 12);
