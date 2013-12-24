@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.UUID;
 
+import static java.lang.String.format;
+
 public class NetworkGearmanClient extends AbstractGearmanClient {
     // A list of managers to cycle through
     private final Logger LOG = LoggerFactory.getLogger(NetworkGearmanClient.class);
@@ -173,7 +175,7 @@ public class NetworkGearmanClient extends AbstractGearmanClient {
                 if (response.getPacket().getType() == PacketType.JOB_CREATED)
                 {
                     String jobHandle =  ((JobCreated)response.getPacket()).getJobHandle();
-                    LOG.debug("Created background job %s, with priority %s\n", jobHandle, priority.toString());
+                    LOG.debug(format("Created background job %s, with priority %s\n", jobHandle, priority.toString()));
                     return jobHandle;
                 }
             }
