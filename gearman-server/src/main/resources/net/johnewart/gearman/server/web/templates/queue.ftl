@@ -7,17 +7,17 @@
 
 <div class="info">
 <div class="box">
-    <span class="number">${latestJobQueueSnapshot.immediate}</span>
+    <span class="number">${latestJobQueueSnapshot.immediate!"Unknown"}</span>
     <span class="text">Immediate jobs</span>
 </div>
 
 <div class="box">
-    <span class="number">${latestJobQueueSnapshot.future}</span>
+    <span class="number">${latestJobQueueSnapshot.future!"Unknown"}</span>
     <span class="text">Future jobs</span>
 </div>
 
 <div class="box">
-    <span class="number">${numberOfConnectedWorkers}</span>
+    <span class="number">${numberOfConnectedWorkers!"Unknown"}</span>
     <span class="text">Connected Workers</span>
 </div>
 <div class="clear"></div>
