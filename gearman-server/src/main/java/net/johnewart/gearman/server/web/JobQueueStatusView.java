@@ -1,10 +1,10 @@
 package net.johnewart.gearman.server.web;
 
+import java.util.List;
+
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
-
-import java.util.List;
 
 public class JobQueueStatusView extends StatusView {
     private final String jobQueueName;
@@ -29,7 +29,11 @@ public class JobQueueStatusView extends StatusView {
     public JobQueueSnapshot getLatestJobQueueSnapshot()
     {
         List<JobQueueSnapshot> snapshots = getJobQueueSnapshots();
-        return snapshots.get(snapshots.size()-1);
+        if (snapshots.size() > 0) {
+            return snapshots.get(snapshots.size()-1);
+        } else {
+            return new JobQueueSnapshot();
+        }
     }
 
     public Long getNumberOfConnectedWorkers()
