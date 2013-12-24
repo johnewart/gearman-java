@@ -17,6 +17,8 @@ public class ConnectionPool {
     private final List<Connection> badConnectionList;
     private final AtomicInteger connectionIndex;
     private final Object connectionLock = new Object();
+    private final Runnable checkDeadServers;
+    private final ScheduledThreadPoolExecutor executor;
 
     public ConnectionPool()
     {
@@ -24,9 +26,14 @@ public class ConnectionPool {
         this.badConnectionList = new ArrayList();
         this.connectionIndex = new AtomicInteger(0);
 
-        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1);
-        Runnable checkDeadServers = new ConnectionChecker(this);
-        executor.scheduleAtFixedRate(checkDeadServers, 0, 30, TimeUnit.SECONDS);
+        this.executor = new ScheduledThreadPoolExecutor(1);
+        this.checkDeadServers = new ConnectionChecker(this);
+        this.executor.scheduleAtFixedRate(checkDeadServers, 0, 30, TimeUnit.SECONDS);
+    }
+
+    public void shutdown() {
+        this.executor.remove(checkDeadServers);
+        this.executor.shutdown();
     }
 
     public void addConnection(Connection connection)
