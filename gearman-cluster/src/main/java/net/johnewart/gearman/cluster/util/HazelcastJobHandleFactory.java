@@ -2,7 +2,7 @@ package net.johnewart.gearman.cluster.util;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 
 public class HazelcastJobHandleFactory implements JobHandleFactory {
 

@@ -1,4 +1,4 @@
-package net.johnewart.gearman.common.interfaces;
+package net.johnewart.gearman.engine.core;
 
 public interface JobHandleFactory {
     public byte[] getNextJobHandle();

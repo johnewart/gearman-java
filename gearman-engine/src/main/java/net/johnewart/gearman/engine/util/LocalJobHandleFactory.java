@@ -1,6 +1,6 @@
 package net.johnewart.gearman.engine.util;
 
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 

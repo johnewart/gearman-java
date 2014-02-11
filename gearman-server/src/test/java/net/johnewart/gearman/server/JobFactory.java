@@ -1,7 +1,7 @@
 package net.johnewart.gearman.server;
 
 import net.johnewart.gearman.common.Job;
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import org.joda.time.DateTime;
