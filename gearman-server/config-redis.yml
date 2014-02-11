@@ -1,0 +1,10 @@
+port: 4730
+httpPort: 8080
+enableSSL: false
+debugging: true
+hostName: localhost
+persistenceEngine:
+  engine: redis
+  redis:
+    host: localhost
+    port: 6379
