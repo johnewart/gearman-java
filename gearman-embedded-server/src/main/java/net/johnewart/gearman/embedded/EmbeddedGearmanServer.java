@@ -1,25 +1,30 @@
 package net.johnewart.gearman.embedded;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.EngineClient;
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 
 public class EmbeddedGearmanServer {
     private final Logger LOG = LoggerFactory.getLogger(EmbeddedGearmanServer.class);
 
     final JobManager jobManager;
     final JobHandleFactory jobHandleFactory;
+    final UniqueIdFactory uniqueIdFactory;
 
     public EmbeddedGearmanServer() {
         JobQueueFactory jobQueueFactory = new MemoryJobQueueFactory();
         jobHandleFactory = new LocalJobHandleFactory("embedded");
-        jobManager = new JobManager(jobQueueFactory, jobHandleFactory);
+        uniqueIdFactory = new LocalUniqueIdFactory();
+        jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory);
     }
 
     public Job submitJob(final Job job, final EngineClient client) {

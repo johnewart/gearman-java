@@ -6,8 +6,10 @@ import com.hazelcast.core.HazelcastInstance;
 import net.johnewart.gearman.cluster.persistence.HBasePersistenceEngine;
 import net.johnewart.gearman.cluster.queue.factories.HazelcastJobQueueFactory;
 import net.johnewart.gearman.cluster.util.HazelcastJobHandleFactory;
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.cluster.util.HazelcastUniqueIdFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.persistence.PersistenceEngine;
 import net.johnewart.gearman.server.config.ServerConfiguration;
@@ -72,7 +74,7 @@ public class ClusterConfiguration implements ServerConfiguration {
     @Override
     public JobManager getJobManager() {
         if (jobManager == null) {
-            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory());
+            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory(), getUniqueIdFactory());
         }
         return jobManager;
     }
@@ -85,6 +87,11 @@ public class ClusterConfiguration implements ServerConfiguration {
     @Override
     public JobHandleFactory getJobHandleFactory() {
         return new HazelcastJobHandleFactory(hazelcast, getHostName());
+    }
+
+    @Override
+    public UniqueIdFactory getUniqueIdFactory() {
+        return new HazelcastUniqueIdFactory(hazelcast);
     }
 
     public void setPort(int port) {

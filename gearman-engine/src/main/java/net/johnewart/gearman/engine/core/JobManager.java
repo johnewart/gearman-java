@@ -1,29 +1,28 @@
 package net.johnewart.gearman.engine.core;
 
+import java.util.Date;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
 import com.yammer.metrics.core.Counter;
+
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
-import net.johnewart.gearman.constants.GearmanConstants;
 import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.util.EqualsLock;
-import org.eclipse.jetty.util.ConcurrentHashSet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Date;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 public class JobManager {
@@ -47,6 +46,7 @@ public class JobManager {
     private final EqualsLock lock = new EqualsLock();
     private final JobQueueFactory jobQueueFactory;
     private final JobHandleFactory jobHandleFactory;
+    private final UniqueIdFactory uniqueIdFactory;
 
     private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
     private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
@@ -54,7 +54,7 @@ public class JobManager {
     private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
 
 
-    public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory) {
+    public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory, UniqueIdFactory uniqueIdFactory) {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
         this.uniqueIdClients = new ConcurrentHashMap<>();
@@ -66,6 +66,7 @@ public class JobManager {
 
         this.jobQueueFactory = jobQueueFactory;
         this.jobHandleFactory = jobHandleFactory;
+        this.uniqueIdFactory = uniqueIdFactory;
 
         // Initialize counters to zero
         this.pendingJobsCounter.clear();
@@ -124,7 +125,7 @@ public class JobManager {
 
     public void unregisterClient(EngineClient client)
     {
-        removeClientForUniqueId(client.getCurrentJob().getUniqueID(), client);
+        removeClientForUniqueId(client.getCurrentJob(), client);
     }
 
     public void sleepingWorker(EngineWorker worker)
@@ -184,7 +185,7 @@ public class JobManager {
         JobQueue jobQueue = getJobQueue(functionName);
 
         do {
-            uniqueID = new String(UUID.randomUUID().toString().getBytes(GearmanConstants.CHARSET));
+            uniqueID = uniqueIdFactory.generateUniqueId();
         } while(jobQueue.uniqueIdInUse(uniqueID));
 
         return uniqueID;
@@ -192,7 +193,9 @@ public class JobManager {
 
     public Job storeJobForClient(Job job, EngineClient client)
     {
-        addClientForUniqueId(job.getUniqueID(), client);
+        if(!job.isBackground()) {
+            addClientForUniqueId(job.getUniqueID(), client);
+        }
         return storeJob(job);
     }
 
@@ -477,8 +480,9 @@ public class JobManager {
         return workerJobs.get(worker);
     }
 
-    private void removeClientForUniqueId(String uniqueID, EngineClient client)
+    private void removeClientForUniqueId(Job job, EngineClient client)
     {
+        String uniqueID = job.getUniqueID();
         Set<EngineClient> clients = getClientsForUniqueId(uniqueID);
         clients.remove(client);
     }
@@ -503,32 +507,34 @@ public class JobManager {
     public final JobAction disconnectClient(final Job job, final EngineClient client) {
         JobAction result = JobAction.DONOTHING;
 
-        Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
+        if(!job.isBackground()) {
+            Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-        switch (job.getState()) {
-            // If the job was in the QUEUED state, all attached clients have
-            // disconnected, and it is not a background job, drop the job
-            case QUEUED:
-                if(clients.isEmpty() && !job.isBackground())
-                    result = JobAction.MARKCOMPLETE;
-                break;
+            switch (job.getState()) {
+                // If the job was in the QUEUED state, all attached clients have
+                // disconnected, and it is not a background job, drop the job
+                case QUEUED:
+                    if(clients.isEmpty() && !job.isBackground())
+                        result = JobAction.MARKCOMPLETE;
+                    break;
 
-            case WORKING:
-                if(clients.isEmpty())
-                {
-                    // The last client disconnected, so be done.
-                    result = JobAction.MARKCOMPLETE;
-                } else {
-                    // (!this.clients.isEmpty() || this.background)==true
-                    result = JobAction.REENQUEUE;
-                }
+                case WORKING:
+                    if(clients.isEmpty())
+                    {
+                        // The last client disconnected, so be done.
+                        result = JobAction.MARKCOMPLETE;
+                    } else {
+                        // (!this.clients.isEmpty() || this.background)==true
+                        result = JobAction.REENQUEUE;
+                    }
 
-                break;
+                    break;
 
-            // Do nothing
-            case COMPLETE:
-            default:
-                result = JobAction.DONOTHING;
+                // Do nothing
+                case COMPLETE:
+                default:
+                    result = JobAction.DONOTHING;
+            }
         }
 
         return result;
@@ -537,29 +543,34 @@ public class JobManager {
     public final JobAction disconnectWorker(final Job job, final EngineWorker worker) {
 
         JobAction result = JobAction.DONOTHING;
-        Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-        switch (job.getState()) {
-            case QUEUED:
-                // This should never happen.
-                LOG.error("Job in a QUEUED state had a worker disconnect from it. This should not happen.");
-                break;
+        if(job.isBackground()) {
+            result = JobAction.REENQUEUE;
+        } else {
+            Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-            case WORKING:
-                if(clients.isEmpty() && !job.isBackground()) {
-                    // Nobody to send it to and it's not a background job,
-                    // not much we can do here..
-                    result = JobAction.MARKCOMPLETE;
-                } else {
-                    // (!this.clients.isEmpty() || this.background)==true
-                    result = JobAction.REENQUEUE;
-                }
-                break;
+            switch (job.getState()) {
+                case QUEUED:
+                    // This should never happen.
+                    LOG.error("Job in a QUEUED state had a worker disconnect from it. This should not happen.");
+                    break;
 
-            // Do nothing if it's complete
-            case COMPLETE:
-            default:
-                result = JobAction.DONOTHING;
+                case WORKING:
+                    if(clients.isEmpty()) {
+                        // Nobody to send it to and it's not a background job,
+                        // not much we can do here..
+                        result = JobAction.MARKCOMPLETE;
+                    } else {
+                        // (!this.clients.isEmpty() || this.background)==true
+                        result = JobAction.REENQUEUE;
+                    }
+                    break;
+
+                // Do nothing if it's complete
+                case COMPLETE:
+                default:
+                    result = JobAction.DONOTHING;
+            }
         }
 
         return result;

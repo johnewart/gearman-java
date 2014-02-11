@@ -1,15 +1,17 @@
 package net.johnewart.gearman.server.config;
 
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
+import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 // Sane defaults.
 public class DefaultServerConfiguration implements ServerConfiguration {
@@ -18,11 +20,13 @@ public class DefaultServerConfiguration implements ServerConfiguration {
     private final JobQueueFactory jobQueueFactory;
     private final JobQueueMonitor jobQueueMonitor;
     private final JobHandleFactory jobHandleFactory;
+    private final UniqueIdFactory uniqueIdFactory;
 
     public DefaultServerConfiguration() {
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
-        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory);
+        this.uniqueIdFactory = new LocalUniqueIdFactory();
+        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory);
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
     }
 
@@ -73,5 +77,10 @@ public class DefaultServerConfiguration implements ServerConfiguration {
     @Override
     public JobHandleFactory getJobHandleFactory() {
         return jobHandleFactory;
+    }
+
+    @Override
+    public UniqueIdFactory getUniqueIdFactory() {
+        return uniqueIdFactory;
     }
 }

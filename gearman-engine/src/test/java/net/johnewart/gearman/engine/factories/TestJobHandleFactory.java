@@ -1,6 +1,6 @@
 package net.johnewart.gearman.engine.factories;
 
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 
 public class TestJobHandleFactory implements JobHandleFactory {
