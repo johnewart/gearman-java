@@ -1,19 +1,21 @@
 package net.johnewart.gearman.engine.queue.persistence;
 
-import net.johnewart.gearman.common.Job;
-import net.johnewart.gearman.engine.core.QueuedJob;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.engine.core.QueuedJob;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 
 public class RedisPersistenceEngine implements PersistenceEngine {
