@@ -17,9 +17,9 @@ public class NumberFormatter
 
         if (longVal < 1000000000)
         {
-            return String.format("%.2M", number.doubleValue() / 1000000.0);
+            return String.format("%.2fM", number.doubleValue() / 1000000.0);
         }
 
-        return String.format("%.3B", number.doubleValue() / 1000000000.0);
+        return String.format("%.3fB", number.doubleValue() / 1000000000.0);
     }
 }
