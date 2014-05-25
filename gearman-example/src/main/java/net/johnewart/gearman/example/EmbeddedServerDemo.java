@@ -1,6 +1,7 @@
 package net.johnewart.gearman.example;
 
 import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.events.WorkEvent;
 import net.johnewart.gearman.common.interfaces.GearmanClient;
 import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.embedded.EmbeddedGearmanClient;
@@ -61,7 +62,8 @@ public class EmbeddedServerDemo {
 
     class TestFunction implements GearmanFunction {
         @Override
-        public byte[] process(Job job) {
+        public byte[] process(WorkEvent workEvent) {
+            Job job = workEvent.job;
             byte[] datacopy = Arrays.copyOf(job.getData(), job.getData().length);
             Arrays.sort(datacopy);
             return datacopy;

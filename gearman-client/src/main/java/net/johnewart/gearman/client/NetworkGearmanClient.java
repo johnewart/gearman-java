@@ -47,6 +47,11 @@ public class NetworkGearmanClient extends AbstractGearmanClient {
         connectionPool.addConnection(conn);
     }
 
+    public void shutdown() {
+        LOG.debug("Client shutting down...");
+        connectionPool.shutdown();
+    }
+
     public void addConnection(Connection conn)
     {
         connectionPool.addConnection(conn);

@@ -44,4 +44,16 @@ public class JobStatus {
     public String getJobHandle() {
         return jobHandle;
     }
+
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(jobHandle).append(": ")
+            .append(numerator).append("/").append(denominator)
+            .append(" - ").append(getState())
+            .append(" isRunning: ").append(isRunning())
+            .append(" statusKnown: ").append(isStatusKnown());
+
+        return sb.toString();
+    }
 }

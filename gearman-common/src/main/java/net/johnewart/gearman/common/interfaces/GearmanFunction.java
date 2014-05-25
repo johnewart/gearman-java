@@ -1,7 +1,7 @@
 package net.johnewart.gearman.common.interfaces;
 
-import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.events.WorkEvent;
 
 public interface GearmanFunction {
-    public byte[] process(Job job);
+    public byte[] process(WorkEvent workEvent);
 }

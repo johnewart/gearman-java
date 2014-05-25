@@ -1,4 +1,4 @@
-package net.johnewart.gearman.cluster.integ;
+package net.johnewart.gearman.integ;
 
 import net.johnewart.gearman.client.NetworkGearmanWorker;
 import net.johnewart.gearman.common.interfaces.GearmanFunction;

@@ -17,4 +17,5 @@ public interface GearmanClient {
     byte[] submitJob(String callback, byte[] data, JobPriority priority) throws JobSubmissionException, WorkException;
     JobStatus getStatus(String jobHandle);
     void registerEventListener(GearmanClientEventListener listener);
+    void shutdown();
 }

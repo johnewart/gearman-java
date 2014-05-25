@@ -1,12 +1,14 @@
 package net.johnewart.gearman.embedded;
 
 import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.events.WorkEvent;
 import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
 import net.johnewart.gearman.common.interfaces.GearmanWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +43,8 @@ public class EmbeddedGearmanWorker implements EngineWorker, GearmanWorker, Runna
             if(nextJob != null) {
                 LOG.debug("Received work to do: " + nextJob.getJobHandle());
                 GearmanFunction function  = abilityMap.get(nextJob.getFunctionName());
-                final byte[] results = function.process(nextJob);
+                WorkEvent workEvent = new WorkEvent(nextJob, this);
+                final byte[] results = function.process(workEvent);
                 server.completeWork(nextJob, results);
             }
         } while (nextJob != null);
@@ -55,6 +58,21 @@ public class EmbeddedGearmanWorker implements EngineWorker, GearmanWorker, Runna
         synchronized(runLock) {
             runLock.notify();
         }
+    }
+
+    @Override
+    public void sendData(Job job, byte[] data) throws IOException {
+        // NOOP
+    }
+
+    @Override
+    public void sendStatus(Job job, int numerator, int denominator) throws IOException {
+        // NOOP
+    }
+
+    @Override
+    public void sendWarning(Job job, byte[] warning) throws IOException {
+        // NOOP
     }
 
     @Override

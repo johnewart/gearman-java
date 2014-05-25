@@ -1,6 +1,7 @@
 package net.johnewart.gearman.example;
 
 import net.johnewart.gearman.client.NetworkGearmanWorker;
+import net.johnewart.gearman.common.events.WorkEvent;
 import org.apache.commons.lang3.ArrayUtils;
 import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.common.Job;
@@ -14,7 +15,8 @@ public class WorkerDemo {
     static class ReverseFunction implements GearmanFunction
     {
         @Override
-        public byte[] process(Job job) {
+        public byte[] process(WorkEvent workEvent) {
+            Job job = workEvent.job;
             byte[] data = job.getData();
             String function = job.getFunctionName();
             LOG.debug("Got data for function " + function);

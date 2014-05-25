@@ -5,7 +5,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,8 +34,9 @@ public class ConnectionPool {
     }
 
     public void shutdown() {
-        this.executor.remove(checkDeadServers);
-        this.executor.shutdown();
+        LOG.debug("Shutting down connection-check scheduler...");
+        this.executor.purge();
+        this.executor.shutdownNow();
     }
 
     public void addConnection(Connection connection)

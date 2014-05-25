@@ -1,11 +1,13 @@
 package net.johnewart.gearman.client;
 
+import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.GearmanFunction;
 import net.johnewart.gearman.common.interfaces.GearmanWorker;
 import net.johnewart.gearman.net.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,6 +73,21 @@ public class NetworkGearmanWorkerPool implements GearmanWorker {
         for(GearmanWorker worker : workerSet) {
             worker.stopWork();
         }
+    }
+
+    @Override
+    public void sendData(Job job, byte[] data) throws IOException {
+        // NOOP -- handled by worker
+    }
+
+    @Override
+    public void sendStatus(Job job, int numerator, int denominator) throws IOException {
+        // NOOP -- handled by worker
+    }
+
+    @Override
+    public void sendWarning(Job job, byte[] warning) throws IOException {
+        // NOOP -- handled by worker
     }
 
     @Override
