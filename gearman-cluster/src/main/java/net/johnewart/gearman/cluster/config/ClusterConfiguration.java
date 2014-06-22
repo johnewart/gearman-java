@@ -7,6 +7,7 @@ import net.johnewart.gearman.cluster.persistence.HBasePersistenceEngine;
 import net.johnewart.gearman.cluster.queue.factories.HazelcastJobQueueFactory;
 import net.johnewart.gearman.cluster.util.HazelcastJobHandleFactory;
 import net.johnewart.gearman.cluster.util.HazelcastUniqueIdFactory;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;

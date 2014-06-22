@@ -1,10 +1,10 @@
 package net.johnewart.gearman.server.config;
 
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import net.johnewart.gearman.engine.core.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;

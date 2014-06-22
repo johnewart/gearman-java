@@ -32,17 +32,20 @@ public class ServerListener {
         LOG.info("Loading existing jobs...");
         // Load up jobs
         JobQueueFactory jobQueueFactory = serverConfiguration.getJobQueueFactory();
-        Collection<QueuedJob> queuedJobs =  jobQueueFactory.loadPersistedJobs();
         JobManager jobManager = serverConfiguration.getJobManager();
 
-        int imported = 0;
-        for(QueuedJob queuedJob : queuedJobs) {
-            boolean added = jobManager.getJobQueue(queuedJob.functionName).add(queuedJob);
-            if(added) {
-                imported += 1;
+        if(jobQueueFactory != null) {
+            Collection<QueuedJob> queuedJobs =  jobQueueFactory.loadPersistedJobs();
+
+            int imported = 0;
+            for(QueuedJob queuedJob : queuedJobs) {
+                boolean added = jobManager.getJobQueue(queuedJob.functionName).add(queuedJob);
+                if(added) {
+                    imported += 1;
+                }
             }
+            LOG.info("Imported " + imported + " persisted jobs.");
         }
-        LOG.info("Imported " + imported + " persisted jobs.");
 
         final NetworkManager networkManager = new NetworkManager(serverConfiguration.getJobManager());
 

@@ -1,6 +1,6 @@
 package net.johnewart.gearman.server.config;
 
-import net.johnewart.gearman.engine.core.JobHandleFactory;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
