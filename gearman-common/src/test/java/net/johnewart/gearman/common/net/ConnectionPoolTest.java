@@ -1,8 +1,10 @@
-package net.johnewart.gearman.net;
+package net.johnewart.gearman.common.net;
 
 import net.johnewart.gearman.common.packets.request.EchoRequest;
 import net.johnewart.gearman.common.packets.response.EchoResponse;
 import net.johnewart.gearman.exceptions.NoServersAvailableException;
+import net.johnewart.gearman.net.Connection;
+import net.johnewart.gearman.net.ConnectionPool;
 import org.junit.Test;
 
 import java.io.IOException;

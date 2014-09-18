@@ -1,9 +1,10 @@
-package net.johnewart.gearman.net;
+package net.johnewart.gearman.common.net;
 
 import net.johnewart.gearman.common.packets.Packet;
 import net.johnewart.gearman.common.packets.request.EchoRequest;
 import net.johnewart.gearman.common.packets.response.EchoResponse;
 import net.johnewart.gearman.constants.PacketType;
+import net.johnewart.gearman.net.Connection;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
