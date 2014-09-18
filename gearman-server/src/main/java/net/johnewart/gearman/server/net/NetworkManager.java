@@ -72,7 +72,7 @@ public class NetworkManager {
         if(workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
-            jobManager.sleepingWorker(worker);
+            jobManager.markWorkerAsAsleep(worker);
         }
     }
 
@@ -86,6 +86,7 @@ public class NetworkManager {
         if(workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
+            worker.removeAbility(functionName);
             jobManager.unregisterWorkerAbility(functionName, worker);
         }
     }
@@ -134,9 +135,6 @@ public class NetworkManager {
         JobPriority priority = packet.getPriority();
         boolean isBackground = packet.isBackground();
         long timeToRun = -1;
-
-        if(packet.getUniqueId().isEmpty())
-            uniqueID = jobManager.generateUniqueID(funcName);
 
         if(packet.getType() == PacketType.SUBMIT_JOB_EPOCH)
         {
@@ -200,36 +198,38 @@ public class NetworkManager {
         return worker;
     }
 
-    public void workResponse(WorkResponse packet, Channel channel) {
+    public void workResponse(WorkResponse response, Channel channel) {
         if(workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
-            Job currentJob = jobManager.getCurrentJobForWorker(worker);
+            Job currentJob = jobManager.getJobByJobHandle(response.getJobHandle());
 
-            switch(packet.getType())
-            {
-                case WORK_COMPLETE:
-                    jobManager.workComplete(currentJob,((WorkCompleteResponse)packet).getData());
-                    break;
+            if (currentJob != null) {
+                switch(response.getType())
+                {
+                    case WORK_COMPLETE:
+                        jobManager.handleWorkCompletion(currentJob, ((WorkCompleteResponse) response).getData());
+                        break;
 
-                case WORK_DATA:
-                    jobManager.workData(currentJob, ((WorkDataResponse)packet).getData());
-                    break;
+                    case WORK_DATA:
+                        jobManager.handleWorkData(currentJob, ((WorkDataResponse) response).getData());
+                        break;
 
-                case WORK_EXCEPTION:
-                    jobManager.workException(currentJob, ((WorkExceptionResponse)packet).getException());
-                    break;
+                    case WORK_EXCEPTION:
+                        jobManager.handleWorkException(currentJob, ((WorkExceptionResponse) response).getException());
+                        break;
 
-                case WORK_WARNING:
-                    jobManager.workWarning(currentJob, ((WorkWarningResponse)packet).getData());
-                    break;
+                    case WORK_WARNING:
+                        jobManager.handleWorkWarning(currentJob, ((WorkWarningResponse) response).getData());
+                        break;
 
-                case WORK_FAIL:
-                    jobManager.workFail(currentJob);
-                    break;
+                    case WORK_FAIL:
+                        jobManager.handleWorkFailure(currentJob);
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
         }
     }

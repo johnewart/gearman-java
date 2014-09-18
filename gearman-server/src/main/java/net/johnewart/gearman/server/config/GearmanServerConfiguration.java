@@ -1,16 +1,22 @@
 package net.johnewart.gearman.server.config;
 
-import net.johnewart.gearman.common.interfaces.JobHandleFactory;
-import org.slf4j.LoggerFactory;
-
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
+import net.johnewart.gearman.server.cluster.config.ClusterConfiguration;
+import net.johnewart.gearman.server.cluster.core.ClusterJobManager;
+import net.johnewart.gearman.server.cluster.queue.factories.HazelcastJobQueueFactory;
+import net.johnewart.gearman.server.cluster.util.HazelcastJobHandleFactory;
+import net.johnewart.gearman.server.cluster.util.HazelcastUniqueIdFactory;
+import net.johnewart.gearman.server.util.JobQueueMonitor;
+import net.johnewart.gearman.server.util.NoopJobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
+import org.slf4j.LoggerFactory;
 
 public class GearmanServerConfiguration implements ServerConfiguration {
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanServerConfiguration.class);
@@ -22,8 +28,11 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private String hostName;
     private JobQueueFactory jobQueueFactory;
     private JobManager jobManager;
-    private SnapshottingJobQueueMonitor jobQueueMonitor;
+    private JobQueueMonitor jobQueueMonitor;
     private PersistenceEngineConfiguration persistenceEngine;
+    private ClusterConfiguration clusterConfiguration;
+    private JobHandleFactory jobHandleFactory;
+    private UniqueIdFactory uniqueIdFactory;
 
     public void setPort(int port) {
         this.port = port;
@@ -125,7 +134,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     }
 
     @Override
-    public SnapshottingJobQueueMonitor getJobQueueMonitor() {
+    public JobQueueMonitor getJobQueueMonitor() {
         if (jobQueueMonitor == null) {
             jobQueueMonitor = new SnapshottingJobQueueMonitor(getJobManager());
         }
@@ -135,11 +144,33 @@ public class GearmanServerConfiguration implements ServerConfiguration {
 
     @Override
     public JobHandleFactory getJobHandleFactory() {
-        return new LocalJobHandleFactory(getHostName());
+        if (jobHandleFactory == null) {
+            jobHandleFactory = new LocalJobHandleFactory(getHostName());
+        }
+
+        return jobHandleFactory;
     }
 
     @Override
     public UniqueIdFactory getUniqueIdFactory() {
-        return new LocalUniqueIdFactory();
+        if (uniqueIdFactory == null) {
+            uniqueIdFactory = new LocalUniqueIdFactory();
+        }
+
+        return uniqueIdFactory;
+    }
+
+    public ClusterConfiguration getCluster() {
+        return clusterConfiguration;
+    }
+
+    // Setting the cluster configuration forces some settings...
+    public void setCluster(ClusterConfiguration clusterConfiguration) {
+        this.clusterConfiguration = clusterConfiguration;
+        this.jobQueueFactory = new HazelcastJobQueueFactory(clusterConfiguration.getHazelcastInstance());
+        this.jobHandleFactory = new HazelcastJobHandleFactory(clusterConfiguration.getHazelcastInstance(), getHostName());
+        this.uniqueIdFactory = new HazelcastUniqueIdFactory(clusterConfiguration.getHazelcastInstance());
+        this.jobManager = new ClusterJobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, clusterConfiguration.getHazelcastInstance());
+        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
     }
 }

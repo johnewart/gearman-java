@@ -1,4 +1,4 @@
-package net.johnewart.gearman.cluster.util;
+package net.johnewart.gearman.server.cluster.util;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IdGenerator;

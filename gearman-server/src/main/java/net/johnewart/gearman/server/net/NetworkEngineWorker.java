@@ -40,5 +40,8 @@ public class NetworkEngineWorker implements EngineWorker {
         send(new NoOp());
     }
 
+    public void removeAbility(String functionName) {
+        this.abilities.remove(functionName);
+    }
 }
 

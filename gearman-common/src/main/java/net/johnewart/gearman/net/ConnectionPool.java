@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,6 +22,7 @@ public class ConnectionPool {
     private final Object connectionLock = new Object();
     private final Runnable checkDeadServers;
     private final ScheduledThreadPoolExecutor executor;
+    private final ScheduledFuture connectionChecker;
 
     public ConnectionPool()
     {
@@ -30,11 +32,12 @@ public class ConnectionPool {
 
         this.executor = new ScheduledThreadPoolExecutor(1);
         this.checkDeadServers = new ConnectionChecker(this);
-        this.executor.scheduleAtFixedRate(checkDeadServers, 0, 30, TimeUnit.SECONDS);
+        this.connectionChecker = this.executor.scheduleAtFixedRate(checkDeadServers, 0, 30, TimeUnit.SECONDS);
     }
 
     public void shutdown() {
         LOG.debug("Shutting down connection-check scheduler...");
+        connectionChecker.cancel(true);
         this.executor.purge();
         this.executor.shutdownNow();
     }

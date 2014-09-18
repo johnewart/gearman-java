@@ -1,7 +1,10 @@
 package net.johnewart.gearman.server.web;
 
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
+import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -16,20 +19,18 @@ import com.yammer.metrics.reporting.MetricsServlet;
 
 import net.johnewart.gearman.server.config.ServerConfiguration;
 
+import javax.servlet.http.HttpServlet;
+
 public class WebListener {
     private final Logger LOG = LoggerFactory.getLogger(WebListener.class);
     private final static String TEMPLATE_PATH = "net/johnewart/gearman/server/web/templates";
-    private final ServerConfiguration serverConfiguration;
+    private final GearmanServerConfiguration serverConfiguration;
 
-    public WebListener(ServerConfiguration serverConfiguration) {
+    public WebListener(GearmanServerConfiguration serverConfiguration) {
         this.serverConfiguration = serverConfiguration;
     }
 
-    public void start() throws Exception {
-        LOG.info("Listening on " + ":" + serverConfiguration.getHttpPort());
-
-        final Server httpServer = new Server(serverConfiguration.getHttpPort());
-        final HandlerList handlerList = new HandlerList();
+    public Map<String, HttpServlet> getServletMappings() {
         final MetricsServlet metricsServlet = new MetricsServlet(true);
 
         final AdminServlet adminServlet = new AdminServlet();
@@ -39,6 +40,28 @@ public class WebListener {
                 new DashboardServlet(serverConfiguration.getJobQueueMonitor(), serverConfiguration.getJobManager());
         final JobQueueServlet jobQueueServlet =
                 new JobQueueServlet(serverConfiguration.getJobManager());
+
+
+        final ClusterServlet clusterServlet = new ClusterServlet(serverConfiguration);
+
+        Map<String, HttpServlet> mappings = new HashMap<>();
+
+        mappings.put("/gearman/*", gearmanServlet);
+        mappings.put("/queues/*", jobQueueServlet);
+        mappings.put("/metrics/*", metricsServlet);
+        mappings.put("/admin/*", adminServlet);
+        mappings.put("/cluster/*", clusterServlet);
+        mappings.put("/", dashboardServlet);
+
+        return mappings;
+    }
+
+    public void start() throws Exception {
+        LOG.info("Listening on " + ":" + serverConfiguration.getHttpPort());
+
+        final Server httpServer = new Server(serverConfiguration.getHttpPort());
+        final HandlerList handlerList = new HandlerList();
+
 
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         final URL templateURL = classLoader.getResource(TEMPLATE_PATH);
@@ -53,11 +76,11 @@ public class WebListener {
             resourceContext.setHandler(resourceHandler);
 
             servletHandler.setContextPath("/");
-            servletHandler.addServlet(new ServletHolder(gearmanServlet), "/gearman/*");
-            servletHandler.addServlet(new ServletHolder(jobQueueServlet), "/queues/*");
-            servletHandler.addServlet(new ServletHolder(metricsServlet), "/metrics/*");
-            servletHandler.addServlet(new ServletHolder(adminServlet),   "/admin/*");
-            servletHandler.addServlet(new ServletHolder(dashboardServlet),  "/");
+            Map<String, HttpServlet> servletMap = getServletMappings();
+
+            for(Map.Entry<String, HttpServlet> map : servletMap.entrySet()) {
+                servletHandler.addServlet(new ServletHolder(map.getValue()), map.getKey());
+            }
 
             handlerList.addHandler(resourceContext);
             handlerList.addHandler(servletHandler);

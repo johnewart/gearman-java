@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public class JobManager {
+public class LocalJobManager {
     public static final Date timeStarted = new Date();
 
     private static Logger LOG = LoggerFactory.getLogger(JobManager.class);
@@ -53,7 +53,7 @@ public class JobManager {
     private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
 
 
-    public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory, UniqueIdFactory uniqueIdFactory) {
+    public LocalJobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory, UniqueIdFactory uniqueIdFactory) {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
         this.uniqueIdClients = new ConcurrentHashMap<>();
@@ -85,49 +85,13 @@ public class JobManager {
         getWorkerPool(funcName).removeWorker(worker);
     }
 
-    public void unregisterWorker(EngineWorker worker)
-    {
-        // Remove this worker from the queues
-        for(String jobQueueName : worker.getAbilities())
-            getWorkerPool(jobQueueName).removeWorker(worker);
-
-        // Remove from active worker count
-        workers.remove(worker);
-
-        // If this worker has any active jobs, clean up after it
-        Job job = getCurrentJobForWorker(worker);
-        if(job != null)
-        {
-            JobAction action = disconnectWorker(job, worker);
-            removeJob(job);
-
-            switch (action)
-            {
-                case REENQUEUE:
-                    try {
-                        reEnqueueJob(job);
-                    } catch (IllegalJobStateTransitionException e) {
-                        LOG.error("Unable to re-enqueue job: " + e.toString());
-                    }
-                    break;
-                // Let it go away
-                case MARKCOMPLETE:
-                case DONOTHING:
-                default:
-                    break;
-            }
-
-            workerJobs.remove(worker);
-        }
-
-    }
 
     public void unregisterClient(EngineClient client)
     {
         removeClientForUniqueId(client.getCurrentJob(), client);
     }
 
-    public void markWorkerAsAsleep(EngineWorker worker)
+    public void sleepingWorker(EngineWorker worker)
     {
         for(String jobQueueName : worker.getAbilities())
             getWorkerPool(jobQueueName).markSleeping(worker);
@@ -201,17 +165,11 @@ public class JobManager {
     public Job storeJob(Job job)
     {
         final String functionName = job.getFunctionName();
-        final String uniqueID;
+        final String uniqueID = job.getUniqueID();
+        final Integer key = uniqueID.hashCode();
         final JobQueue jobQueue = getJobQueue(functionName);
 
-        if(job.getUniqueID().isEmpty()) {
-            uniqueID = generateUniqueID(functionName);
-        } else {
-            uniqueID = job.getUniqueID();
-        }
-
         // Make sure only one thread attempts to add a job with this unique id
-        final Integer key = uniqueID.hashCode();
         this.lock.lock(key);
         try {
 
@@ -279,7 +237,7 @@ public class JobManager {
 
     @Timed
     @Metered
-    public synchronized void handleWorkCompletion(Job job, byte[] data)
+    public synchronized void workComplete(Job job, byte[] data)
     {
 
         if(job != null)
@@ -295,23 +253,37 @@ public class JobManager {
         }
     }
 
-    public synchronized void handleWorkData(Job job, byte[] data)
+    public synchronized void workData(Job job, byte[] data)
     {
         if(job != null && !job.isBackground())
         {
-            for(EngineClient client : getClientsForUniqueId(job.getUniqueID()))
+            Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
+
+            if(!clients.isEmpty())
             {
-                client.sendWorkData(job.getJobHandle(), data);
+                for(EngineClient client : clients)
+                {
+                    client.sendWorkData(job.getJobHandle(), data);
+                }
             }
         }
     }
 
-    public synchronized void handleWorkException(Job job, byte[] exception)
+    public synchronized void workException(Job job, byte[] exception)
     {
-        if(job != null && !job.isBackground()) {
-            for(EngineClient client : getClientsForUniqueId(job.getUniqueID()))
+        if(job != null)
+        {
+            if(!job.isBackground())
             {
-                client.sendWorkException(job.getJobHandle(), exception);
+                Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
+
+                if(!clients.isEmpty())
+                {
+                    for(EngineClient client : clients)
+                    {
+                        client.sendWorkException(job.getJobHandle(), exception);
+                    }
+                }
             }
 
             job.complete();
@@ -319,30 +291,35 @@ public class JobManager {
         }
     }
 
-    public synchronized void handleWorkWarning(Job job, byte[] warning)
+    public synchronized void workWarning(Job job, byte[] warning)
     {
         if(job != null && !job.isBackground())
         {
             Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-            for(EngineClient client : clients)
+            if(!clients.isEmpty())
             {
-                client.sendWorkWarning(job.getJobHandle(), warning);
+                for(EngineClient client : clients)
+                {
+                    client.sendWorkWarning(job.getJobHandle(), warning);
+                }
             }
         }
     }
 
-    public synchronized void handleWorkFailure(Job job)
+    public synchronized void workFail(Job job)
     {
         if(job != null && !job.isBackground())
         {
             Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-            for(EngineClient client : clients)
+            if(!clients.isEmpty())
             {
-                client.sendWorkFail(job.getJobHandle());
+                for(EngineClient client : clients)
+                {
+                    client.sendWorkFail(job.getJobHandle());
+                }
             }
-
         }
     }
 
@@ -458,20 +435,20 @@ public class JobManager {
         return workerJobs.get(worker);
     }
 
-    private void removeClientForUniqueId(Job job, EngineClient client)
+    protected void removeClientForUniqueId(Job job, EngineClient client)
     {
         String uniqueID = job.getUniqueID();
         Set<EngineClient> clients = getClientsForUniqueId(uniqueID);
         clients.remove(client);
     }
 
-    private void addClientForUniqueId(String uniqueID, EngineClient client)
+    protected void addClientForUniqueId(String uniqueID, EngineClient client)
     {
         Set<EngineClient> clients = getClientsForUniqueId(uniqueID);
         clients.add(client);
     }
 
-    private Set<EngineClient> getClientsForUniqueId(String uniqueID)
+    protected Set<EngineClient> getClientsForUniqueId(String uniqueID)
     {
         if(uniqueIdClients.containsKey(uniqueID))
             return uniqueIdClients.get(uniqueID);
@@ -574,3 +551,4 @@ public class JobManager {
         return activeJobHandles.get(jobHandle);
     }
 }
+

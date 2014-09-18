@@ -1,17 +1,16 @@
 package net.johnewart.gearman.embedded;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.EngineClient;
-import net.johnewart.gearman.engine.core.JobHandleFactory;
+import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EmbeddedGearmanServer {
     private final Logger LOG = LoggerFactory.getLogger(EmbeddedGearmanServer.class);
@@ -37,7 +36,7 @@ public class EmbeddedGearmanServer {
     }
 
     public void markWorkerAsleep(final EmbeddedGearmanWorker worker) {
-        jobManager.sleepingWorker(worker);
+        jobManager.markWorkerAsAsleep(worker);
     }
 
     public void registerWorkerAbility(final EmbeddedGearmanWorker worker,
@@ -46,6 +45,6 @@ public class EmbeddedGearmanServer {
     }
 
     public void completeWork(final Job job, final byte[] results) {
-        jobManager.workComplete(job, results);
+        jobManager.handleWorkCompletion(job, results);
     }
 }

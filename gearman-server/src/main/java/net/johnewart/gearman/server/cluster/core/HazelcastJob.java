@@ -1,4 +1,4 @@
-package net.johnewart.gearman.cluster;
+package net.johnewart.gearman.server.cluster.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.nio.ObjectDataInput;

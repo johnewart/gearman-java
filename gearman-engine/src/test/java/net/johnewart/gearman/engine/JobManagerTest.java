@@ -87,7 +87,7 @@ public class JobManagerTest {
                 Is.is(0L));
 
         // Complete the job
-        jobManager.workComplete(nextJob, result);
+        jobManager.handleWorkCompletion(nextJob, result);
 
         Assert.assertThat("The job store has one complete job",
                 jobManager.getCompletedJobsCounter().count(),
@@ -176,7 +176,7 @@ public class JobManagerTest {
     {
         Job job = JobFactory.generateBackgroundJob("reverseString");
         jobManager.registerWorkerAbility("removeString", worker);
-        jobManager.sleepingWorker(worker);
+        jobManager.markWorkerAsAsleep(worker);
         jobManager.storeJob(job);
         verify(worker).wakeUp();
     }
@@ -188,7 +188,7 @@ public class JobManagerTest {
         EngineWorker mockWorker = mock(EngineWorker.class);
         //when(mockWorker.wakeUp()).thenThrow(new Exception("Can't send that packet"));
         //jobManager.registerWorkerAbility("reverseString", spyWorker);
-        //jobManager.sleepingWorker(spyWorker);
+        //jobManager.markWorkerAsAsleep(spyWorker);
         //jobManager.storeJob(job);
         //verify(spyWorker).wakeUp();
     }
@@ -287,7 +287,7 @@ public class JobManagerTest {
                 Is.is(true));
 
         // Complete the job
-        jobManager.workComplete(nextJob, result);
+        jobManager.handleWorkCompletion(nextJob, result);
 
         verify(mockClientOne).sendWorkResults(jobOne.getJobHandle(), result);
         verify(mockClientTwo).sendWorkResults(jobOne.getJobHandle(), result);
@@ -308,7 +308,7 @@ public class JobManagerTest {
         byte[] data = {'r','e','s','u','l','t'};
 
         // Send back some data
-        jobManager.workData(nextJob, data);
+        jobManager.handleWorkData(nextJob, data);
 
         verify(mockClient).sendWorkData(jobOne.getJobHandle(), data);
     }

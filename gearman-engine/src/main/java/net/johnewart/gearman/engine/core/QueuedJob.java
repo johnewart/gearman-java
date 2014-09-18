@@ -3,7 +3,7 @@ package net.johnewart.gearman.engine.core;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.common.Job;
 
-public final class QueuedJob
+public final class QueuedJob implements Comparable<QueuedJob>
 {
     public final String uniqueID;
     public final Long timeToRun;
@@ -64,5 +64,10 @@ public final class QueuedJob
         result = 31 * result + (priority != null ? priority.hashCode() : 0);
         result = 31 * result + (functionName != null ? functionName.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public int compareTo(QueuedJob other) {
+        return other.getTimeToRun().compareTo(this.getTimeToRun());
     }
 }

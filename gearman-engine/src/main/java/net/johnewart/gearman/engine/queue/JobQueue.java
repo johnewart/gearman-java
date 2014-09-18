@@ -6,10 +6,29 @@ import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface JobQueue {
 
+    /**
+     * Enqueue work
+     * @param job
+     * @return
+     */
     boolean enqueue(Job job);
+    /**
+     * Remove a job from the queue - simply deleting it
+     * @param job
+     * @return true on success, false otherwise
+     */
+    boolean remove(Job job);
+
+    /**
+     * Add a queued job directly to the queue, skipping the traditional enqueue process
+     * @param queuedJob
+     * @return
+     */
+    boolean add(QueuedJob queuedJob);
 
     /**
      * Fetch the next job waiting -- this checks high, then normal, then low
@@ -26,6 +45,12 @@ public interface JobQueue {
 	 * 		The total number of jobs in all priorities
 	 */
     long size();
+
+    /**
+     * The size of a particular priority queue
+     * @param jobPriority
+     * @return
+     */
     long size(JobPriority jobPriority);
 
     /**
@@ -41,15 +66,13 @@ public interface JobQueue {
 
     String getName();
 
-    boolean remove(Job job);
-
     String metricName();
 
+    // Data
     Collection<QueuedJob> getAllJobs();
 
     Job findJobByUniqueId(String uniqueID);
 
     ImmutableMap<Integer, Long> futureCounts();
 
-    boolean add(QueuedJob queuedJob);
 }

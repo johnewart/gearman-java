@@ -87,6 +87,11 @@ public class EmbeddedGearmanClient extends AbstractGearmanClient implements Engi
     }
 
     @Override
+    public void shutdown() {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     public Job getCurrentJob() {
         // NO-OP
         return null;

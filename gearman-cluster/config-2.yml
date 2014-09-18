@@ -1,6 +1,0 @@
-port: 4741
-httpPort: 9006
-enableSSL: false
-debugging: true
-hostName: node2
-

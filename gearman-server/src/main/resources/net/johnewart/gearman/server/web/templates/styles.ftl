@@ -151,4 +151,8 @@
         left: -18px;
     }
 
+    table.cluster tr.local {
+        background-color: #eeffee;
+    }
+
 </style>

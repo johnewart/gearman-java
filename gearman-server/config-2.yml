@@ -1,0 +1,11 @@
+port: 4741
+httpPort: 9006
+enableSSL: false
+debugging: true
+hostName: node2
+cluster:
+    hazelcast:
+      port: 5702
+      hosts:
+        - 127.0.0.1:5701
+

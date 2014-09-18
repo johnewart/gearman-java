@@ -1,6 +1,7 @@
 package net.johnewart.gearman.client;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,9 +81,13 @@ public class NetworkGearmanWorker implements GearmanWorker, Runnable {
                         case NO_JOB:
                             LOG.info("Worker sending PRE_SLEEP and sleeping for 30 seconds...");
                             c.sendPacket(new PreSleep());
-                            Packet noop = c.getNextPacket(30 * 1000);
-                            if(noop.getType() != PacketType.NOOP) {
-                                LOG.error("Received invalid packet. Expected NOOP, received " + noop.getType());
+                            try {
+                                Packet noop = c.getNextPacket(30 * 1000);
+                                if(noop.getType() != PacketType.NOOP) {
+                                    LOG.error("Received invalid packet. Expected NOOP, received " + noop.getType());
+                                }
+                            } catch (SocketTimeoutException e) {
+                                LOG.warn("Socket timed out waiting for next packet...");
                             }
                             break;
                     }

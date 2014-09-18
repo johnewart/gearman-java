@@ -1,4 +1,4 @@
-package net.johnewart.gearman.cluster;
+package net.johnewart.gearman.server.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

@@ -14,7 +14,7 @@ import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 
 // Sane defaults.
-public class DefaultServerConfiguration implements ServerConfiguration {
+public class DefaultServerConfiguration extends GearmanServerConfiguration {
 
     private final JobManager jobManager;
     private final JobQueueFactory jobQueueFactory;

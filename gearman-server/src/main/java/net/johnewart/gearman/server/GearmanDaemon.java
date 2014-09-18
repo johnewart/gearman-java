@@ -26,7 +26,7 @@ public class GearmanDaemon {
         }
 
 
-        final ServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(configFile);
+        final GearmanServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(configFile);
         final ServerListener serverListener = new ServerListener(serverConfiguration);
         final WebListener webListener = new WebListener(serverConfiguration);
 
@@ -38,8 +38,8 @@ public class GearmanDaemon {
         }
     }
 
-    private static ServerConfiguration loadFromConfigOrGenerateDefaultConfig(final String configFile) {
-        ServerConfiguration serverConfiguration = null;
+    private static GearmanServerConfiguration loadFromConfigOrGenerateDefaultConfig(final String configFile) {
+        GearmanServerConfiguration serverConfiguration = null;
         try (InputStream in = Files.newInputStream(Paths.get(configFile))) {
             Yaml yaml = new Yaml();
 

@@ -1,9 +1,9 @@
-package net.johnewart.gearman.cluster.queue;
+package net.johnewart.gearman.server.cluster.queue;
 
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
-import net.johnewart.gearman.cluster.HazelcastJob;
+import net.johnewart.gearman.server.cluster.core.HazelcastJob;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.lang.String.format;
 
@@ -24,6 +25,7 @@ public class HazelcastJobQueue implements JobQueue {
     private final Set<String> uniqueIds;
     private final String queueName;
     private final IAtomicLong maxQueueSize;
+    private final ConcurrentHashMap<String, Job> localJobs;
 
     public HazelcastJobQueue(String name, HazelcastInstance hazelcast) {
         this.hazelcast = hazelcast;
@@ -33,10 +35,14 @@ public class HazelcastJobQueue implements JobQueue {
         this.lowQueue = hazelcast.getQueue(format("jobs-%s-low", name));
         this.uniqueIds = hazelcast.getSet(format("uniqueids-%s", name));
         this.maxQueueSize = hazelcast.getAtomicLong(format("maxsize-%s", name));
+        this.localJobs = new ConcurrentHashMap<>();
     }
 
     @Override
     public boolean enqueue(Job job) {
+        localJobs.put(job.getUniqueID(), job);
+        uniqueIds.add(job.getUniqueID());
+
         switch(job.getPriority()) {
             case HIGH:
                 return highQueue.add(new HazelcastJob(job));
@@ -62,7 +68,9 @@ public class HazelcastJobQueue implements JobQueue {
         }
 
         if (dequeued != null) {
-            return dequeued.toJob();
+            Job job = dequeued.toJob();
+            localJobs.put(job.getUniqueID(), job);
+            return job;
         } else {
             return null;
         }
@@ -110,6 +118,9 @@ public class HazelcastJobQueue implements JobQueue {
 
     @Override
     public boolean remove(Job job) {
+        localJobs.remove(job.getUniqueID());
+        uniqueIds.remove(job.getUniqueID());
+
         switch(job.getPriority()) {
             case HIGH:
                 return highQueue.remove(new HazelcastJob(job));
@@ -124,8 +135,9 @@ public class HazelcastJobQueue implements JobQueue {
 
     @Override
     public String metricName() {
-        return null;
+        return this.queueName.replaceAll(":", ".");
     }
+
 
     @Override
     public Collection<QueuedJob> getAllJobs() {
@@ -134,12 +146,12 @@ public class HazelcastJobQueue implements JobQueue {
 
     @Override
     public Job findJobByUniqueId(String uniqueID) {
-        return null;
+        return localJobs.get(uniqueID);
     }
 
     @Override
     public ImmutableMap<Integer, Long> futureCounts() {
-        return null;
+        return ImmutableMap.of();
     }
 
     @Override

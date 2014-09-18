@@ -13,7 +13,6 @@
         <module>gearman-server</module>
         <module>gearman-common</module>
         <module>gearman-example</module>
-        <module>gearman-cluster</module>
         <module>gearman-engine</module>
         <module>gearman-embedded-server</module>
         <module>gearman-integration</module>

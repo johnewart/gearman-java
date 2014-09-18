@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,6 +31,7 @@ public class PersistedJobQueue implements JobQueue {
     private final BlockingDeque<QueuedJob> low		= new LinkedBlockingDeque<>();
     private final BlockingDeque<QueuedJob> mid		= new LinkedBlockingDeque<>();
     private final BlockingDeque<QueuedJob> high		= new LinkedBlockingDeque<>();
+    private final PriorityBlockingQueue<QueuedJob> futureJobs = new PriorityBlockingQueue<>();
 
     // Set of unique IDs in this queue
     private final ConcurrentHashSet<String> allJobs = new ConcurrentHashSet<>();
@@ -49,6 +51,7 @@ public class PersistedJobQueue implements JobQueue {
         highPriorityCount = new AtomicLong();
         maxQueueSize = new AtomicInteger(0);
     }
+
 
     @Override
     public boolean add(final QueuedJob queuedJob) {
@@ -70,7 +73,12 @@ public class PersistedJobQueue implements JobQueue {
                         enqueued = low.add(queuedJob);
                         break;
                     case NORMAL:
-                        enqueued = mid.add(queuedJob);
+                        // Future job, stick on future queue
+                        if(queuedJob.getTimeToRun() > 0) {
+                            enqueued = futureJobs.add(queuedJob);
+                        } else {
+                            enqueued = mid.add(queuedJob);
+                        }
                         break;
                     case HIGH:
                         enqueued = high.add(queuedJob);
@@ -123,20 +131,12 @@ public class PersistedJobQueue implements JobQueue {
 
         if (queuedJob == null)
         {
-            // Check to see which, if any, need to be run now
-            synchronized (mid)
-            {
-                for(QueuedJob rj : mid)
-                {
-                    if(rj.timeToRun < currentTime)
-                    {
-                        if(mid.remove(rj))
-                        {
-                            queuedJob = rj;
-                            break;
-                        }
-                    }
-                }
+            // Check future jobs
+            QueuedJob peekJob = futureJobs.peek();
+            if (peekJob != null && peekJob.getTimeToRun() < currentTime) {
+                queuedJob = futureJobs.poll();
+            } else {
+                queuedJob = mid.poll();
             }
         }
 
