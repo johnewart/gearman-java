@@ -1,6 +1,9 @@
 Gearman Java Implementation
 ===========================
 
+[![Build
+Status](https://travis-ci.org/johnewart/gearman-java.svg)](https://travis-ci.org/johnewart/gearman-java)
+
 An implementation of the [gearman protocol](http://www.gearman.org) server, basic client, and soon-to-be worker in Java. Features include:
 
 * Pluggable persistent storage mechanism currently supporting:
