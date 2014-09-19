@@ -19,11 +19,6 @@
         </dependency>
         <dependency>
             <groupId>net.johnewart.gearman</groupId>
-            <artifactId>gearman-cluster</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>net.johnewart.gearman</groupId>
             <artifactId>gearman-common</artifactId>
             <version>${project.version}</version>
         </dependency>
