@@ -17,7 +17,7 @@ import net.johnewart.gearman.net.Connection;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import net.johnewart.gearman.server.config.ServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
