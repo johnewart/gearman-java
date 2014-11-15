@@ -7,7 +7,7 @@
     <groupId>net.johnewart.gearman</groupId>
     <artifactId>gearman-java</artifactId>
     <packaging>pom</packaging>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.8.0-SNAPSHOT</version>
     <modules>
         <module>gearman-client</module>
         <module>gearman-server</module>
