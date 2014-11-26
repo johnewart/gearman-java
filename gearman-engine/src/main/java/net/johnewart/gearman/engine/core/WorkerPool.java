@@ -1,18 +1,18 @@
 package net.johnewart.gearman.engine.core;
 
 import net.johnewart.gearman.common.interfaces.EngineWorker;
+import org.eclipse.jetty.util.ConcurrentHashSet;
 
-import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class WorkerPool {
-    private final HashSet<EngineWorker> sleepingWorkers;
-    private final HashSet<EngineWorker> activeWorkers;
+    private final ConcurrentHashSet<EngineWorker> sleepingWorkers;
+    private final ConcurrentHashSet<EngineWorker> activeWorkers;
     private final AtomicLong numberOfConnectedWorkers;
 
     public WorkerPool(final String name) {
-        sleepingWorkers = new HashSet<>();
-        activeWorkers = new HashSet<>();
+        sleepingWorkers = new ConcurrentHashSet<>();
+        activeWorkers = new ConcurrentHashSet<>();
         numberOfConnectedWorkers = new AtomicLong(0);
     }
 
