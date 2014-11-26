@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Serves as an interface between the packet handler and the job manager
  * General flow:
- *   Netty -> CODEC -> PacketHandler -> NetworkManager -> JobManager
+ *   Netty - CODEC - PacketHandler - NetworkManager - JobManager
  *
  */
 public class NetworkManager {

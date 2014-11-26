@@ -6,7 +6,7 @@ import net.johnewart.gearman.common.Job;
 
 /**
  * This interface is for implementations of the clients that are connected to the
- * core engine. (i.e server -> client relationship)
+ * core engine. (i.e server to client relationship)
  */
 public interface EngineClient {
     Job getCurrentJob();
