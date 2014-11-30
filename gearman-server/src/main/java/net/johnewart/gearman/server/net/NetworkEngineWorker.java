@@ -7,15 +7,18 @@ import net.johnewart.gearman.common.packets.response.NoOp;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class NetworkEngineWorker implements EngineWorker {
     private final Channel channel;
     private final Set<String> abilities;
+    private Boolean awake;
 
     public NetworkEngineWorker(Channel channel)
     {
         this.channel = channel;
         this.abilities = new HashSet<>();
+        this.awake = new Boolean(true);
     }
 
     public void send(Packet packet)
@@ -37,7 +40,19 @@ public class NetworkEngineWorker implements EngineWorker {
     @Override
     public void wakeUp()
     {
-        send(new NoOp());
+        synchronized (awake) {
+            if(!awake) {
+                send(new NoOp());
+                awake = true;
+            }
+        }
+    }
+
+    @Override
+    public void markAsleep() {
+        synchronized (awake) {
+            awake = false;
+        }
     }
 
     public void removeAbility(String functionName) {

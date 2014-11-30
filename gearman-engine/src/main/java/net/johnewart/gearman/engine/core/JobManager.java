@@ -129,8 +129,19 @@ public class JobManager {
 
     public void markWorkerAsAsleep(EngineWorker worker)
     {
-        for(String jobQueueName : worker.getAbilities())
+        boolean workWaiting = false;
+        for(String jobQueueName : worker.getAbilities()) {
             getWorkerPool(jobQueueName).markSleeping(worker);
+
+            if(getJobQueue(jobQueueName).size() > 0) {
+                workWaiting = true;
+            }
+        }
+
+        if(workWaiting)
+            worker.wakeUp();
+
+
     }
 
     @Timed

@@ -107,4 +107,9 @@ public class EmbeddedGearmanWorker implements EngineWorker, GearmanWorker, Runna
         }
     }
 
+    @Override
+    public void markAsleep() {
+        //NOOP
+    }
+
 }

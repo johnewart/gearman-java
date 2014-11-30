@@ -7,28 +7,29 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class WorkerPool {
     private final ConcurrentHashSet<EngineWorker> sleepingWorkers;
-    private final ConcurrentHashSet<EngineWorker> activeWorkers;
+    private final ConcurrentHashSet<EngineWorker> connectedWorkers;
     private final AtomicLong numberOfConnectedWorkers;
 
     public WorkerPool(final String name) {
         sleepingWorkers = new ConcurrentHashSet<>();
-        activeWorkers = new ConcurrentHashSet<>();
+        connectedWorkers = new ConcurrentHashSet<>();
         numberOfConnectedWorkers = new AtomicLong(0);
     }
 
     public void addWorker(final EngineWorker worker) {
-        activeWorkers.add(worker);
+        connectedWorkers.add(worker);
         numberOfConnectedWorkers.incrementAndGet();
     }
 
     public void removeWorker(final EngineWorker worker) {
         sleepingWorkers.remove(worker);
-        activeWorkers.remove(worker);
+        connectedWorkers.remove(worker);
         numberOfConnectedWorkers.decrementAndGet();
     }
 
     public void markSleeping(final EngineWorker worker) {
         sleepingWorkers.add(worker);
+        worker.markAsleep();
     }
 
     public void wakeupWorkers() {
