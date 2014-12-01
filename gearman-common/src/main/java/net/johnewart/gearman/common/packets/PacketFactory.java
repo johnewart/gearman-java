@@ -1,14 +1,7 @@
 package net.johnewart.gearman.common.packets;
 
 import com.google.common.primitives.Ints;
-import net.johnewart.gearman.common.packets.request.CanDo;
-import net.johnewart.gearman.common.packets.request.CantDo;
-import net.johnewart.gearman.common.packets.request.EchoRequest;
-import net.johnewart.gearman.common.packets.request.GetStatus;
-import net.johnewart.gearman.common.packets.request.GrabJob;
-import net.johnewart.gearman.common.packets.request.PreSleep;
-import net.johnewart.gearman.common.packets.request.SetClientId;
-import net.johnewart.gearman.common.packets.request.SubmitJob;
+import net.johnewart.gearman.common.packets.request.*;
 import net.johnewart.gearman.common.packets.response.EchoResponse;
 import net.johnewart.gearman.common.packets.response.JobAssign;
 import net.johnewart.gearman.common.packets.response.JobAssignUniq;
@@ -72,14 +65,17 @@ public class PacketFactory {
                 return new JobAssign(packetBytes);
             case JOB_ASSIGN_UNIQ:
                 return new JobAssignUniq(packetBytes);
-
             /* Worker request packets */
+            case CAN_DO_TIMEOUT:
+                return new CanDoTimeout(packetBytes);
             case CANT_DO:
                 return new CantDo(packetBytes);
             case CAN_DO:
                 return new CanDo(packetBytes);
             case GRAB_JOB:
                 return new GrabJob(packetBytes);
+            case GRAB_JOB_UNIQ:
+                return new GrabJobUniq(packetBytes);
             case PRE_SLEEP:
                 return new PreSleep(packetBytes);
             case SET_CLIENT_ID:

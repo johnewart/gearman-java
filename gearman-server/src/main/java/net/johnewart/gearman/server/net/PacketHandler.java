@@ -4,11 +4,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import net.johnewart.gearman.common.packets.Packet;
-import net.johnewart.gearman.common.packets.request.CanDo;
-import net.johnewart.gearman.common.packets.request.CantDo;
-import net.johnewart.gearman.common.packets.request.EchoRequest;
-import net.johnewart.gearman.common.packets.request.GetStatus;
-import net.johnewart.gearman.common.packets.request.SubmitJob;
+import net.johnewart.gearman.common.packets.request.*;
 import net.johnewart.gearman.common.packets.response.WorkResponse;
 import net.johnewart.gearman.common.packets.response.WorkStatus;
 import net.johnewart.gearman.constants.PacketType;
@@ -94,8 +90,11 @@ public class PacketHandler extends SimpleChannelInboundHandler<Object> {
         switch(packet.getType())
         {
             case CAN_DO:
-            case CAN_DO_TIMEOUT:
                 networkManager.registerAbility(((CanDo)packet).getFunctionName(), channel);
+                return;
+            case CAN_DO_TIMEOUT:
+                // TODO: Support timeout
+                networkManager.registerAbility(((CanDoTimeout)packet).getFunctionName(), channel);
                 return;
             case CANT_DO:
                 networkManager.unregisterAbility(((CantDo)packet).getFunctionName(), channel);
