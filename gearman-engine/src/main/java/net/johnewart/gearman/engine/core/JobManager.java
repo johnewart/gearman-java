@@ -4,6 +4,7 @@ import com.yammer.metrics.Metrics;
 import com.yammer.metrics.annotation.Metered;
 import com.yammer.metrics.annotation.Timed;
 import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Meter;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 
 public class JobManager {
@@ -51,6 +53,7 @@ public class JobManager {
     private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
     private final Counter completedJobsCounter = Metrics.newCounter(JobManager.class, "completed-jobs");
     private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
+    private final Meter jobMeter = Metrics.newMeter(JobManager.class, "queued-jobs-meter", "enqueued", TimeUnit.SECONDS);
 
 
     public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory, UniqueIdFactory uniqueIdFactory) {
@@ -211,6 +214,7 @@ public class JobManager {
 
     public Job storeJob(Job job)
     {
+        jobMeter.mark();
         final String functionName = job.getFunctionName();
         final String uniqueID;
         final JobQueue jobQueue = getJobQueue(functionName);
