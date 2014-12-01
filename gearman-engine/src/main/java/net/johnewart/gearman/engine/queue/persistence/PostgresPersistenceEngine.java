@@ -431,14 +431,15 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                 if(!tables.next())
                 {
                     st = conn.prepareStatement("CREATE TABLE jobs(id bigserial, unique_id varchar(255), priority varchar(50), function_name varchar(255), time_to_run bigint, job_handle text, json_data text)");
-                    int created = st.executeUpdate();
+                    st.executeUpdate();
                     st = conn.prepareStatement("CREATE INDEX jobs_unique_id ON jobs(unique_id)");
-                    int createdUniqueIDIndex = st.executeUpdate();
+                    st.executeUpdate();
                     st = conn.prepareStatement("CREATE INDEX jobs_job_handle ON jobs(job_handle)");
-                    int createdJobHandleIndex = st.executeUpdate();
+                    st.executeUpdate();
 
-                    if(created > 0)
-                    {
+                    // Make sure it worked
+                    ResultSet createdTables = dbm.getTables(null, null, "jobs", null);
+                    if(createdTables.next()) {
                         LOG.debug("Created jobs table");
                         success = true;
                     } else {
