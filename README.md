@@ -4,7 +4,7 @@ Gearman Java Implementation
 [![Build
 Status](https://travis-ci.org/johnewart/gearman-java.svg)](https://travis-ci.org/johnewart/gearman-java)
 
-An implementation of the [gearman protocol](http://www.gearman.org) server, basic client, and soon-to-be worker in Java. Features include:
+An implementation of the [gearman protocol](http://www.gearman.org) server, client, and worker in Java. Features include:
 
 * Pluggable persistent storage mechanism currently supporting:
     * PostgreSQL
@@ -13,6 +13,9 @@ An implementation of the [gearman protocol](http://www.gearman.org) server, basi
 * Web-based UI dashboard
 * Metrics using [java metrics](https://github.com/codahale/metrics)
 * Multi-threaded server using Netty for high-performance network I/O
+* High-performance - on a single m3.2xlarge EC2 instance with 8 on-box Ruby
+  clients it has achieved over 11,000 jobs per second with in-memory
+  storage
 
 
 Getting Started
@@ -20,11 +23,12 @@ Getting Started
 
 Quick start:
 
-1. Download the [latest version pre-built](http://code.johnewart.net/maven/org/gearman/gearman-server/0.6.0/gearman-server-0.6.0.jar) from my Maven repository 
-2. Run java -jar gearman-server-0.6.0.jar 
+1. Download the [latest pre-built SNAPSHOT release](https://oss.sonatype.org/content/repositories/snapshots/net/johnewart/gearman/gearman-server/) from the Sonatype snapshots repository
+2. Run java -jar gearman-server-VERSION.jar
 3. This will default to port 4730 and memory-only persistence, with snapshotting and the web interface listening on port 8080
 
-If you want to use more advanced features, you can see what command-line options are available by passing *-h* or *--help* on the command line. Currently you can toggle / configure storage engine, port, HTTP port and debugging level.
+If you want to use more advanced features, see the example config.yml
+files in [the gearman-server sub-project](https://github.com/johnewart/gearman-java/tree/master/gearman-server)
 
 
 Web Interface
@@ -50,4 +54,4 @@ John Ewart [@soysamurai](https://twitter.com/soysamurai), [http://johnewart.net]
 Contributors
 ------------
 
-Some small portions of this leverage code from the java-gearman-service project, as this started because I wanted to add persistence to that service but decided to write it from (mostly) scratch. 
+Some tiny portions of this project leverage code from the java-gearman-service project.
