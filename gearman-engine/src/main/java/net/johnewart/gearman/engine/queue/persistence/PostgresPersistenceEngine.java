@@ -1,11 +1,11 @@
 package net.johnewart.gearman.engine.queue.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +126,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
 
     @Override
     public void delete(final Job job) {
-
+       this.delete(job.getFunctionName(), job.getUniqueID());
     }
 
     @Override
