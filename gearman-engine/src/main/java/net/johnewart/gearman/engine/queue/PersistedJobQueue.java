@@ -228,8 +228,10 @@ public class PersistedJobQueue implements JobQueue {
                     removed = false;
             }
 
+            // Remove from persistence engine
+            persistenceEngine.delete(job);
+
             if (removed) {
-                persistenceEngine.delete(job);
                 decrementJobCounter(job.getPriority());
             }
         }
