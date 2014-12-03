@@ -100,15 +100,16 @@ public class SnapshottingJobQueueMonitor implements JobQueueMonitor {
         Long totalProcessed = jobManager.getCompletedJobsCounter().count();
         Long totalQueued = jobManager.getQueuedJobsCounter().count();
         Long totalPending = jobManager.getPendingJobsCounter().count();
-        Long heapUsed = Runtime.getRuntime().totalMemory();
+        Long heapSize = Runtime.getRuntime().totalMemory();
+        Long heapUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
         if(systemSnapshots.size() > 0)
         {
             SystemSnapshot previousSnapshot = systemSnapshots.get(systemSnapshots.size()-1);
             long processedDiff = totalProcessed - previousSnapshot.getTotalJobsProcessed();
             long queuedDiff = totalQueued - previousSnapshot.getTotalJobsQueued();
-            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, queuedDiff, processedDiff, totalPending, heapUsed);
+            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, queuedDiff, processedDiff, totalPending, heapSize, heapUsed);
         } else {
-            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, 0L, 0L, totalPending, heapUsed);
+            currentSnapshot = new SystemSnapshot(totalQueued, totalProcessed, 0L, 0L, totalPending, heapSize, heapUsed);
         }
 
         if(systemSnapshots.size() == maxSnapshots) {

@@ -10,12 +10,14 @@ public class SystemSnapshot {
     private final Long jobsProcessedSinceLastSnapshot;
     private final Long totalJobsPending;
     private final Long heapUsed;
+    private final Long heapSize;
 
     public SystemSnapshot(Long totalJobsQueued,
                           Long totalJobsProcessed,
                           Long jobsQueuedSinceLastSnapshot,
                           Long jobsProcessedSinceLastSnapshot,
                           Long totalJobsPending,
+                          Long heapSize,
                           Long heapUsed)
     {
         this.timestamp = new Date();
@@ -25,6 +27,7 @@ public class SystemSnapshot {
         this.jobsQueuedSinceLastSnapshot = jobsQueuedSinceLastSnapshot;
         this.totalJobsPending = totalJobsPending;
         this.heapUsed = heapUsed;
+        this.heapSize = heapSize;
     }
 
     public Date getTimestamp() {
@@ -53,5 +56,9 @@ public class SystemSnapshot {
 
     public Long getHeapUsed() {
         return heapUsed;
+    }
+
+    public Long getHeapSize() {
+        return heapSize;
     }
 }

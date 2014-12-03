@@ -191,12 +191,17 @@ var memoryGraph = new Rickshaw.Graph.Ajax( {
             {
                 "name": "Heap Used",
                 "data": []
+            },
+            {
+                "name": "Heap Size",
+                "data": []
             }
         ];
 
         data.forEach(function(d) {
             var timestamp = parseInt(d.timestamp / 1000);
             graphData[0].data.push( { 'x': timestamp, 'y': d.heapUsed / (1024 * 1024) });
+            graphData[1].data.push( { 'x': timestamp, 'y': d.heapSize / (1024 * 1024) });
         });
 
         return graphData;
@@ -263,6 +268,10 @@ var memoryGraph = new Rickshaw.Graph.Ajax( {
     series: [
         {
             name: "Heap Used",
+            color: "#ffc020",
+        },
+        {
+            name: "Heap Size",
             color: palette.color()
         }
     ],

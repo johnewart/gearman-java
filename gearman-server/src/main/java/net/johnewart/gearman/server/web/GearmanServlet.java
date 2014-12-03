@@ -100,6 +100,7 @@ public class GearmanServlet extends HttpServlet {
                 json.writeNumberField("diffQueued", snapshot.getJobsQueuedSinceLastSnapshot());
                 json.writeNumberField("diffProcessed", snapshot.getJobsProcessedSinceLastSnapshot());
                 json.writeNumberField("heapUsed", snapshot.getHeapUsed());
+                json.writeNumberField("heapSize", snapshot.getHeapSize());
             }
             json.writeEndObject();
         }
