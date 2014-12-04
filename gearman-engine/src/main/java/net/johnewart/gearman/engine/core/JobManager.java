@@ -52,6 +52,7 @@ public class JobManager {
     private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
     private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
     private final Counter completedJobsCounter = Metrics.newCounter(JobManager.class, "completed-jobs");
+    private final Counter failedJobsCounter = Metrics.newCounter(JobManager.class, "failed-jobs");
     private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
     private final Meter jobMeter = Metrics.newMeter(JobManager.class, "queued-jobs-meter", "enqueued", TimeUnit.SECONDS);
 
@@ -329,6 +330,7 @@ public class JobManager {
                 client.sendWorkException(job.getJobHandle(), exception);
             }
 
+            failedJobsCounter.inc();
             job.complete();
             removeJob(job);
         }
@@ -358,6 +360,9 @@ public class JobManager {
                 client.sendWorkFail(job.getJobHandle());
             }
 
+            failedJobsCounter.inc();
+            job.complete();
+            removeJob(job);
         }
     }
 
