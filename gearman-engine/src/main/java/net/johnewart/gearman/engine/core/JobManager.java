@@ -595,4 +595,11 @@ public class JobManager {
     public Job getJobByJobHandle(final String jobHandle) {
         return activeJobHandles.get(jobHandle);
     }
+
+    public void resetWorkerAbilities(EngineWorker worker) {
+        for(String jobQueueName : worker.getAbilities()) {
+            getWorkerPool(jobQueueName).removeWorker(worker);
+        }
+        worker.getAbilities().clear();
+    }
 }

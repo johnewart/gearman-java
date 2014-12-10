@@ -283,4 +283,9 @@ public class NetworkManager {
         EchoResponse response = new EchoResponse(request);
         channel.write(response);
     }
+
+    public void resetWorkerAbilities(Channel channel) {
+        NetworkEngineWorker worker = findOrCreateWorker(channel);
+        jobManager.resetWorkerAbilities(worker);
+    }
 }

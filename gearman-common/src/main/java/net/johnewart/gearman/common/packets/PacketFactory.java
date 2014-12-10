@@ -66,6 +66,8 @@ public class PacketFactory {
             case JOB_ASSIGN_UNIQ:
                 return new JobAssignUniq(packetBytes);
             /* Worker request packets */
+            case RESET_ABILITIES:
+                return new ResetAbilities(packetBytes);
             case CAN_DO_TIMEOUT:
                 return new CanDoTimeout(packetBytes);
             case CANT_DO:
