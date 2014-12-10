@@ -324,10 +324,11 @@ public class JobManager {
 
     public synchronized void handleWorkException(Job job, byte[] exception)
     {
-        if(job != null && !job.isBackground()) {
-            for(EngineClient client : getClientsForUniqueId(job.getUniqueID()))
-            {
-                client.sendWorkException(job.getJobHandle(), exception);
+        if(job != null) {
+            if (!job.isBackground()) {
+                for (EngineClient client : getClientsForUniqueId(job.getUniqueID())) {
+                    client.sendWorkException(job.getJobHandle(), exception);
+                }
             }
 
             failedJobsCounter.inc();
@@ -351,19 +352,20 @@ public class JobManager {
 
     public synchronized void handleWorkFailure(Job job)
     {
-        if(job != null && !job.isBackground())
-        {
-            Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
+        if(job != null) {
+            if (!job.isBackground()) {
+                Set<EngineClient> clients = getClientsForUniqueId(job.getUniqueID());
 
-            for(EngineClient client : clients)
-            {
-                client.sendWorkFail(job.getJobHandle());
+                for (EngineClient client : clients) {
+                    client.sendWorkFail(job.getJobHandle());
+                }
             }
 
             failedJobsCounter.inc();
             job.complete();
             removeJob(job);
         }
+
     }
 
     public JobStatus checkJobStatus(String jobHandle)
