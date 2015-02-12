@@ -143,8 +143,12 @@ public class PacketHandler extends SimpleChannelInboundHandler<Object> {
                 return;
 
             case OPTION_REQ:
+                networkManager.handleOptionRequest((OptionRequest)packet, channel);
+                return;
+
             case RESET_ABILITIES:
                 networkManager.resetWorkerAbilities(channel);
+
             case ALL_YOURS:
             case SUBMIT_JOB_SCHED:
                 //client.sendPacket(StaticPackets.ERROR_BAD_COMMAND, null);

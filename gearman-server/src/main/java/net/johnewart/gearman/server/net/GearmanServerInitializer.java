@@ -4,7 +4,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
-import net.johnewart.gearman.net.codec.Encoder;
 import net.johnewart.gearman.server.net.ssl.GearmanSslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

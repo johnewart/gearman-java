@@ -1,8 +1,8 @@
-package net.johnewart.gearman.common.net.codec;
+package net.johnewart.gearman.server.net;
 
 import net.johnewart.gearman.common.packets.Packet;
 import net.johnewart.gearman.common.packets.request.EchoRequest;
-import net.johnewart.gearman.net.codec.Encoder;
+import net.johnewart.gearman.server.net.Encoder;
 import org.junit.Test;
 
 import java.util.Arrays;

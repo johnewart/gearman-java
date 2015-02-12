@@ -101,7 +101,9 @@ public class PacketFactory {
                 return new EchoResponse(packetBytes);
 
             /* TODO: Handle these. */
-            case OPTION_RES:
+            case OPTION_REQ:
+                return new OptionRequest(packetBytes);
+
             case ERROR:
             default:
                 LOG.error("Unhandled type: ", messagetype);

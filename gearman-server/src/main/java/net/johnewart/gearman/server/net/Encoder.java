@@ -1,4 +1,4 @@
-package net.johnewart.gearman.net.codec;
+package net.johnewart.gearman.server.net;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
