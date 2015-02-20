@@ -18,16 +18,37 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
     private static Logger LOG = LoggerFactory.getLogger(PostgresPersistenceEngine.class);
     private static final int JOBS_PER_PAGE = 5000;
     private final String url;
+    private final String tableName;
     private final BoneCP connectionPool;
+
+    private final String updateJobQuery;
+    private final String insertJobQuery;
+    private final String deleteJobQuery;
+    private final String findJobQuery;
+    private final String readAllJobsQuery;
+    private final String countQuery;
+    private final String findAllJobsForFunctionQuery;
+    private final String findJobByHandleQuery;
 
     public PostgresPersistenceEngine(final String hostname,
                                      final int port,
                                      final String database,
                                      final String user,
-                                     final String password) throws SQLException
+                                     final String password,
+                                     final String tableName) throws SQLException
     {
 
         this.url = "jdbc:postgresql://" + hostname + ":" + port + "/" + database;
+        this.tableName = tableName;
+
+        this.updateJobQuery = String.format("UPDATE %s SET job_handle = ?, priority = ?, time_to_run = ?, json_data = ? WHERE unique_id = ? AND function_name = ?", tableName);
+        this.insertJobQuery = String.format("INSERT INTO %s (unique_id, function_name, time_to_run, priority, job_handle, json_data) VALUES (?, ?, ?, ?, ?, ?)", tableName);
+        this.deleteJobQuery = String.format("DELETE FROM %s WHERE function_name = ? AND unique_id = ?", tableName);
+        this.findJobQuery = String.format("SELECT * FROM %s WHERE function_name = ? AND unique_id = ?", tableName);
+        this.readAllJobsQuery = String.format("SELECT function_name, priority, unique_id, time_to_run FROM %s LIMIT ? OFFSET ?", tableName);
+        this.countQuery = String.format("SELECT COUNT(*) AS jobCount FROM %s", tableName);
+        this.findAllJobsForFunctionQuery = String.format("SELECT unique_id, time_to_run, priority FROM %s WHERE function_name = ?", tableName);
+        this.findJobByHandleQuery= String.format("SELECT * FROM %s WHERE job_handle = ?", tableName);
 
         final BoneCPConfig config = new BoneCPConfig();
         config.setJdbcUrl(this.url);
@@ -40,7 +61,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
         connectionPool = new BoneCP(config);
 
         if (!validateOrCreateTable()) {
-            throw new SQLException("Unable to validate or create jobs table. Check credentials.");
+            throw new SQLException("Unable to validate or create jobs table '" + tableName + "'. Check credentials.");
         }
     }
 
@@ -79,7 +100,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                 String jobJSON = mapper.writeValueAsString(job);
 
                 // Update an existing job if one exists based on unique id
-                st = conn.prepareStatement("UPDATE jobs SET job_handle = ?, priority = ?, time_to_run = ?, json_data = ? WHERE unique_id = ? AND function_name = ?");
+                st = conn.prepareStatement(updateJobQuery);
                 st.setString(1, job.getJobHandle());
                 st.setString(2, job.getPriority().toString());
                 st.setLong  (3, job.getTimeToRun());
@@ -91,7 +112,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                 // No updates, insert a new record.
                 if(updated == 0)
                 {
-                    st = conn.prepareStatement("INSERT INTO jobs (unique_id, function_name, time_to_run, priority, job_handle, json_data) VALUES (?, ?, ?, ?, ?, ?)");
+                    st = conn.prepareStatement(insertJobQuery);
                     st.setString(1, job.getUniqueID());
                     st.setString(2, job.getFunctionName());
                     st.setLong(3, job.getTimeToRun());
@@ -138,7 +159,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("DELETE FROM jobs WHERE function_name = ? AND unique_id = ?");
+                st = conn.prepareStatement(deleteJobQuery);
                 st.setString(1, functionName);
                 st.setString(2, uniqueID);
                 int deleted = st.executeUpdate();
@@ -169,7 +190,8 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             if(conn != null)
             {
                 st = conn.createStatement();
-                int deleted = st.executeUpdate("DELETE FROM jobs");
+                final String deleteAllQuery = String.format("DELETE FROM %s", tableName);
+                int deleted = st.executeUpdate(deleteAllQuery);
                 LOG.debug("Deleted " + deleted + " jobs...");
             }
         } catch (SQLException se) {
@@ -200,7 +222,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("SELECT * FROM jobs WHERE function_name = ? AND unique_id = ?");
+                st = conn.prepareStatement(findJobQuery);
                 st.setString(1, functionName);
                 st.setString(2, uniqueID);
 
@@ -253,7 +275,6 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             {
 
                 LOG.debug("Reading all job data from PostgreSQL");
-                final String countQuery = "SELECT COUNT(*) AS jobCount FROM jobs";
                 st = conn.prepareStatement(countQuery);
                 rs = st.executeQuery();
 
@@ -263,16 +284,12 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                     int fetchedJobs = 0;
                     LOG.debug("Reading " + totalJobs + " jobs from PostgreSQL");
                     do {
-                        final String readQuery =
-                                "SELECT function_name, priority, unique_id, time_to_run " +
-                                "  FROM jobs " +
-                                " LIMIT ? " +
-                                "OFFSET ?";
+
 
                         st.setFetchSize(JOBS_PER_PAGE);
                         st.setMaxRows(JOBS_PER_PAGE);
 
-                        st = conn.prepareStatement(readQuery);
+                        st = conn.prepareStatement(readAllJobsQuery);
                         st.setInt(1, JOBS_PER_PAGE);
                         st.setInt(2, (pageNum * JOBS_PER_PAGE));
 
@@ -334,7 +351,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("SELECT unique_id, time_to_run, priority FROM jobs WHERE function_name = ?");
+                st = conn.prepareStatement(findAllJobsForFunctionQuery);
                 st.setString(1, functionName);
                 ObjectMapper mapper = new ObjectMapper();
                 rs = st.executeQuery();
@@ -377,7 +394,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             conn = connectionPool.getConnection();
             if(conn != null)
             {
-                st = conn.prepareStatement("SELECT * FROM jobs WHERE job_handle = ?");
+                st = conn.prepareStatement(findJobByHandleQuery);
                 st.setString(1, jobHandle);
 
                 ObjectMapper mapper = new ObjectMapper();
@@ -427,27 +444,30 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             if(conn != null)
             {
                 DatabaseMetaData dbm = conn.getMetaData();
-                ResultSet tables = dbm.getTables(null, null, "jobs", null);
+                ResultSet tables = dbm.getTables(null, null, tableName, null);
                 if(!tables.next())
                 {
-                    st = conn.prepareStatement("CREATE TABLE jobs(id bigserial, unique_id varchar(255), priority varchar(50), function_name varchar(255), time_to_run bigint, job_handle text, json_data text)");
+                    final String createQuery = String.format("CREATE TABLE %s(id bigserial, unique_id varchar(255), priority varchar(50), function_name varchar(255), time_to_run bigint, job_handle text, json_data text)", tableName);
+                    final String indexUidQuery = String.format("CREATE INDEX %s_unique_id ON %s(unique_id)", tableName, tableName);
+                    final String indexJobHandleQuery = String.format("CREATE INDEX %s_job_handle ON %s(job_handle)", tableName, tableName);
+                    st = conn.prepareStatement(createQuery);
                     st.executeUpdate();
-                    st = conn.prepareStatement("CREATE INDEX jobs_unique_id ON jobs(unique_id)");
+                    st = conn.prepareStatement(indexUidQuery);
                     st.executeUpdate();
-                    st = conn.prepareStatement("CREATE INDEX jobs_job_handle ON jobs(job_handle)");
+                    st = conn.prepareStatement(indexJobHandleQuery);
                     st.executeUpdate();
 
                     // Make sure it worked
-                    ResultSet createdTables = dbm.getTables(null, null, "jobs", null);
+                    ResultSet createdTables = dbm.getTables(null, null, tableName, null);
                     if(createdTables.next()) {
-                        LOG.debug("Created jobs table");
+                        LOG.debug("Created jobs table '" + tableName + "'");
                         success = true;
                     } else {
-                        LOG.debug("Unable to create jobs table.");
+                        LOG.debug("Unable to create jobs table '" + tableName + "'");
                         success = false;
                     }
                 }  else {
-                    LOG.debug("Jobs table already exists.");
+                    LOG.debug("Jobs table '" + tableName + "' already exists.");
                     success = true;
                 }
             }

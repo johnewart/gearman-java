@@ -6,7 +6,15 @@ public class PostgreSQLConfiguration {
     private String dbName;
     private String password;
     private String user;
+    private String table = "jobs";
 
+    public String getTable() {
+        return table;
+    }
+
+    public void setTable(String table) {
+        this.table = table;
+    }
 
     public String getDbName() {
         return dbName;

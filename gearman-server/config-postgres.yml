@@ -11,3 +11,4 @@ persistenceEngine:
     dbName: gearman
     user: gearman
     password: gearman
+    table: gearman_00

@@ -1,5 +1,6 @@
 package net.johnewart.gearman.server.config;
 
+import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.PostgreSQLPersistedJobQueueFactory;
@@ -49,13 +50,18 @@ public class PersistenceEngineConfiguration {
                     jobQueueFactory = new MemoryJobQueueFactory();
                     break;
                 case ENGINE_POSTGRES:
-                    jobQueueFactory = new PostgreSQLPersistedJobQueueFactory(
-                            postgreSQL.getHost(),
-                            postgreSQL.getPort(),
-                            postgreSQL.getDbName(),
-                            postgreSQL.getUser(),
-                            postgreSQL.getPassword()
-                    );
+                    try {
+                        jobQueueFactory = new PostgreSQLPersistedJobQueueFactory(
+                                postgreSQL.getHost(),
+                                postgreSQL.getPort(),
+                                postgreSQL.getDbName(),
+                                postgreSQL.getUser(),
+                                postgreSQL.getPassword(),
+                                postgreSQL.getTable()
+                        );
+                    } catch (JobQueueFactoryException e) {
+                        jobQueueFactory = null;
+                    }
                     break;
                 case ENGINE_REDIS:
                     jobQueueFactory = new RedisPersistedJobQueueFactory(
@@ -66,6 +72,10 @@ public class PersistenceEngineConfiguration {
                 default:
                     jobQueueFactory = null;
             }
+        }
+
+        if(jobQueueFactory == null) {
+            throw new RuntimeException("No job queue factory was constructed, giving up!");
         }
 
         return jobQueueFactory;
