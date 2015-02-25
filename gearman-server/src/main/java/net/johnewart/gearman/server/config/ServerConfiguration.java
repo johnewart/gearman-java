@@ -5,6 +5,7 @@ import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
+import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 
 public interface ServerConfiguration {
@@ -27,4 +28,5 @@ public interface ServerConfiguration {
     JobHandleFactory getJobHandleFactory();
 
     UniqueIdFactory getUniqueIdFactory();
+
 }

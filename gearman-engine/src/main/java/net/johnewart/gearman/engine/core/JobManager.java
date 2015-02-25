@@ -15,6 +15,7 @@ import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionExceptio
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
+import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
 import net.johnewart.gearman.engine.util.EqualsLock;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ public class JobManager {
     private final JobQueueFactory jobQueueFactory;
     private final JobHandleFactory jobHandleFactory;
     private final UniqueIdFactory uniqueIdFactory;
+    private final ExceptionStorageEngine exceptionStorageEngine;
 
     private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
     private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
@@ -57,7 +59,10 @@ public class JobManager {
     private final Meter jobMeter = Metrics.newMeter(JobManager.class, "queued-jobs-meter", "enqueued", TimeUnit.SECONDS);
 
 
-    public JobManager(JobQueueFactory jobQueueFactory, JobHandleFactory jobHandleFactory, UniqueIdFactory uniqueIdFactory) {
+    public JobManager(JobQueueFactory jobQueueFactory,
+                      JobHandleFactory jobHandleFactory,
+                      UniqueIdFactory uniqueIdFactory,
+                      ExceptionStorageEngine exceptionStorageEngine) {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
         this.uniqueIdClients = new ConcurrentHashMap<>();
@@ -70,6 +75,7 @@ public class JobManager {
         this.jobQueueFactory = jobQueueFactory;
         this.jobHandleFactory = jobHandleFactory;
         this.uniqueIdFactory = uniqueIdFactory;
+        this.exceptionStorageEngine = exceptionStorageEngine;
 
         // Initialize counters to zero
         this.pendingJobsCounter.clear();
@@ -330,6 +336,8 @@ public class JobManager {
                     client.sendWorkException(job.getJobHandle(), exception);
                 }
             }
+
+            exceptionStorageEngine.storeException(job.getJobHandle(), job.getUniqueID(), job.getData(), exception);
 
             failedJobsCounter.inc();
             job.complete();

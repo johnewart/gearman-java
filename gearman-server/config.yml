@@ -5,3 +5,5 @@ debugging: true
 hostName: localhost
 persistenceEngine:
   engine: memory
+exceptionStore:
+  engine: memory

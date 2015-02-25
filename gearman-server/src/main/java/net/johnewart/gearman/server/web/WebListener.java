@@ -43,6 +43,7 @@ public class WebListener {
 
 
         final ClusterServlet clusterServlet = new ClusterServlet(serverConfiguration);
+        final ExceptionsServlet exceptionsServlet = new ExceptionsServlet(serverConfiguration.getExceptionStorageEngine());
 
         Map<String, HttpServlet> mappings = new HashMap<>();
 
@@ -51,6 +52,7 @@ public class WebListener {
         mappings.put("/metrics/*", metricsServlet);
         mappings.put("/admin/*", adminServlet);
         mappings.put("/cluster/*", clusterServlet);
+        mappings.put("/exceptions/*", exceptionsServlet);
         mappings.put("/", dashboardServlet);
 
         return mappings;

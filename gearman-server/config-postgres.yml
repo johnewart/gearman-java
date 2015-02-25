@@ -12,3 +12,13 @@ persistenceEngine:
     user: gearman
     password: gearman
     table: gearman_00
+exceptionStore:
+  engine: postgres
+  postgreSQL:
+      host: localhost
+      port: 5432
+      dbName: gearman
+      user: gearman
+      password: gearman
+      table: gearman_exceptions
+

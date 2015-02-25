@@ -6,6 +6,8 @@ import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
+import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
+import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 import net.johnewart.gearman.server.cluster.config.ClusterConfiguration;
@@ -29,8 +31,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private JobQueueFactory jobQueueFactory;
     private JobManager jobManager;
     private JobQueueMonitor jobQueueMonitor;
+    private ExceptionStorageEngine exceptionStorageEngine;
     private PersistenceEngineConfiguration persistenceEngine;
     private ClusterConfiguration clusterConfiguration;
+    private ExceptionStoreConfiguration exceptionStoreConfiguration;
     private JobHandleFactory jobHandleFactory;
     private UniqueIdFactory uniqueIdFactory;
 
@@ -86,6 +90,14 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         this.jobQueueMonitor = jobQueueMonitor;
     }
 
+    public void setExceptionStore(ExceptionStoreConfiguration exceptionStoreConfiguration) {
+        this.exceptionStoreConfiguration = exceptionStoreConfiguration;
+    }
+
+    public ExceptionStoreConfiguration getExceptionStore() {
+        return exceptionStoreConfiguration;
+    }
+
     @Override
     public int getPort() {
         return port;
@@ -127,7 +139,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobManager getJobManager() {
         if(jobManager == null) {
-            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory(), getUniqueIdFactory());
+            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory(), getUniqueIdFactory(), getExceptionStorageEngine());
         }
 
         return jobManager;
@@ -158,6 +170,14 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         }
 
         return uniqueIdFactory;
+    }
+
+    public ExceptionStorageEngine getExceptionStorageEngine() {
+        if(exceptionStorageEngine == null && getExceptionStore() != null) {
+            this.exceptionStorageEngine = getExceptionStore().getExceptionStorageEngine();
+        }
+
+        return exceptionStorageEngine;
     }
 
     public ClusterConfiguration getCluster() {

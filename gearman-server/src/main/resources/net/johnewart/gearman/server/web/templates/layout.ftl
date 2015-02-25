@@ -26,7 +26,7 @@
                     <li><a href="/status/">Dashboard</a></li>
                     <li><a href="/status/?queues=true">Queues</a></li>
                     <li><a href="/cluster/">Cluster Status</a></li>
-
+                    <li><a href="/exceptions/">Exceptions</a></li>
                 </ul>
             </div>
             <div id="content">

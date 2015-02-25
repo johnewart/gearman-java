@@ -8,6 +8,7 @@ import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
+import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
@@ -26,7 +27,7 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
         this.uniqueIdFactory = new LocalUniqueIdFactory();
-        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory);
+        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine());
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
     }
 

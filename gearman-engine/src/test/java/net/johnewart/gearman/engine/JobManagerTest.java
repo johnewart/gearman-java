@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,7 +38,7 @@ public class JobManagerTest {
 
     @Before
     public void initialize() {
-        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory);
+        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine());
         final ImmutableSet<String> abilities = ImmutableSet.of("reverseString", "computeBigStuff");
         worker = mock(EngineWorker.class);
         when(worker.getAbilities()).thenReturn(abilities);
