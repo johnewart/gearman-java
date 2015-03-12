@@ -6,7 +6,7 @@ hostName: localhost
 persistenceEngine:
   engine: dynamodb
   dynamoDB:
-    region: "us-east-1"
+    endpoint: http://localhost:8000
     accessKey: your_access_key
     secretKey: your_secret_key
     table: gearman
