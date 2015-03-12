@@ -3,19 +3,15 @@ package net.johnewart.gearman.engine.queue.persistence;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.TableCollection;
+import com.amazonaws.services.dynamodbv2.document.*;
 import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jolbox.bonecp.BoneCP;
-import com.jolbox.bonecp.BoneCPConfig;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.annotation.Timed;
+import com.yammer.metrics.core.*;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
@@ -24,27 +20,26 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.*;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 public class DynamoDBPersistenceEngine implements PersistenceEngine {
     private static Logger LOG = LoggerFactory.getLogger(DynamoDBPersistenceEngine.class);
-    private static final int JOBS_PER_PAGE = 5000;
     private final String tableName;
 
     private final DynamoDB dynamoDB;
     private final AmazonDynamoDBClient client;
     private final DynamoDBMapper mapper;
+    private final com.yammer.metrics.core.Timer writeTimer;
 
     public DynamoDBPersistenceEngine(final String endpoint,
-                                     final String user,
-                                     final String password,
+                                     final String accessKey,
+                                     final String secretKey,
                                      final String tableName) throws SQLException
     {
 
-        AWSCredentials credentials = new BasicAWSCredentials(user, password);
+        AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
         ClientConfiguration clientConfig = new ClientConfiguration();
         client = new AmazonDynamoDBClient(credentials);
         //client.setRegion(Region.getRegion(Regions.US_WEST_2));
@@ -52,7 +47,7 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         this.dynamoDB = new DynamoDB(client);
         this.tableName = tableName;
         mapper = new DynamoDBMapper(client);
-
+        writeTimer = Metrics.newTimer(DynamoDBPersistenceEngine.class, "dynamodb", "writes");
 
         if (!validateOrCreateTable()) {
             throw new SQLException("Unable to validate or create jobs table '" + tableName + "'. Check credentials.");
@@ -61,58 +56,54 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
 
     private boolean validateOrCreateTable() {
         try {
+            TableDescription tableDescription = dynamoDB.getTable(tableName).describe();
 
-            ArrayList<AttributeDefinition> attributeDefinitions = new ArrayList<>();
-            attributeDefinitions.add(new AttributeDefinition()
-                    .withAttributeName("UniqueId")
-                    .withAttributeType("S"));
+            // Table exists?
+            if (tableDescription != null) {
+                return true;
+            }
+        } catch (ResourceNotFoundException nfe) {
+            try {
 
-            ArrayList<KeySchemaElement> keySchema = new ArrayList<>();
-            keySchema.add(new KeySchemaElement()
-                    .withAttributeName("UniqueId")
-                    .withKeyType(KeyType.HASH));
+                // If not, create it!
+                ArrayList<AttributeDefinition> attributeDefinitions = new ArrayList<>();
+                attributeDefinitions.add(new AttributeDefinition()
+                        .withAttributeName("JobKey")
+                        .withAttributeType("S"));
 
-            CreateTableRequest request = new CreateTableRequest()
-                    .withTableName(tableName)
-                    .withKeySchema(keySchema)
-                    .withAttributeDefinitions(attributeDefinitions)
-                    .withProvisionedThroughput(new ProvisionedThroughput()
-                            .withReadCapacityUnits(5L)
-                            .withWriteCapacityUnits(6L));
+                ArrayList<KeySchemaElement> keySchema = new ArrayList<>();
+                keySchema.add(new KeySchemaElement()
+                        .withAttributeName("JobKey")
+                        .withKeyType(KeyType.HASH));
 
-            System.out.println("Issuing CreateTable request for " + tableName);
-            Table table = dynamoDB.createTable(request);
+                CreateTableRequest request = new CreateTableRequest()
+                        .withTableName(tableName)
+                        .withKeySchema(keySchema)
+                        .withAttributeDefinitions(attributeDefinitions)
+                        .withProvisionedThroughput(new ProvisionedThroughput()
+                                .withReadCapacityUnits(5L)
+                                .withWriteCapacityUnits(6L));
 
-            System.out.println("Waiting for " + tableName
-                    + " to be created...this may take a while...");
-            table.waitForActive();
+                System.out.println("Issuing CreateTable request for " + tableName);
+                Table table = dynamoDB.createTable(request);
 
-            getTableInformation();
+                System.out.println("Waiting for " + tableName
+                        + " to be created...this may take a while...");
+                table.waitForActive();
 
-        } catch (Exception e) {
-            System.err.println("CreateTable request failed for " + tableName);
-            System.err.println(e.getMessage());
-            return false;
+                getTableInformation();
+
+            } catch (Exception e) {
+                System.err.println("CreateTable request failed for " + tableName);
+                System.err.println(e.getMessage());
+                return false;
+            }
         }
 
         return true;
-
     }
 
-    private void listMyTables() {
-
-        TableCollection<ListTablesResult> tables = dynamoDB.listTables();
-        Iterator<Table> iterator = tables.iterator();
-
-        System.out.println("Listing table names");
-
-        while (iterator.hasNext()) {
-            Table table = iterator.next();
-            System.out.println(table.getTableName());
-        }
-    }
-
-    private void getTableInformation() {
+        private void getTableInformation() {
 
         System.out.println("Describing " + tableName);
 
@@ -133,16 +124,20 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         return null;
     }
 
+    @Timed(name = "dynamodb.write")
     @Override
     public boolean write(Job job) {
+        long startTime = new Date().getTime();
         ObjectMapper objectMapper = new ObjectMapper();
         Table table = dynamoDB.getTable(tableName);
 
         try {
             String jobJSON = objectMapper.writeValueAsString(job);
 
+
             Item item = new Item()
-                    .withPrimaryKey("UniqueId", job.getUniqueID())
+                    .withPrimaryKey("JobKey", jobIdKey(job))
+                    .withString("UniqueId", job.getUniqueID())
                     .withString("JobHandle", job.getJobHandle())
                     .withNumber("When", job.getTimeToRun())
                     .withString("Priority", job.getPriority().toString())
@@ -150,6 +145,8 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
                     .withString("JSON", jobJSON);
 
             table.putItem(item);
+            long timeDiff = new Date().getTime() - startTime;
+            writeTimer.update(timeDiff, TimeUnit.MILLISECONDS);
             return true;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -158,14 +155,26 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         return false;
     }
 
+    private String jobIdKey(Job job) {
+        return jobIdKey(job.getFunctionName(), job.getUniqueID());
+    }
+
+    private String jobIdKey(String functionName, String uniqueId) {
+        return new StringBuilder()
+                        .append(functionName)
+                        .append(uniqueId)
+                        .toString();
+    }
+
     @Override
     public void delete(Job job) {
-
+        delete(job.getFunctionName(), job.getUniqueID());
     }
 
     @Override
     public void delete(String functionName, String uniqueID) {
-
+        Table table = dynamoDB.getTable(tableName);
+        table.deleteItem("JobKey", jobIdKey(functionName, uniqueID));
     }
 
     @Override
@@ -175,12 +184,47 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
 
     @Override
     public Job findJob(String functionName, String uniqueID) {
-        return null;
+        Table table = dynamoDB.getTable(tableName);
+        Item item = table.getItem("JobKey", jobIdKey(functionName, uniqueID));
+        return jobFromItem(item);
+
     }
 
     @Override
     public Collection<QueuedJob> readAll() {
-        return new LinkedList<>();
+        ScanRequest scanRequest = new ScanRequest()
+                .withTableName(tableName);
+
+        ScanResult result = client.scan(scanRequest);
+        List<QueuedJob> queuedJobs = new LinkedList<>();
+
+        for (Map<String, AttributeValue> item : result.getItems()){
+            queuedJobs.add(queuedJobFromMap(item));
+        }
+
+        return queuedJobs;
+    }
+
+    private Job jobFromItem(Item item) {
+        ObjectMapper mapper = new ObjectMapper();
+        String json = item.getString("JSON");
+        Job job = null;
+        try {
+            job = mapper.readValue(json, Job.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return job;
+    }
+
+    private QueuedJob queuedJobFromMap(Map<String, AttributeValue> item) {
+        String uniqueId = item.get("UniqueId").getS();
+        JobPriority priority = JobPriority.valueOf(item.get("Priority").getS());
+        String jobQueue = item.get("JobQueue").getS();
+        Long when = Long.valueOf(item.get("When").getN());
+
+        return new QueuedJob(uniqueId, when, priority, jobQueue);
     }
 
     @Override

@@ -58,8 +58,8 @@ public class PersistenceEngineConfiguration {
                     try {
                         jobQueueFactory = new DynamoDBPersistedJobQueueFactory(
                                 dynamoDB.getEndpoint(),
-                                dynamoDB.getUser(),
-                                dynamoDB.getPassword(),
+                                dynamoDB.getAccessKey(),
+                                dynamoDB.getSecretKey(),
                                 dynamoDB.getTable()
                         );
                     } catch (JobQueueFactoryException e) {
