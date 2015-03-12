@@ -60,7 +60,9 @@ public class PersistenceEngineConfiguration {
                                 dynamoDB.getEndpoint(),
                                 dynamoDB.getAccessKey(),
                                 dynamoDB.getSecretKey(),
-                                dynamoDB.getTable()
+                                dynamoDB.getTable(),
+                                dynamoDB.getReadUnits(),
+                                dynamoDB.getWriteUnits()
                         );
                     } catch (JobQueueFactoryException e) {
                         jobQueueFactory = null;

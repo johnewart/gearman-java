@@ -19,9 +19,12 @@ public class DynamoDBPersistedJobQueueFactory implements JobQueueFactory {
     public DynamoDBPersistedJobQueueFactory(String endpoint,
                                             String user,
                                             String password,
-                                            String tableName) throws JobQueueFactoryException {
+                                            String tableName,
+                                            Integer readUnits,
+                                            Integer writeUnits) throws JobQueueFactoryException {
         try {
-            this.dynamoDBPersistenceEngine = new DynamoDBPersistenceEngine(endpoint, user, password, tableName);
+            this.dynamoDBPersistenceEngine =
+                    new DynamoDBPersistenceEngine(endpoint, user, password, tableName, readUnits, writeUnits);
         } catch (SQLException e) {
             LOG.error("Unable to create DynamoDB persistence engine: ", e);
             throw new JobQueueFactoryException("Could not create the DynamoDB persistence engine!");

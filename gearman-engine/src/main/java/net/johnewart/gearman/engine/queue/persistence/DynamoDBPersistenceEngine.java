@@ -36,7 +36,9 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
     public DynamoDBPersistenceEngine(final String endpoint,
                                      final String accessKey,
                                      final String secretKey,
-                                     final String tableName) throws SQLException
+                                     final String tableName,
+                                     final Integer readUnits,
+                                     final Integer writeUnits) throws SQLException
     {
 
         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
@@ -49,17 +51,45 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         mapper = new DynamoDBMapper(client);
         writeTimer = Metrics.newTimer(DynamoDBPersistenceEngine.class, "dynamodb", "writes");
 
-        if (!validateOrCreateTable()) {
+        if (!validateOrCreateTable(readUnits, writeUnits)) {
             throw new SQLException("Unable to validate or create jobs table '" + tableName + "'. Check credentials.");
         }
     }
 
-    private boolean validateOrCreateTable() {
+    // TODO: Validation of things other than R/W units
+    private boolean validateOrCreateTable(Integer readUnits, Integer writeUnits) {
         try {
-            TableDescription tableDescription = dynamoDB.getTable(tableName).describe();
+            Table table =  dynamoDB.getTable(tableName);
+            TableDescription tableDescription = table.describe();
 
             // Table exists?
             if (tableDescription != null) {
+                // Ensure our r/w units are up to date
+
+                if(tableDescription.getProvisionedThroughput().getWriteCapacityUnits() != writeUnits.longValue() ||
+                   tableDescription.getProvisionedThroughput().getReadCapacityUnits() != readUnits.longValue()) {
+                    ProvisionedThroughput throughput = new ProvisionedThroughput()
+                            .withWriteCapacityUnits(writeUnits.longValue())
+                            .withReadCapacityUnits(readUnits.longValue());
+                    table.updateTable(throughput);
+
+                    try {
+                        table.waitForActive();
+                        LOG.info(
+                                String.format("Table %s already existed, updated R/W units of %d/%d units/sec",
+                                        table.getTableName(),
+                                        table.getDescription().getProvisionedThroughput().getReadCapacityUnits(),
+                                        table.getDescription().getProvisionedThroughput().getWriteCapacityUnits()
+                                )
+                        );
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        return false;
+                    }
+                } else {
+                    LOG.info(String.format("Table %s already exists and is up to date!", table.getTableName()));
+                }
+
                 return true;
             }
         } catch (ResourceNotFoundException nfe) {
@@ -81,8 +111,8 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
                         .withKeySchema(keySchema)
                         .withAttributeDefinitions(attributeDefinitions)
                         .withProvisionedThroughput(new ProvisionedThroughput()
-                                .withReadCapacityUnits(5L)
-                                .withWriteCapacityUnits(6L));
+                                .withReadCapacityUnits(readUnits.longValue())
+                                .withWriteCapacityUnits(writeUnits.longValue()));
 
                 System.out.println("Issuing CreateTable request for " + tableName);
                 Table table = dynamoDB.createTable(request);
@@ -91,7 +121,16 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
                         + " to be created...this may take a while...");
                 table.waitForActive();
 
-                getTableInformation();
+
+                TableDescription tableDescription = table.describe();
+                LOG.info(
+                    String.format("Created table '%s'(%s) with throughput %d read, %d write units/sec",
+                            tableDescription.getTableName(),
+                            tableDescription.getTableStatus(),
+                            tableDescription.getProvisionedThroughput().getReadCapacityUnits(),
+                            tableDescription.getProvisionedThroughput().getWriteCapacityUnits()
+                    )
+                );
 
             } catch (Exception e) {
                 System.err.println("CreateTable request failed for " + tableName);
@@ -103,19 +142,6 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         return true;
     }
 
-        private void getTableInformation() {
-
-        System.out.println("Describing " + tableName);
-
-        TableDescription tableDescription = dynamoDB.getTable(tableName).describe();
-        System.out.format("Name: %s:\n" + "Status: %s \n"
-                        + "Provisioned Throughput (read capacity units/sec): %d \n"
-                        + "Provisioned Throughput (write capacity units/sec): %d \n",
-                tableDescription.getTableName(),
-                tableDescription.getTableStatus(),
-                tableDescription.getProvisionedThroughput().getReadCapacityUnits(),
-                tableDescription.getProvisionedThroughput().getWriteCapacityUnits());
-    }
 
 
 
@@ -192,15 +218,24 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
 
     @Override
     public Collection<QueuedJob> readAll() {
-        ScanRequest scanRequest = new ScanRequest()
-                .withTableName(tableName);
-
-        ScanResult result = client.scan(scanRequest);
         List<QueuedJob> queuedJobs = new LinkedList<>();
+        Map<String, AttributeValue> lastKey = null;
 
-        for (Map<String, AttributeValue> item : result.getItems()){
-            queuedJobs.add(queuedJobFromMap(item));
-        }
+        do {
+            LOG.debug("Fetching a page of jobs from DynamoDB!");
+            ScanRequest scanRequest = new ScanRequest()
+                    .withTableName(tableName)
+                    .withExclusiveStartKey(lastKey);
+
+            ScanResult result = client.scan(scanRequest);
+
+            for (Map<String, AttributeValue> item : result.getItems()) {
+                queuedJobs.add(queuedJobFromMap(item));
+            }
+
+            lastKey = result.getLastEvaluatedKey();
+
+        } while(lastKey != null);
 
         return queuedJobs;
     }

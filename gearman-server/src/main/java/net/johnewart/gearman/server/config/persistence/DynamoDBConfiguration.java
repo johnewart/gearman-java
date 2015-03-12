@@ -8,8 +8,12 @@ public class DynamoDBConfiguration {
     private String endpoint;
     private String secretKey;
     private String accessKey;
-    private String table = "jobs";
     private String region;
+
+    // Some sane defaults
+    private String table = "GearmanJobs";
+    private Integer writeUnits = 10;
+    private Integer readUnits = 10;
 
     public String getTable() {
         return table;
@@ -33,6 +37,22 @@ public class DynamoDBConfiguration {
 
     public void setAccessKey(String accessKey) {
         this.accessKey = accessKey;
+    }
+
+    public Integer getWriteUnits() {
+        return writeUnits;
+    }
+
+    public void setWriteUnits(Integer writeUnits) {
+        this.writeUnits = writeUnits;
+    }
+
+    public Integer getReadUnits() {
+        return readUnits;
+    }
+
+    public void setReadUnits(Integer readUnits) {
+        this.readUnits = readUnits;
     }
 
     public String getEndpoint() {
