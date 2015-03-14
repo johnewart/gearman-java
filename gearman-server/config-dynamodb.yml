@@ -1,0 +1,12 @@
+port: 4730
+httpPort: 8080
+enableSSL: false
+debugging: true
+hostName: localhost
+persistenceEngine:
+  engine: dynamodb
+  dynamoDB:
+    region: "us-east-1"
+    accessKey: your_access_key
+    secretKey: your_secret_key
+    table: gearman

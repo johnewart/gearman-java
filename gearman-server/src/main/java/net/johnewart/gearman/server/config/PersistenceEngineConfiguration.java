@@ -1,10 +1,8 @@
 package net.johnewart.gearman.server.config;
 
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
-import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
-import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
-import net.johnewart.gearman.engine.queue.factories.PostgreSQLPersistedJobQueueFactory;
-import net.johnewart.gearman.engine.queue.factories.RedisPersistedJobQueueFactory;
+import net.johnewart.gearman.engine.queue.factories.*;
+import net.johnewart.gearman.server.config.persistence.DynamoDBConfiguration;
 import net.johnewart.gearman.server.config.persistence.PostgreSQLConfiguration;
 import net.johnewart.gearman.server.config.persistence.RedisConfiguration;
 
@@ -13,9 +11,12 @@ public class PersistenceEngineConfiguration {
     private static final String ENGINE_MEMORY = "memory";
     private static final String ENGINE_REDIS = "redis";
     private static final String ENGINE_POSTGRES = "postgres";
+    private static final String ENGINE_DYNAMODB = "dynamodb";
 
     private RedisConfiguration redis;
     private PostgreSQLConfiguration postgreSQL;
+    private DynamoDBConfiguration dynamoDB;
+
     private String engine;
     private JobQueueFactory jobQueueFactory;
 
@@ -43,11 +44,29 @@ public class PersistenceEngineConfiguration {
         this.postgreSQL = postgreSQL;
     }
 
+    public DynamoDBConfiguration getDynamodB() { return dynamoDB; }
+
+    public void setDynamoDB(DynamoDBConfiguration dynamoDB) { this.dynamoDB = dynamoDB; }
+
     public JobQueueFactory getJobQueueFactory() {
         if(jobQueueFactory == null) {
             switch (getEngine()) {
                 case ENGINE_MEMORY:
                     jobQueueFactory = new MemoryJobQueueFactory();
+                    break;
+                case ENGINE_DYNAMODB:
+                    try {
+                        jobQueueFactory = new DynamoDBPersistedJobQueueFactory(
+                                dynamoDB.getEndpoint(),
+                                dynamoDB.getAccessKey(),
+                                dynamoDB.getSecretKey(),
+                                dynamoDB.getTable(),
+                                dynamoDB.getReadUnits(),
+                                dynamoDB.getWriteUnits()
+                        );
+                    } catch (JobQueueFactoryException e) {
+                        jobQueueFactory = null;
+                    }
                     break;
                 case ENGINE_POSTGRES:
                     try {
