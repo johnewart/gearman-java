@@ -128,7 +128,7 @@ public class StatusView {
         }
     }
 
-    public long getMaxMemory()
+    public long getMaxHeapSize()
     {
         return Runtime.getRuntime().maxMemory() / (1024 * 1024);
     }
@@ -138,9 +138,15 @@ public class StatusView {
         return Runtime.getRuntime().totalMemory() / (1024 * 1024);
     }
 
+    public Long getHeapSize() { return Runtime.getRuntime().totalMemory() / (1024 * 1024); }
+
+    public Long getHeapUsed() {
+        return (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024);
+    }
+
     public Integer getMemoryUsage()
     {
-        return new Float(((float) getUsedMemory() / (float) getMaxMemory()) * 100).intValue();
+        return new Float(((float) getHeapUsed() / (float) getMaxHeapSize()) * 100).intValue();
     }
 
     public NumberFormatter getNumberFormatter()

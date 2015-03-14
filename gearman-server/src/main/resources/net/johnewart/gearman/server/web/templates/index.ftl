@@ -33,7 +33,7 @@
 
         <div class="box">
             <span class="number">${memoryUsage}%</span>
-            <span class="text">Used memory<br/>(${usedMemory}MB / ${maxMemory}MB)</span>
+            <span class="text">Used memory<br/>(${heapUsed}MB / ${maxHeapSize}MB)</span>
         </div>
 
         <div class="clear"></div>
@@ -281,7 +281,7 @@ var memoryGraph = new Rickshaw.Graph.Ajax( {
         left: 0.02,
         right: 0.02
     },
-    max: ${maxMemory?string.computer}
+    max: ${maxHeapSize?string.computer}
 } );
 
 setInterval( function() {
