@@ -13,6 +13,8 @@ import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
+import org.joda.time.LocalDateTime;
+import org.mockito.cglib.core.Local;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +74,21 @@ public class GearmanServlet extends HttpServlet {
                 } else {
                     if(history)
                     {
-                        writeJobQueueSnapshots(jobQueueName, json);
+
+                        final LocalDateTime startTime, endTime;
+                        if (req.getParameter("start") != null) {
+                            startTime = new LocalDateTime(Long.valueOf(req.getParameter("start")));
+                        } else {
+                            startTime = LocalDateTime.now().minusHours(8);
+                        }
+
+                        if (req.getParameter("end") != null) {
+                            endTime = new LocalDateTime(Long.valueOf(req.getParameter("end")));
+                        } else {
+                            endTime = LocalDateTime.now();
+                        }
+
+                        writeJobQueueSnapshots(jobQueueName, json, startTime, endTime);
                     } else {
                         writeJobQueueDetails(jobQueueName, json);
                     }
@@ -121,7 +137,9 @@ public class GearmanServlet extends HttpServlet {
         }
     }
 
-    public void writeJobQueueSnapshots(String jobQueueName, JsonGenerator json) throws IOException
+    public void writeJobQueueSnapshots(String jobQueueName, JsonGenerator json,
+                                       LocalDateTime startTime,
+                                       LocalDateTime endTime) throws IOException
     {
         if(jobQueueMonitor != null)
         {
@@ -133,25 +151,26 @@ public class GearmanServlet extends HttpServlet {
                 json.writeStartArray();
                 for(JobQueueSnapshot snapshot : snapshotList)
                 {
-                    json.writeStartObject();
-                    {
-                        json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                        json.writeNumberField("currentJobs", snapshot.getImmediate());
-                        if(snapshot.getFutureJobCounts().keySet().size() > 0)
+                    LocalDateTime timestamp = LocalDateTime.fromDateFields(snapshot.getTimestamp());
+                    if (timestamp.isAfter(startTime) && timestamp.isBefore(endTime)) {
+                        json.writeStartObject();
                         {
-                            json.writeFieldName("futureJobs");
-                            json.writeStartObject();
-                            {
-                                for(Integer hour : snapshot.getFutureJobCounts().keySet())
+                            json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
+                            json.writeNumberField("currentJobs", snapshot.getImmediate());
+                            if (snapshot.getFutureJobCounts().keySet().size() > 0) {
+                                json.writeFieldName("futureJobs");
+                                json.writeStartObject();
                                 {
-                                    json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
+                                    for (Integer hour : snapshot.getFutureJobCounts().keySet()) {
+                                        json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
+                                    }
                                 }
+                                json.writeEndObject();
                             }
-                            json.writeEndObject();
-                        }
 
+                        }
+                        json.writeEndObject();
                     }
-                    json.writeEndObject();
                 }
                 json.writeEndArray();
             }
