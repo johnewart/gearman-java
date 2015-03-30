@@ -80,6 +80,7 @@ public class JobManager {
     public void registerWorkerAbility(String funcName, EngineWorker worker)
     {
         workers.add(worker);
+        metrics.handleWorkerAddition(worker);
         getWorkerPool(funcName).addWorker(worker);
     }
 
@@ -96,6 +97,7 @@ public class JobManager {
 
         // Remove from active worker count
         workers.remove(worker);
+        metrics.handleWorkerRemoval(worker);
 
         // If this worker has any active jobs, clean up after it
         Job job = getCurrentJobForWorker(worker);
@@ -213,8 +215,6 @@ public class JobManager {
 
     public Job storeJob(Job job)
     {
-        metrics.handleJobEnqueued(job);
-
         final String functionName = job.getFunctionName();
         final String uniqueID;
         final JobQueue jobQueue = getJobQueue(functionName);
@@ -244,9 +244,6 @@ public class JobManager {
                     job.setJobHandle(new String(jobHandleFactory.getNextJobHandle()));
                 }
 
-                // Client is submitting a job whose unique ID is in use
-                // i.e re-submitting an existing job, ignore and
-                // return the existing job.
                 if(!jobQueue.enqueue(job))
                 {
                     LOG.error("Unable to enqueue job");
@@ -260,6 +257,7 @@ public class JobManager {
                                 .wakeupWorkers();
                     }
 
+                    metrics.handleJobEnqueued(job);
                     return job;
                 }
             }

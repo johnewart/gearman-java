@@ -32,4 +32,45 @@ public class JobQueueStatusView extends StatusView {
     {
         return queueMetrics.getActiveWorkers(jobQueueName);
     }
+
+    public Long getActiveJobCount() {
+        return queueMetrics.getActiveJobCount(jobQueueName);
+    }
+
+    public long getEnqueuedJobCount() {
+        return queueMetrics.getEnqueuedJobCount(jobQueueName);
+    }
+
+    public long getCompletedJobCount() {
+        return queueMetrics.getCompletedJobCount(jobQueueName);
+    }
+
+    public long getFailedJobCount() {
+        return queueMetrics.getFailedJobCount(jobQueueName);
+    }
+
+    public long getExceptionCount() {
+        return queueMetrics.getExceptionCount(jobQueueName);
+    }
+
+    public long getRunningJobsCount() {
+        return queueMetrics.getRunningJobsCount(jobQueueName);
+    }
+
+    public long getPendingJobsCount() {
+        return queueMetrics.getPendingJobsCount(jobQueueName);
+    }
+
+    public long getHighPriorityJobsCount() {
+        return queueMetrics.getHighPriorityJobsCount(jobQueueName);
+    }
+
+    public long getMidPriorityJobsCount() {
+        return queueMetrics.getMidPriorityJobsCount(jobQueueName);
+    }
+
+    public long getLowPriorityJobsCount() {
+        return queueMetrics.getLowPriorityJobsCount(jobQueueName);
+    }
+
 }
