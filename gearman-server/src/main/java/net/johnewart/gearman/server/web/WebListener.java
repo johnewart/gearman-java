@@ -35,9 +35,11 @@ public class WebListener {
 
         final AdminServlet adminServlet = new AdminServlet();
         final GearmanServlet gearmanServlet =
-                new GearmanServlet(serverConfiguration.getJobQueueMonitor(), serverConfiguration.getJobManager());
+                new GearmanServlet(serverConfiguration.getJobQueueMonitor(),
+                                   serverConfiguration.getJobManager());
         final DashboardServlet dashboardServlet =
-                new DashboardServlet(serverConfiguration.getJobQueueMonitor(), serverConfiguration.getJobManager());
+                new DashboardServlet(serverConfiguration.getJobQueueMonitor(),
+                                     serverConfiguration.getQueueMetrics());
         final JobQueueServlet jobQueueServlet =
                 new JobQueueServlet(serverConfiguration.getJobManager());
 

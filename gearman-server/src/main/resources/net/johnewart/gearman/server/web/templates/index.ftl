@@ -39,258 +39,177 @@
         <div class="clear"></div>
     </div>
 
-    <div id="charts">
-        <form class="chart">
-            <h3>Activity</h3>
-            <div id="jobslegend" class="legend"></div>
-            <div class="chart_container">
-                <div id="jobschart"></div>
-                <div id="jobstimeline"></div>
-                <div id="jobsslider"></div>
-            </div>
-
-        </form>
-
-        <form class="chart">
-            <h3>Memory Usage (MB)</h3>
-            <div id="memorylegend" class="legend"></div>
-            <div class="chart_container">
-                <div id="memorychart"></div>
-                <div id="memorytimeline"></div>
-                <div id="memoryslider"></div>
-            </div>
-
-        </form>
-    </div>
-<script>
-
-var palette = new Rickshaw.Color.Palette( { scheme: 'spectrum14' } );
-var graph = null;
-var drawn = false;
-var memchartDrawn = false;
-
-var jobsGraph = new Rickshaw.Graph.Ajax( {
-    element: document.getElementById("jobschart"),
-    width: 700,
-    height: 220,
-    renderer: 'line',
-    interpolation: 'basis',
-    stroke: true,
-    preserve: false,
-    dataURL: "/gearman/?system=true",
-    onData: function(data) {
-        var graphData = [
-            {
-                "name": "Queued",
-                "data": []
-            },
-            {
-                "name": "Processed",
-                "data": []
-            }
-        ];
-
-        data.forEach(function(d) {
-            var timestamp = parseInt(d.timestamp / 1000);
-            graphData[0].data.push( { 'x': timestamp, 'y': d.diffQueued });
-            graphData[1].data.push( { 'x': timestamp, 'y': d.diffProcessed });
-        });
 
 
-        return graphData;
-    },
-    onComplete: function(transport) {
-        var graph = transport.graph;
+    <script type="text/javascript">
 
-        if(!drawn)
-        {
-            var slider = new Rickshaw.Graph.RangeSlider( {
-                graph: graph,
-                element: $('#jobsslider')
-            } );
-
-            var hoverDetail = new Rickshaw.Graph.HoverDetail( {
-                graph: graph
-            } );
-
-            var annotator = new Rickshaw.Graph.Annotate( {
-                graph: graph,
-                element: document.getElementById('jobstimeline')
-            } );
-
-            var legend = new Rickshaw.Graph.Legend( {
-                graph: graph,
-                element: document.getElementById('jobslegend')
-            } );
-
-            var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
-                graph: graph,
-                legend: legend
-            } );
-
-            var order = new Rickshaw.Graph.Behavior.Series.Order( {
-                graph: graph,
-                legend: legend
-            } );
-
-            var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight( {
-                graph: graph,
-                legend: legend
-            } );
-
-
-            var ticksTreatment = 'glow';
-
-            var xAxis = new Rickshaw.Graph.Axis.Time( {
-                graph: graph
-                //ticksTreatment: ticksTreatment
-            } );
-
-            xAxis.render();
-
-            var yAxis = new Rickshaw.Graph.Axis.Y( {
-                graph: graph,
-                tickFormat: Rickshaw.Fixtures.Number.formatKMBT
-                //ticksTreatment: ticksTreatment
-            } );
-
-            yAxis.render();
-            drawn = true;
+    function readableNumber(n) {
+        if (n == 0) {
+            return 0;
+        } else {
+            var s = ['', 'K', 'M', 'G', 'T', 'P'];
+            var e = Math.floor(Math.log(n) / Math.log(1000));
+            return (n / Math.pow(1000, e)).toFixed(2) + " " + s[e];
         }
-    },
-    series: [
-        {
-            name: "Queued",
-            color: "#6060c0",
-        },
-        {
-            name: "Processed",
-            color: "#30c020",
-        }
-    ],
-    min: -.001,
-    padding: {
-        top: 0.05,
-        bottom: 0.05,
-        left: 0.02,
-        right: 0.02
     }
-} );
 
-var memoryGraph = new Rickshaw.Graph.Ajax( {
-    element: document.getElementById("memorychart"),
-    width: 700,
-    height: 160,
-    renderer: 'area',
-    interpolation: 'basis',
-    stroke: true,
-    preserve: false,
-    dataURL: "/gearman/?system=true",
-    onData: function(data) {
-        var graphData = [
-            {
-                "name": "Heap Used",
-                "data": []
-            },
-            {
-                "name": "Heap Size",
-                "data": []
-            }
-        ];
 
-        data.forEach(function(d) {
-            var timestamp = parseInt(d.timestamp / 1000);
-            graphData[0].data.push( { 'x': timestamp, 'y': d.heapUsed / (1024 * 1024) });
-            graphData[1].data.push( { 'x': timestamp, 'y': d.heapSize / (1024 * 1024) });
+    function numberWithCommas(x) {
+        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function round(x) {
+        return (Math.round(x) * 100 ) / 100;
+    }
+
+    function displayNumber(x) {
+        return numberWithCommas(round(x));
+    }
+
+    function drawGraph(snapshots, selector) {
+
+        var color = d3.scale.category20b();
+
+        // Set the dimensions of the canvas / graph
+        var	margin = {top: 10, right: 40, bottom: 30, left: 40},
+            width = 960 - margin.left - margin.right,
+            height = 150 - margin.top - margin.bottom;
+
+        // Parse the date / time
+        var	parseDate = d3.time.format("%d-%b-%y").parse;
+
+        // Set the ranges
+        var	x = d3.time.scale().range([0, width]);
+        var	y = d3.scale.linear().range([height, 0]);
+
+        // Define the axes
+        var	xAxis = d3.svg.axis().scale(x)
+            .orient("bottom").ticks(5);
+
+        var formatter = d3.format(".3s");
+        var	yAxis = d3.svg.axis().scale(y)
+            .orient("left")
+            .tickFormat(formatter);
+
+        // Define the line
+        var	valueline = d3.svg.line()
+            .x(function(d) { return x(d.date); })
+            .y(function(d) { return y(d.totalQueued - d.totalProcessed); });
+
+        var area = d3.svg.area()
+                .x(function(d) { return x(d.date); })
+                .y0(height)
+                .y1(function(d) { return y(d.totalQueued - d.totalProcessed); });
+
+        // Adds the svg canvas
+        var graph = d3.select("#" + selector);
+        var	svg = graph
+                    .append("svg")
+                        .attr("width", width + margin.left + margin.right)
+                        .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+
+        snapshots.forEach(function(d) {
+            d.date = new Date(d.timestamp);
+            d.currentJobs = +d.totalQueued;
         });
 
-        return graphData;
-    },
-    onComplete: function(transport) {
-        graph = transport.graph;
+        // Scale the range of the data
+        x.domain(d3.extent(snapshots, function(d) { return d.timestamp; }));
 
-        if(!memchartDrawn)
-        {
-            var slider = new Rickshaw.Graph.RangeSlider( {
-                graph: graph,
-                element: $('#memoryslider')
-            } );
 
-            var hoverDetail = new Rickshaw.Graph.HoverDetail( {
-                graph: graph
-            } );
+        // Draw!
 
-            var annotator = new Rickshaw.Graph.Annotate( {
-                graph: graph,
-                element: document.getElementById('memorytimeline')
-            } );
 
-            var legend = new Rickshaw.Graph.Legend( {
-                graph: graph,
-                element: document.getElementById('memorylegend')
-            } );
+        var yMax = d3.max(snapshots, function(d) { return d.totalQueued; });
+        var yMin = d3.min(snapshots, function(d) { return d.totalQueued; });
 
-            var shelving = new Rickshaw.Graph.Behavior.Series.Toggle( {
-                graph: graph,
-                legend: legend
-            } );
+        y.domain([0, yMax]);
 
-            var order = new Rickshaw.Graph.Behavior.Series.Order( {
-                graph: graph,
-                legend: legend
-            } );
+        var i = 0;
 
-            var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight( {
-                graph: graph,
-                legend: legend
-            } );
+        // Draw shaded area
+        svg.append("path")
+                .attr("d", area(snapshots))
+                .style({
+                    "fill": "#8AB8E6",
+                    "opacity": 0.3
+                });
 
-            var ticksTreatment = 'glow';
+        // Add the valueline path.
+        svg.append("path")
+            .style({'stroke': "#8AB8E6", 'fill': 'none', 'stroke-width': '.5px'})
+            .attr("d", valueline(snapshots));
 
-            var xAxis = new Rickshaw.Graph.Axis.Time( {
-                graph: graph,
-                ticksTreatment: ticksTreatment
-            } );
+        svg.selectAll("queued")
+                .data(snapshots)
+            .enter().append("rect")
+                .style("fill", "steelblue")
+                .attr("x", function(d) { return x(d.timestamp); - 1 })
+                .attr("width", 2)
+                .attr("y", function(d) { return y(d.diffQueued); })
+                .attr("height", function(d) { return height - y(d.diffQueued); });
 
-            xAxis.render();
-
-            var yAxis = new Rickshaw.Graph.Axis.Y( {
-                graph: graph,
-                tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-                ticksTreatment: ticksTreatment
-            } );
-
-            yAxis.render();
-            memchartDrawn = true;
-        }
-
-    },
-    series: [
-        {
-            name: "Heap Used",
-            color: "#ffc020",
-        },
-        {
-            name: "Heap Size",
-            color: palette.color()
-        }
-    ],
-    padding: {
-        top: 0.05,
-        bottom: 0.05,
-        left: 0.02,
-        right: 0.02
-    },
-    max: ${maxHeapSize?string.computer}
-} );
-
-setInterval( function() {
-    jobsGraph.request();
-    memoryGraph.request();
-}, 30000 );
+        svg.selectAll("processed")
+                .data(snapshots)
+            .enter().append("rect")
+                .style("fill", "red")
+                .attr("x", function(d) { return x(d.timestamp) + 1; })
+                .attr("width", 2)
+                .attr("y", function(d) { return y(d.diffProcessed); })
+                .attr("height", function(d) { return height - y(d.diffProcessed); });
 
 
 
-</script>
 
+        // Add the X Axis
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+        // Add the Y Axis
+        yAxis.tickValues([yMin, yMax]);
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis);
+
+        var totalQueued = snapshots[snapshots.length-1].totalQueued;
+            var totalProcessed = snapshots[snapshots.length-1].totalProcessed;
+            var totalInQueues = totalQueued - totalProcessed;
+
+            svg.append("text")
+                     .attr("x", width - 5)
+                     .attr("y", height - 17)
+                     .attr("dy", ".71em")
+                     .attr("style","font-size:20px; font-weight: 400;")
+                     .style("text-anchor", "end")
+                     .text(totalInQueues);
+
+    }
+
+    </script>
+    <div id="metrics">
+            <div class="tinygraph" id="queuemetrics">
+            </div>
+            <script type="text/javascript">
+                var snapshots = $.parseJSON(
+                    $.ajax({
+                        dataType: "json",
+                        url: "/gearman/?system=true" ,
+                        data: { },
+                        success: function() { },
+                        type: "GET",
+                        async: false
+                    }).responseText
+                );
+
+                drawGraph(snapshots, "queuemetrics");
+            </script>
+        </div>
+    </div>
 </@layout>

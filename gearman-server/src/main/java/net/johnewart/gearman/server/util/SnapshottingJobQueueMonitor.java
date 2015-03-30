@@ -5,13 +5,14 @@ import com.google.common.collect.ImmutableMap;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
-import net.johnewart.gearman.constants.JobPriority;
-import net.johnewart.gearman.engine.core.JobManager;
-import net.johnewart.gearman.engine.queue.JobQueue;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
+import net.johnewart.shuzai.Frequency;
+import net.johnewart.shuzai.SampleMethod;
+import net.johnewart.shuzai.TimeSeries;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -20,22 +21,23 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class SnapshottingJobQueueMonitor implements JobQueueMonitor {
-    private JobManager jobManager;
-    private HashMap<String, List<JobQueueSnapshot>> snapshots;
+    private HashMap<String, JobQueueMetrics> snapshots;
     private final Logger LOG = LoggerFactory.getLogger(SnapshottingJobQueueMonitor.class);
     private List<SystemSnapshot> systemSnapshots;
     private final int maxSnapshots = 2880;
+    private final QueueMetrics queueMetrics;
+    private final Object lockObject = new Object();
 
-    public SnapshottingJobQueueMonitor(JobManager jobManager)
+    public SnapshottingJobQueueMonitor(QueueMetrics queueMetrics)
     {
-        this.jobManager = jobManager;
         this.snapshots = new HashMap<>();
         this.systemSnapshots = new LinkedList<>();
+        this.queueMetrics = queueMetrics;
 
         ScheduledExecutorService executor =
-                Executors.newSingleThreadScheduledExecutor();
+                Executors.newScheduledThreadPool(2);
 
-        Runnable periodicTask = new Runnable() {
+        Runnable snapshotTask = new Runnable() {
             public void run() {
                 final Timer timer = Metrics.newTimer(SnapshottingJobQueueMonitor.class, "snapshots", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
@@ -43,63 +45,76 @@ public class SnapshottingJobQueueMonitor implements JobQueueMonitor {
 
                 try {
                     snapshotJobQueues();
-                    condenseDataPoints();
                 } finally {
                     context.stop();
                 }
             }
         };
 
-        executor.scheduleAtFixedRate(periodicTask, 0, 30, TimeUnit.SECONDS);
+        Runnable compactTask = new Runnable() {
+            @Override
+            public void run() {
+                condenseDataPoints();
+            }
+        };
+
+        executor.scheduleAtFixedRate(compactTask, 2, 2, TimeUnit.MINUTES);
+        executor.scheduleAtFixedRate(snapshotTask, 0, 5, TimeUnit.SECONDS);
 
     }
 
     private void condenseDataPoints() {
-        LOG.debug("Condensing data points");
+        synchronized(lockObject) {
+            LOG.debug("Condensing data points");
+
+            for (String jobQueueName : queueMetrics.getQueueNames()) {
+
+                JobQueueMetrics metrics = snapshots.get(jobQueueName);
+
+                if (metrics != null) {
+                    try {
+                        snapshots.put(jobQueueName, metrics.compact());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
     }
 
     private void snapshotJobQueues()
     {
-        LOG.debug("Snapshotting job queues.");
+        synchronized (lockObject) {
+            LOG.debug("Snapshotting job queues.");
 
-        for(String jobQueueName : jobManager.getJobQueues().keySet())
-        {
-            JobQueue jobQueue = jobManager.getJobQueues().get(jobQueueName);
+            for (String jobQueueName : queueMetrics.getQueueNames()) {
+                if (!snapshots.containsKey(jobQueueName)) {
+                    snapshots.put(jobQueueName, new JobQueueMetrics());
+                }
 
-            if(!snapshots.containsKey(jobQueueName))
-            {
-                snapshots.put(jobQueueName, new LinkedList<JobQueueSnapshot>());
+                JobQueueMetrics metrics = snapshots.get(jobQueueName);
+
+                DateTime now = DateTime.now();
+                Long highJobs = queueMetrics.getHighPriorityJobsCount(jobQueueName);
+                Long midJobs = queueMetrics.getMidPriorityJobsCount(jobQueueName);
+                Long lowJobs = queueMetrics.getLowPriorityJobsCount(jobQueueName);
+
+                metrics.highJobs.add(now, highJobs);
+                metrics.midJobs.add(now, midJobs);
+                metrics.lowJobs.add(now, lowJobs);
+                metrics.queued.add(now, queueMetrics.getEnqueuedJobCount(jobQueueName));
+                metrics.exceptions.add(now, queueMetrics.getExceptionCount(jobQueueName));
+                metrics.completed.add(now, queueMetrics.getCompletedJobCount(jobQueueName));
+                metrics.failed.add(now, queueMetrics.getFailedJobCount(jobQueueName));
+
             }
-
-            final ImmutableMap<JobPriority, Long> priorityCounts = ImmutableMap.of(
-                JobPriority.LOW,
-                jobQueue.size(JobPriority.LOW),
-                JobPriority.NORMAL,
-                jobQueue.size(JobPriority.NORMAL),
-                JobPriority.HIGH,
-                jobQueue.size(JobPriority.HIGH)
-            );
-            final ImmutableMap<Integer, Long> hourCounts = jobQueue.futureCounts();
-
-            final long futureCount = sumOfJobsOccurringInOrAfter(hourCounts, 1);
-            final long immediateCount = hourCounts.get(0);
-
-            JobQueueSnapshot snapshot = new JobQueueSnapshot(new Date(), immediateCount, futureCount, hourCounts, priorityCounts);
-            List<JobQueueSnapshot> snapshotList = snapshots.get(jobQueueName);
-
-            if(snapshotList.size() == maxSnapshots) {
-                snapshotList.remove(maxSnapshots - 1);
-            }
-
-            snapshotList.add(snapshot);
         }
-
 
         // Generate an overall snapshot
         SystemSnapshot currentSnapshot;
-        Long totalProcessed = jobManager.getCompletedJobsCounter().count();
-        Long totalQueued = jobManager.getQueuedJobsCounter().count();
-        Long totalPending = jobManager.getPendingJobsCounter().count();
+        Long totalProcessed = queueMetrics.getCompletedJobCount();
+        Long totalQueued = queueMetrics.getEnqueuedJobCount();
+        Long totalPending = queueMetrics.getPendingJobsCount();
         Long heapSize = Runtime.getRuntime().totalMemory();
         Long heapUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
         if(systemSnapshots.size() > 0)
@@ -131,7 +146,11 @@ public class SnapshottingJobQueueMonitor implements JobQueueMonitor {
         return sum;
     }
 
-    public ImmutableMap<String, List<JobQueueSnapshot>> getSnapshots() {
+    private TimeSeries fiveMinuteAverage(TimeSeries original) {
+        return original.downSample(Frequency.of(5, TimeUnit.MINUTES), SampleMethod.MEAN);
+    }
+
+    public ImmutableMap<String, JobQueueMetrics> getSnapshots() {
         return ImmutableMap.copyOf(snapshots);
     }
 

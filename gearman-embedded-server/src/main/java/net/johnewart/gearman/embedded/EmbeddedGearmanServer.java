@@ -5,6 +5,8 @@ import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.metrics.MetricsEngine;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
@@ -20,13 +22,15 @@ public class EmbeddedGearmanServer {
     final JobManager jobManager;
     final JobHandleFactory jobHandleFactory;
     final UniqueIdFactory uniqueIdFactory;
+    final QueueMetrics queueMetrics;
 
     public EmbeddedGearmanServer() {
         JobQueueFactory jobQueueFactory = new MemoryJobQueueFactory();
         jobHandleFactory = new LocalJobHandleFactory("embedded");
         uniqueIdFactory = new LocalUniqueIdFactory();
         ExceptionStorageEngine exceptionStore = new NoopExceptionStorageEngine();
-        jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, exceptionStore);
+        queueMetrics = new MetricsEngine();
+        jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, exceptionStore, queueMetrics);
     }
 
     public Job submitJob(final Job job, final EngineClient client) {

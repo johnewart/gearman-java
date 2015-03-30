@@ -13,6 +13,7 @@ import net.johnewart.gearman.common.interfaces.EngineWorker;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
@@ -51,18 +52,14 @@ public class JobManager {
     private final UniqueIdFactory uniqueIdFactory;
     private final ExceptionStorageEngine exceptionStorageEngine;
 
-    private final Counter pendingJobsCounter = Metrics.newCounter(JobManager.class, "pending-jobs");
-    private final Counter queuedJobsCounter = Metrics.newCounter(JobManager.class, "queued-jobs");
-    private final Counter completedJobsCounter = Metrics.newCounter(JobManager.class, "completed-jobs");
-    private final Counter failedJobsCounter = Metrics.newCounter(JobManager.class, "failed-jobs");
-    private final Counter activeJobsCounter = Metrics.newCounter(JobManager.class, "active-jobs");
-    private final Meter jobMeter = Metrics.newMeter(JobManager.class, "queued-jobs-meter", "enqueued", TimeUnit.SECONDS);
 
+    private final QueueMetrics metrics;
 
     public JobManager(JobQueueFactory jobQueueFactory,
                       JobHandleFactory jobHandleFactory,
                       UniqueIdFactory uniqueIdFactory,
-                      ExceptionStorageEngine exceptionStorageEngine) {
+                      ExceptionStorageEngine exceptionStorageEngine,
+                      QueueMetrics queueMetrics) {
         this.activeJobHandles = new ConcurrentHashMap<>();
         this.activeUniqueIds = new ConcurrentHashMap<>();
         this.uniqueIdClients = new ConcurrentHashMap<>();
@@ -71,17 +68,13 @@ public class JobManager {
         this.workerJobs = new ConcurrentHashMap<>();
         this.jobWorker = new ConcurrentHashMap<>();
         this.workerPools = new ConcurrentHashMap<>();
+        this.metrics = queueMetrics;
 
         this.jobQueueFactory = jobQueueFactory;
         this.jobHandleFactory = jobHandleFactory;
         this.uniqueIdFactory = uniqueIdFactory;
         this.exceptionStorageEngine = exceptionStorageEngine;
 
-        // Initialize counters to zero
-        this.pendingJobsCounter.clear();
-        this.queuedJobsCounter.clear();
-        this.completedJobsCounter.clear();
-        this.activeJobsCounter.clear();
     }
 
     public void registerWorkerAbility(String funcName, EngineWorker worker)
@@ -172,8 +165,7 @@ public class JobManager {
                 activeUniqueIds.put(job.getUniqueID(), job);
                 workerJobs.put(worker, job);
                 jobWorker.put(job, worker);
-                pendingJobsCounter.dec();
-                activeJobsCounter.inc();
+                metrics.handleJobStarted(job);
                 job.markInProgress();
                 return job;
             }
@@ -221,7 +213,8 @@ public class JobManager {
 
     public Job storeJob(Job job)
     {
-        jobMeter.mark();
+        metrics.handleJobEnqueued(job);
+
         final String functionName = job.getFunctionName();
         final String uniqueID;
         final JobQueue jobQueue = getJobQueue(functionName);
@@ -267,8 +260,6 @@ public class JobManager {
                                 .wakeupWorkers();
                     }
 
-                    queuedJobsCounter.inc();
-                    pendingJobsCounter.inc();
                     return job;
                 }
             }
@@ -311,7 +302,7 @@ public class JobManager {
                 notifyClientsOfCompletion(job, data);
             }
 
-            completedJobsCounter.inc();
+            metrics.handleJobCompleted(job);
             job.complete();
             removeJob(job);
         }
@@ -339,7 +330,7 @@ public class JobManager {
 
             exceptionStorageEngine.storeException(job.getJobHandle(), job.getUniqueID(), job.getData(), exception);
 
-            failedJobsCounter.inc();
+            metrics.handleJobException(job);
             job.complete();
             removeJob(job);
         }
@@ -369,7 +360,7 @@ public class JobManager {
                 }
             }
 
-            failedJobsCounter.inc();
+            metrics.handleJobFailed(job);
             job.complete();
             removeJob(job);
         }
@@ -457,26 +448,6 @@ public class JobManager {
     public ConcurrentHashMap<String, JobQueue> getJobQueues()
     {
         return jobQueues;
-    }
-
-    public Counter getPendingJobsCounter()
-    {
-        return pendingJobsCounter;
-    }
-
-    public Counter getCompletedJobsCounter()
-    {
-        return completedJobsCounter;
-    }
-
-    public Counter getQueuedJobsCounter()
-    {
-        return queuedJobsCounter;
-    }
-
-    public Counter getActiveJobsCounter()
-    {
-        return activeJobsCounter;
     }
 
     public Integer getWorkerCount()

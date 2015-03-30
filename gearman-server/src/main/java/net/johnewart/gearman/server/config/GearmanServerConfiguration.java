@@ -5,6 +5,8 @@ import ch.qos.logback.classic.Logger;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.metrics.MetricsEngine;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
@@ -37,6 +39,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private ExceptionStoreConfiguration exceptionStoreConfiguration;
     private JobHandleFactory jobHandleFactory;
     private UniqueIdFactory uniqueIdFactory;
+    private QueueMetrics queueMetrics = new MetricsEngine();
 
     public void setPort(int port) {
         this.port = port;
@@ -139,7 +142,11 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobManager getJobManager() {
         if(jobManager == null) {
-            jobManager = new JobManager(getJobQueueFactory(), getJobHandleFactory(), getUniqueIdFactory(), getExceptionStorageEngine());
+            jobManager = new JobManager(getJobQueueFactory(),
+                                        getJobHandleFactory(),
+                                        getUniqueIdFactory(),
+                                        getExceptionStorageEngine(),
+                                        queueMetrics);
         }
 
         return jobManager;
@@ -148,7 +155,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobQueueMonitor getJobQueueMonitor() {
         if (jobQueueMonitor == null) {
-            jobQueueMonitor = new SnapshottingJobQueueMonitor(getJobManager());
+            jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
         }
 
         return jobQueueMonitor;
@@ -172,6 +179,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         return uniqueIdFactory;
     }
 
+    public QueueMetrics getQueueMetrics() {
+        return queueMetrics;
+    }
+
     public ExceptionStorageEngine getExceptionStorageEngine() {
         if(exceptionStorageEngine == null && getExceptionStore() != null) {
             this.exceptionStorageEngine = getExceptionStore().getExceptionStorageEngine();
@@ -190,7 +201,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         this.jobQueueFactory = new HazelcastJobQueueFactory(clusterConfiguration.getHazelcastInstance());
         this.jobHandleFactory = new HazelcastJobHandleFactory(clusterConfiguration.getHazelcastInstance(), getHostName());
         this.uniqueIdFactory = new HazelcastUniqueIdFactory(clusterConfiguration.getHazelcastInstance());
-        this.jobManager = new ClusterJobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, clusterConfiguration.getHazelcastInstance());
-        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
+        this.jobManager = new ClusterJobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, clusterConfiguration.getHazelcastInstance(), queueMetrics);
+        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
     }
 }

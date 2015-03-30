@@ -1,36 +1,47 @@
 package net.johnewart.gearman.server.web;
 
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.JobQueue;
+import net.johnewart.gearman.server.util.JobQueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
 
 public class StatusView {
     protected final JobQueueMonitor jobQueueMonitor;
-    protected final JobManager jobManager;
+    protected final QueueMetrics queueMetrics;
 
-    public StatusView(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
+    public StatusView(JobQueueMonitor jobQueueMonitor, QueueMetrics queueMetrics)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobManager = jobManager;
+        this.queueMetrics = queueMetrics;
     }
 
-    public List<JobQueue> getJobQueues()
+    public List<String> getJobQueues()
     {
-        return new ArrayList<>(jobManager.getJobQueues().values());
+        List<String> queueNames = new ArrayList<>(queueMetrics.getQueueNames());
+        queueNames.sort(new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.compareTo(o2);
+            }
+        });
+
+        return queueNames;
+    }
+
+    public int getJobQueueCount() {
+        return queueMetrics.getQueueNames().size();
     }
 
     public long getUptimeInSeconds()
     {
         Date now = new Date();
-        Date started = jobManager.timeStarted;
+        Date started = queueMetrics.getStartTime().toDate();
         return (now.getTime() - started.getTime()) / 1000;
     }
 
@@ -62,32 +73,26 @@ public class StatusView {
 
     public Long getTotalJobsPending()
     {
-        long total = 0;
-        for(JobQueue jobQueue : getJobQueues())
-        {
-            total += jobQueue.size();
-        }
-
-        return total;
+        return queueMetrics.getPendingJobsCount();
     }
 
     public Long getTotalJobsQueued()
     {
-        return jobManager.getQueuedJobsCounter().count();
+        return queueMetrics.getEnqueuedJobCount();
     }
 
     public Long getTotalJobsProcessed()
     {
-        return jobManager.getCompletedJobsCounter().count();
+        return queueMetrics.getCompletedJobCount();
     }
 
-    public Integer getWorkerCount()
+    public Long getWorkerCount()
     {
-        return jobManager.getWorkerCount();
+        return queueMetrics.getActiveWorkers();
     }
 
     public Long getWorkerCount(String jobQueueName) {
-        return jobManager.getWorkerPool(jobQueueName).getNumberOfConnectedWorkers();
+        return queueMetrics.getActiveWorkers(jobQueueName);
     }
 
     public String getHostname()
@@ -117,14 +122,14 @@ public class StatusView {
         return snapshots.get(snapshots.size()-1);
     }
 
-    public List<JobQueueSnapshot> getJobQueueSnapshots(String jobQueueName)
+    public JobQueueMetrics getJobQueueSnapshots(String jobQueueName)
     {
-        Map<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
+        Map<String, JobQueueMetrics> snapshotMap = jobQueueMonitor.getSnapshots();
         if(snapshotMap.containsKey(jobQueueName))
         {
             return snapshotMap.get(jobQueueName);
         } else {
-            return new ArrayList<>();
+            return new JobQueueMetrics();
         }
     }
 

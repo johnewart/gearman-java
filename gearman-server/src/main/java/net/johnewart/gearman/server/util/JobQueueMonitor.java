@@ -13,6 +13,6 @@ import java.util.List;
  * To change this template use File | Settings | File Templates.
  */
 public interface JobQueueMonitor {
-    ImmutableMap<String, List<JobQueueSnapshot>> getSnapshots();
+    ImmutableMap<String, JobQueueMetrics> getSnapshots();
     ImmutableList<SystemSnapshot> getSystemSnapshots();
 }

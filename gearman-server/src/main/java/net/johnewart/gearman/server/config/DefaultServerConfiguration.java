@@ -6,6 +6,8 @@ import java.net.UnknownHostException;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.metrics.MetricsEngine;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
@@ -22,13 +24,15 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
     private final JobQueueMonitor jobQueueMonitor;
     private final JobHandleFactory jobHandleFactory;
     private final UniqueIdFactory uniqueIdFactory;
+    private final QueueMetrics queueMetrics;
 
     public DefaultServerConfiguration() {
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
         this.uniqueIdFactory = new LocalUniqueIdFactory();
-        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine());
-        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(jobManager);
+        this.queueMetrics = new MetricsEngine();
+        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), queueMetrics);
+        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
     }
 
     @Override

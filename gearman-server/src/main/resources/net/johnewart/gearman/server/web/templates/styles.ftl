@@ -1,6 +1,6 @@
 <style>
     * {
-        font-family: "PT Sans", sans-serif !important;
+        font-family: "Whitney", "Source Sans Pro", sans-serif !important;
     }
 
     div#container {

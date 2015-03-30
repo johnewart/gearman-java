@@ -6,6 +6,7 @@
         <link type="text/css" rel="stylesheet" href="/static/css/jquery-ui.css">
         <link type="text/css" rel="stylesheet" href="/static/css/rickshaw.min.css">
         <link type="text/css" rel="stylesheet" href="/static/css/extensions.css">
+        <link type="text/css" rel="stylesheet" href="/static/css/chart.css">
 
         <script src="/static/d3.v3.min.js"></script>
         <script src="/static/jquery.min.js"></script>

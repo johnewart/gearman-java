@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.metrics.MetricsEngine;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
@@ -29,6 +30,7 @@ public class JobManagerTest {
     private EngineWorker worker;
     private JobHandleFactory jobHandleFactory;
     private UniqueIdFactory uniqueIdFactory;
+    private MetricsEngine metricsEngine;
 
     public JobManagerTest()
     {
@@ -38,7 +40,8 @@ public class JobManagerTest {
 
     @Before
     public void initialize() {
-        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine());
+        metricsEngine = new MetricsEngine();
+        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), metricsEngine);
         final ImmutableSet<String> abilities = ImmutableSet.of("reverseString", "computeBigStuff");
         worker = mock(EngineWorker.class);
         when(worker.getAbilities()).thenReturn(abilities);
@@ -50,15 +53,15 @@ public class JobManagerTest {
         jobManager.storeJob(job);
 
         Assert.assertThat("There are no completed jobs",
-                jobManager.getCompletedJobsCounter().count(),
+                metricsEngine.getCompletedJobCount(),
                 Is.is(0L));
 
         Assert.assertThat("There is one pending job",
-                jobManager.getPendingJobsCounter().count(),
+                metricsEngine.getPendingJobsCount(),
                 Is.is(1L));
 
         Assert.assertThat("One job has been enqueued",
-                jobManager.getQueuedJobsCounter().count(),
+                metricsEngine.getEnqueuedJobCount(),
                 Is.is(1L));
     }
 
@@ -76,22 +79,22 @@ public class JobManagerTest {
                 Is.is(true));
 
         Assert.assertThat("The job store is now empty",
-                jobManager.getPendingJobsCounter().count(),
+                metricsEngine.getPendingJobsCount(),
                 Is.is(0L));
 
         Assert.assertThat("There is one active job",
-                jobManager.getActiveJobsCounter().count(),
+                metricsEngine.getActiveJobCount(),
                 Is.is(1L));
 
         Assert.assertThat("The job store has no complete jobs",
-                jobManager.getCompletedJobsCounter().count(),
+                metricsEngine.getCompletedJobCount(),
                 Is.is(0L));
 
         // Complete the job
         jobManager.handleWorkCompletion(nextJob, result);
 
         Assert.assertThat("The job store has one complete job",
-                jobManager.getCompletedJobsCounter().count(),
+                metricsEngine.getCompletedJobCount(),
                 Is.is(1L));
 
     }
@@ -273,11 +276,11 @@ public class JobManagerTest {
                 Is.is(1L));
 
         Assert.assertThat("There is 1 job pending in the job store",
-                jobManager.getPendingJobsCounter().count(),
+                metricsEngine.getPendingJobsCount(),
                 Is.is(1L));
 
         Assert.assertThat("There has been 1 job queued in the job store",
-                jobManager.getQueuedJobsCounter().count(),
+                metricsEngine.getEnqueuedJobCount(),
                 Is.is(1L));
 
         Job nextJob = jobManager.nextJobForWorker(worker);

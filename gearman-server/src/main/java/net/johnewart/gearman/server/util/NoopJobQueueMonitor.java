@@ -2,17 +2,12 @@ package net.johnewart.gearman.server.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.JobQueueSnapshot;
-import net.johnewart.gearman.server.util.SystemSnapshot;
-
-import java.util.List;
 
 
 public class NoopJobQueueMonitor implements JobQueueMonitor {
 
     @Override
-    public ImmutableMap<String, List<JobQueueSnapshot>> getSnapshots() {
+    public ImmutableMap<String, JobQueueMetrics> getSnapshots() {
         return ImmutableMap.of();
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateException;
 import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,15 +20,15 @@ import java.io.OutputStreamWriter;
 public class DashboardServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "text/html";
     private JobQueueMonitor jobQueueMonitor;
-    private JobManager jobManager;
+    private QueueMetrics queueMetrics;
     private static final JsonFactory jsonFactory = new JsonFactory();
     private final Logger LOG = LoggerFactory.getLogger(DashboardServlet.class);
     private static Configuration cfg = new Configuration();
 
-    public DashboardServlet(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
+    public DashboardServlet(JobQueueMonitor jobQueueMonitor, QueueMetrics queueMetrics)
     {
         this.jobQueueMonitor = jobQueueMonitor;
-        this.jobManager = jobManager;
+        this.queueMetrics = queueMetrics;
     }
 
     @Override
@@ -46,13 +47,13 @@ public class DashboardServlet extends HttpServlet {
 
             if(queues)
             {
-                cfg.getTemplate("queues.ftl").process(new StatusView(jobQueueMonitor, jobManager), wr);
+                cfg.getTemplate("queues.ftl").process(new StatusView(jobQueueMonitor, queueMetrics), wr);
             } else {
                 if(jobQueueName != null)
                 {
-                    cfg.getTemplate("queue.ftl").process(new JobQueueStatusView(jobQueueMonitor, jobManager, jobQueueName), wr);
+                    cfg.getTemplate("queue.ftl").process(new JobQueueStatusView(jobQueueMonitor, queueMetrics, jobQueueName), wr);
                 } else {
-                    cfg.getTemplate("index.ftl").process(new StatusView(jobQueueMonitor, jobManager), wr);
+                    cfg.getTemplate("index.ftl").process(new StatusView(jobQueueMonitor, queueMetrics), wr);
                 }
             }
 

@@ -1,0 +1,204 @@
+div.graph {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #dddddd;
+    width: 850px;
+}
+
+div.chart {
+    width: 560px;
+    float: left;
+}
+
+div.clear {
+    clear: both;
+}
+
+div.meta {
+    padding-top: 5px;
+    width: 140px;
+    float: left;
+}
+
+
+
+    div.meta div.big {
+        width: 140px;
+        float: left;
+    }
+
+    div.meta div.small {
+        width: 140px;
+        float: left;
+        margin-top: -10px;
+    }
+
+    div.meta div.big span.value {
+        font-family: "Open Sans" !important;
+        font-weight: 700 !important;
+        font-size: 30px;
+        line-height: 36px;
+        margin-bottom: 0px;
+        margin-top: 0px;
+        margin-right: 5px;
+        text-align: right;
+        display: inline-block;
+        width: 100px;
+        padding: 0px;
+    }
+
+    div.meta div.small span.value {
+        font-family: "Open Sans" !important;
+        font-weight: 700 !important;
+        font-size: 16px;
+        line-height: 20px;
+        margin-bottom: 0px;
+        margin-top: 0px;
+        margin-right: 5px;
+        padding: 0px;
+        text-align: right;
+        width: 100px;
+        display: inline-block;
+    }
+
+    div.meta span.label {
+        font-size: 9px;
+        display: inline;
+        width: 40px;
+        text-align: left;
+        margin-top: 0px;
+        padding: 0px;
+        line-height: 30px;
+    }
+
+    div.meta .unit {
+        font-size: 12px;
+        display: inline-block;
+        width: 150px;
+        text-align: right;
+
+    }
+
+div.legend {
+    font-size: 8pt !important;
+    font-family: "Andika";
+    line-height: 16px;
+    vertical-align: middle !important;
+    width: 100px;
+    float: left;
+}
+
+div.legendItem {
+    margin-bottom: 5px;
+    text-align: right;
+}
+
+.color-box {
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+    background-color: #ccc;
+    margin-left: 5px;
+}
+
+.area {
+    fill: lightsteelblue;
+    stroke-width: 0;
+    opacity: 0.6;
+}
+
+.axis text {
+    font-size: 10px;
+    font-family: "FiraSans";
+}
+
+
+path {
+	stroke: steelblue;
+	stroke-width: 2;
+	fill: none;
+}
+
+.axis path,
+.axis line {
+	fill: none;
+	stroke: grey;
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}
+
+.yaxislabel {
+   font-size: 10px;
+   font-family: "FiraSans";
+}
+
+.graphcontainer h4 {
+    font-size: 12px;
+    text-align: left;
+}
+
+
+.threesd {
+    color: red;
+}
+
+.donut-label {
+    font-family: "Andika";
+}
+
+div.clear {
+    clear: both;
+}
+
+.barchart rect {
+    fill: #888888;
+}
+
+.barchart text {
+    font: 10px "Andika";
+}
+
+.barchart text.time {
+    fill: white;
+    text-anchor: end;
+    opacity: 0.5;
+}
+
+.barchart text.operation {
+    text-anchor: start;
+    fill: white;
+}
+
+
+div.jobqueue {
+    width: 400px;
+    float: left;
+    border: 1px solid #aaa;
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    border-radius: 7px;
+    box-shadow: 0 6px 2px -4px #888;
+    background-color: #ffffff;
+}
+
+div.jobqueue h2 {
+    text-align: left;
+    background-color: #ffffff;
+    margin-top: 15px;
+    font-weight: 400;
+    font-size: 20px;
+    margin-left: 30px;
+
+}
+
+div.jobqueue a,
+div.jobqueue a:visited {
+    text-decoration: none;
+    color: #000;
+}
+
+div#jobqueues {
+    width: 960px;
+}
+

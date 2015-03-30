@@ -4,17 +4,19 @@ import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.queue.JobQueue;
+import net.johnewart.gearman.server.util.JobQueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
+import net.johnewart.shuzai.Frequency;
+import net.johnewart.shuzai.SampleMethod;
+import net.johnewart.shuzai.TimeSeries;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
-import org.mockito.cglib.core.Local;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +26,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class GearmanServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json";
@@ -75,17 +79,17 @@ public class GearmanServlet extends HttpServlet {
                     if(history)
                     {
 
-                        final LocalDateTime startTime, endTime;
+                        final DateTime startTime, endTime;
                         if (req.getParameter("start") != null) {
-                            startTime = new LocalDateTime(Long.valueOf(req.getParameter("start")));
+                            startTime = new DateTime(Long.valueOf(req.getParameter("start")));
                         } else {
-                            startTime = LocalDateTime.now().minusHours(8);
+                            startTime = DateTime.now().minusHours(8);
                         }
 
                         if (req.getParameter("end") != null) {
-                            endTime = new LocalDateTime(Long.valueOf(req.getParameter("end")));
+                            endTime = new DateTime(Long.valueOf(req.getParameter("end")));
                         } else {
-                            endTime = LocalDateTime.now();
+                            endTime = DateTime.now();
                         }
 
                         writeJobQueueSnapshots(jobQueueName, json, startTime, endTime);
@@ -138,42 +142,62 @@ public class GearmanServlet extends HttpServlet {
     }
 
     public void writeJobQueueSnapshots(String jobQueueName, JsonGenerator json,
-                                       LocalDateTime startTime,
-                                       LocalDateTime endTime) throws IOException
+                                       DateTime startTime,
+                                       DateTime endTime) throws IOException
     {
         if(jobQueueMonitor != null)
         {
-            ImmutableMap<String, List<JobQueueSnapshot>> snapshotMap = jobQueueMonitor.getSnapshots();
+            ImmutableMap<String, JobQueueMetrics> snapshotMap = jobQueueMonitor.getSnapshots();
             if( snapshotMap != null && snapshotMap.containsKey(jobQueueName))
             {
-                List<JobQueueSnapshot> snapshotList = ImmutableList.copyOf(jobQueueMonitor.getSnapshots().get(jobQueueName));
-                json.writeFieldName("snapshots");
-                json.writeStartArray();
-                for(JobQueueSnapshot snapshot : snapshotList)
-                {
-                    LocalDateTime timestamp = LocalDateTime.fromDateFields(snapshot.getTimestamp());
-                    if (timestamp.isAfter(startTime) && timestamp.isBefore(endTime)) {
-                        json.writeStartObject();
-                        {
-                            json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                            json.writeNumberField("currentJobs", snapshot.getImmediate());
-                            if (snapshot.getFutureJobCounts().keySet().size() > 0) {
-                                json.writeFieldName("futureJobs");
-                                json.writeStartObject();
-                                {
-                                    for (Integer hour : snapshot.getFutureJobCounts().keySet()) {
-                                        json.writeNumberField(hour.toString(), snapshot.getFutureJobCounts().get(hour));
-                                    }
-                                }
-                                json.writeEndObject();
-                            }
 
-                        }
-                        json.writeEndObject();
-                    }
+                DateTime end = snapshotMap.get(jobQueueName).lowJobs.index().last();
+
+                // If the last data point is before our end time, we need to use that data as the end
+                if(end.isBefore(endTime)) {
+                    endTime = end;
+                }
+
+                JobQueueMetrics jobQueueMetrics = snapshotMap.get(jobQueueName);
+                TimeSeries high = jobQueueMetrics.highJobs.downSampleToTimeWindow(startTime,
+                        endTime, Frequency.of(5, TimeUnit.MINUTES), SampleMethod.MEAN);
+                TimeSeries mid = jobQueueMetrics.midJobs.downSampleToTimeWindow(startTime,
+                        endTime, Frequency.of(5, TimeUnit.MINUTES), SampleMethod.MEAN);
+                TimeSeries low = jobQueueMetrics.lowJobs.downSampleToTimeWindow(startTime,
+                        endTime, Frequency.of(5, TimeUnit.MINUTES), SampleMethod.MEAN);
+
+                json.writeFieldName("times");
+                json.writeStartArray();
+                for(DateTime t : high.index().asList()) {
+                    json.writeNumber(t.toDate().getTime());
+                }
+                json.writeEndArray();
+
+                json.writeFieldName("high");
+                json.writeStartArray();
+                for(BigDecimal d : high.values()) {
+                    json.writeNumber(d);
+                }
+                json.writeEndArray();
+
+                json.writeFieldName("mid");
+
+                json.writeStartArray();
+                for(BigDecimal d : mid.values()) {
+                    json.writeNumber(d);
+                }
+                json.writeEndArray();
+
+                json.writeFieldName("low");
+
+                json.writeStartArray();
+                for(BigDecimal d : low.values()) {
+                    json.writeNumber(d);
                 }
                 json.writeEndArray();
             }
+
+
         } else {
             json.writeFieldName("snapshots");
             json.writeString("Disabled.");

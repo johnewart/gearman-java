@@ -10,6 +10,7 @@ import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.constants.PacketType;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import org.slf4j.Logger;
@@ -25,8 +26,9 @@ public class ClusterJobManager extends JobManager implements MessageListener<Wor
     public ClusterJobManager(JobQueueFactory jobQueueFactory,
                              JobHandleFactory jobHandleFactory,
                              UniqueIdFactory uniqueIdFactory,
-                             HazelcastInstance hazelcast) {
-        super(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine());
+                             HazelcastInstance hazelcast,
+                             QueueMetrics queueMetrics) {
+        super(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), queueMetrics);
         this.hazelcast = hazelcast;
         workMessageTopic = this.hazelcast.getTopic (WORK_TOPIC);
         workMessageTopic.addMessageListener(this);
