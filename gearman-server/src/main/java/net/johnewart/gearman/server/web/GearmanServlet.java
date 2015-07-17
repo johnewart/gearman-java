@@ -16,7 +16,6 @@ import net.johnewart.shuzai.Frequency;
 import net.johnewart.shuzai.SampleMethod;
 import net.johnewart.shuzai.TimeSeries;
 import org.joda.time.DateTime;
-import org.joda.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +27,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -171,6 +171,7 @@ public class GearmanServlet extends HttpServlet {
                 for(DateTime t : high.index().asList()) {
                     json.writeNumber(t.toDate().getTime());
                 }
+                json.writeNumber(new Date().getTime());
                 json.writeEndArray();
 
                 json.writeFieldName("high");
@@ -178,6 +179,7 @@ public class GearmanServlet extends HttpServlet {
                 for(BigDecimal d : high.values()) {
                     json.writeNumber(d);
                 }
+                json.writeNumber(jobQueueMetrics.highJobs.lastValue());
                 json.writeEndArray();
 
                 json.writeFieldName("mid");
@@ -186,6 +188,7 @@ public class GearmanServlet extends HttpServlet {
                 for(BigDecimal d : mid.values()) {
                     json.writeNumber(d);
                 }
+                json.writeNumber(jobQueueMetrics.midJobs.lastValue());
                 json.writeEndArray();
 
                 json.writeFieldName("low");
@@ -194,6 +197,7 @@ public class GearmanServlet extends HttpServlet {
                 for(BigDecimal d : low.values()) {
                     json.writeNumber(d);
                 }
+                json.writeNumber(jobQueueMetrics.lowJobs.lastValue());
                 json.writeEndArray();
             }
 

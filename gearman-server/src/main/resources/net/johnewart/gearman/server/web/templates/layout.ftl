@@ -7,12 +7,14 @@
         <link type="text/css" rel="stylesheet" href="/static/css/rickshaw.min.css">
         <link type="text/css" rel="stylesheet" href="/static/css/extensions.css">
         <link type="text/css" rel="stylesheet" href="/static/css/chart.css">
+        <link type="text/css" rel="stylesheet" href="/static/css/admin.css">
 
         <script src="/static/d3.v3.min.js"></script>
         <script src="/static/jquery.min.js"></script>
         <script src="/static/jquery-ui.min.js"></script>
         <script src="/static/rickshaw.js"></script>
         <script src="/static/rickshaw.extensions.js"></script>
+        <script src="/static/js/charts.js"></script>
 
         <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
         <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
