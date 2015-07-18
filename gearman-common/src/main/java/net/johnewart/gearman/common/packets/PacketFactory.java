@@ -78,6 +78,8 @@ public class PacketFactory {
                 return new GrabJob(packetBytes);
             case GRAB_JOB_UNIQ:
                 return new GrabJobUniq(packetBytes);
+            case GRAB_JOB_ALL:
+                return new GrabJobAll(packetBytes);
             case PRE_SLEEP:
                 return new PreSleep(packetBytes);
             case SET_CLIENT_ID:

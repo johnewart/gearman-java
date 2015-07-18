@@ -12,7 +12,19 @@ import net.johnewart.gearman.common.packets.request.EchoRequest;
 import net.johnewart.gearman.common.packets.request.GetStatus;
 import net.johnewart.gearman.common.packets.request.OptionRequest;
 import net.johnewart.gearman.common.packets.request.SubmitJob;
-import net.johnewart.gearman.common.packets.response.*;
+import net.johnewart.gearman.common.packets.response.EchoResponse;
+import net.johnewart.gearman.common.packets.response.JobAssign;
+import net.johnewart.gearman.common.packets.response.JobAssignUniq;
+import net.johnewart.gearman.common.packets.response.JobCreated;
+import net.johnewart.gearman.common.packets.response.NoJob;
+import net.johnewart.gearman.common.packets.response.OptionResponse;
+import net.johnewart.gearman.common.packets.response.StatusRes;
+import net.johnewart.gearman.common.packets.response.WorkCompleteResponse;
+import net.johnewart.gearman.common.packets.response.WorkDataResponse;
+import net.johnewart.gearman.common.packets.response.WorkExceptionResponse;
+import net.johnewart.gearman.common.packets.response.WorkResponse;
+import net.johnewart.gearman.common.packets.response.WorkStatus;
+import net.johnewart.gearman.common.packets.response.WorkWarningResponse;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.constants.PacketType;
 import net.johnewart.gearman.engine.core.JobManager;
@@ -283,5 +295,15 @@ public class NetworkManager {
         //TODO: mark that the client wants exceptions (why would it not want them?)
         OptionResponse response = new OptionResponse(packet.getOption());
         channel.write(response);
+    }
+
+    // TODO: address this; temporary fix to support PHP worker - the C++ daemon has deviated from the spec some
+    public void allJobsForWorker(Channel channel)
+    {
+        if(workers.containsKey(channel))
+        {
+            NetworkEngineWorker worker = workers.get(channel);
+            worker.send(new NoJob());
+        }
     }
 }

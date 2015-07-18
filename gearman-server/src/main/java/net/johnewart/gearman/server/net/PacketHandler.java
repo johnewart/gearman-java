@@ -4,10 +4,15 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import net.johnewart.gearman.common.packets.Packet;
-import net.johnewart.gearman.common.packets.request.*;
+import net.johnewart.gearman.common.packets.request.CanDo;
+import net.johnewart.gearman.common.packets.request.CanDoTimeout;
+import net.johnewart.gearman.common.packets.request.CantDo;
+import net.johnewart.gearman.common.packets.request.EchoRequest;
+import net.johnewart.gearman.common.packets.request.GetStatus;
+import net.johnewart.gearman.common.packets.request.OptionRequest;
+import net.johnewart.gearman.common.packets.request.SubmitJob;
 import net.johnewart.gearman.common.packets.response.WorkResponse;
 import net.johnewart.gearman.common.packets.response.WorkStatus;
-import net.johnewart.gearman.constants.PacketType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +109,9 @@ public class PacketHandler extends SimpleChannelInboundHandler<Object> {
                 return;
             case GRAB_JOB_UNIQ:
                 networkManager.nextJobForWorker(channel, true);
+                return;
+            case GRAB_JOB_ALL:
+                networkManager.allJobsForWorker(channel);
                 return;
             case SUBMIT_JOB:
             case SUBMIT_JOB_BG:

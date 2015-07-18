@@ -49,7 +49,14 @@ public enum PacketType {
     SUBMIT_JOB_LOW,			// REQ    Client
     SUBMIT_JOB_LOW_BG,		// REQ    Client
     SUBMIT_JOB_SCHED,		// REQ    Client
-    SUBMIT_JOB_EPOCH;	    // REQ    Client
+    SUBMIT_JOB_EPOCH,	    // REQ    Client
+    SUBMIT_REDUCE_JOB,      // REQ    Client
+    SUBMIT_REDUCE_JOB_BACKGROUND,
+                            // REQ    Client
+    GRAB_JOB_ALL,           // REQ    Worker
+    JOB_ASSIGN_ALL,         // RES    Worker
+    GET_STATUS_UNIQUE,      // REQ    Client
+    STATUS_RES_UNIQUE;      // RES    Client
 
     public int getIndex() { return ordinal() + 1; }
     public static PacketType fromPacketMagicNumber(int x) {
@@ -90,6 +97,12 @@ public enum PacketType {
             case 34: return SUBMIT_JOB_LOW_BG;
             case 35: return SUBMIT_JOB_SCHED;
             case 36: return SUBMIT_JOB_EPOCH;
+            case 37: return SUBMIT_REDUCE_JOB;
+            case 38: return SUBMIT_REDUCE_JOB_BACKGROUND;
+            case 39: return GRAB_JOB_ALL;
+            case 40: return JOB_ASSIGN_ALL;
+            case 41: return GET_STATUS_UNIQUE;
+            case 42: return STATUS_RES_UNIQUE;
         }
         return null;
     }
