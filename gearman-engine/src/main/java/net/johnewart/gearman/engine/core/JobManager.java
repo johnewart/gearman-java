@@ -1,10 +1,7 @@
 package net.johnewart.gearman.engine.core;
 
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.annotation.Metered;
-import com.yammer.metrics.annotation.Timed;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Meter;
+import com.codahale.metrics.annotation.Metered;
+import com.codahale.metrics.annotation.Timed;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
@@ -25,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 
 public class JobManager {

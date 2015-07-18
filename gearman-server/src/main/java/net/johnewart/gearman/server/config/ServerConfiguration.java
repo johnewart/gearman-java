@@ -1,11 +1,10 @@
 package net.johnewart.gearman.server.config;
 
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
-import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
-import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 
 public interface ServerConfiguration {
@@ -28,5 +27,7 @@ public interface ServerConfiguration {
     JobHandleFactory getJobHandleFactory();
 
     UniqueIdFactory getUniqueIdFactory();
+
+    MetricRegistry getMetricRegistry();
 
 }

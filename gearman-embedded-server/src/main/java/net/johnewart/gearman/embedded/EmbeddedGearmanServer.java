@@ -1,5 +1,6 @@
 package net.johnewart.gearman.embedded;
 
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
@@ -25,11 +26,12 @@ public class EmbeddedGearmanServer {
     final QueueMetrics queueMetrics;
 
     public EmbeddedGearmanServer() {
+        MetricRegistry registry = new MetricRegistry();
         JobQueueFactory jobQueueFactory = new MemoryJobQueueFactory();
         jobHandleFactory = new LocalJobHandleFactory("embedded");
         uniqueIdFactory = new LocalUniqueIdFactory();
         ExceptionStorageEngine exceptionStore = new NoopExceptionStorageEngine();
-        queueMetrics = new MetricsEngine();
+        queueMetrics = new MetricsEngine(registry);
         jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, exceptionStore, queueMetrics);
     }
 

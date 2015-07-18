@@ -1,9 +1,7 @@
 package net.johnewart.gearman.server.web;
 
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.codahale.metrics.servlets.HealthCheckServlet;
+import com.codahale.metrics.servlets.MetricsServlet;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -14,12 +12,10 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.yammer.metrics.reporting.AdminServlet;
-import com.yammer.metrics.reporting.MetricsServlet;
-
-import net.johnewart.gearman.server.config.ServerConfiguration;
-
 import javax.servlet.http.HttpServlet;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WebListener {
     private final Logger LOG = LoggerFactory.getLogger(WebListener.class);
@@ -31,9 +27,10 @@ public class WebListener {
     }
 
     public Map<String, HttpServlet> getServletMappings() {
-        final MetricsServlet metricsServlet = new MetricsServlet(true);
+        final MetricsServlet metricsServlet = new MetricsServlet(serverConfiguration.getMetricRegistry());
 
-        final AdminServlet adminServlet = new AdminServlet();
+        final HealthCheckServlet healthCheckServlet =
+                new HealthCheckServlet();
         final GearmanServlet gearmanServlet =
                 new GearmanServlet(serverConfiguration.getJobQueueMonitor(),
                                    serverConfiguration.getJobManager());
@@ -52,7 +49,7 @@ public class WebListener {
         mappings.put("/gearman/*", gearmanServlet);
         mappings.put("/queues/*", jobQueueServlet);
         mappings.put("/metrics/*", metricsServlet);
-        mappings.put("/admin/*", adminServlet);
+        mappings.put("/health/*", healthCheckServlet);
         mappings.put("/cluster/*", clusterServlet);
         mappings.put("/exceptions/*", exceptionsServlet);
         mappings.put("/", dashboardServlet);

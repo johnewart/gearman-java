@@ -2,6 +2,7 @@ package net.johnewart.gearman.server.config;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
@@ -9,7 +10,6 @@ import net.johnewart.gearman.engine.metrics.MetricsEngine;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.storage.ExceptionStorageEngine;
-import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import net.johnewart.gearman.engine.util.LocalJobHandleFactory;
 import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 import net.johnewart.gearman.server.cluster.config.ClusterConfiguration;
@@ -18,7 +18,6 @@ import net.johnewart.gearman.server.cluster.queue.factories.HazelcastJobQueueFac
 import net.johnewart.gearman.server.cluster.util.HazelcastJobHandleFactory;
 import net.johnewart.gearman.server.cluster.util.HazelcastUniqueIdFactory;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.NoopJobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +38,8 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private ExceptionStoreConfiguration exceptionStoreConfiguration;
     private JobHandleFactory jobHandleFactory;
     private UniqueIdFactory uniqueIdFactory;
-    private QueueMetrics queueMetrics = new MetricsEngine();
+    private MetricRegistry metricRegistry;
+    private QueueMetrics queueMetrics;
 
     public void setPort(int port) {
         this.port = port;
@@ -146,7 +146,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
                                         getJobHandleFactory(),
                                         getUniqueIdFactory(),
                                         getExceptionStorageEngine(),
-                                        queueMetrics);
+                                        getQueueMetrics());
         }
 
         return jobManager;
@@ -155,7 +155,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobQueueMonitor getJobQueueMonitor() {
         if (jobQueueMonitor == null) {
-            jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
+            jobQueueMonitor = new SnapshottingJobQueueMonitor(getQueueMetrics());
         }
 
         return jobQueueMonitor;
@@ -179,7 +179,22 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         return uniqueIdFactory;
     }
 
+    @Override
+    public MetricRegistry getMetricRegistry()
+    {
+        if (metricRegistry == null)
+        {
+            metricRegistry = new MetricRegistry();
+        }
+        return metricRegistry;
+    }
+
+
     public QueueMetrics getQueueMetrics() {
+        if (queueMetrics == null)
+        {
+            queueMetrics = new MetricsEngine(getMetricRegistry());
+        }
         return queueMetrics;
     }
 

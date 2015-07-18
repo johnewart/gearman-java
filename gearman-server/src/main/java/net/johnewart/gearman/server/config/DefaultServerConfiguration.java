@@ -1,8 +1,6 @@
 package net.johnewart.gearman.server.config;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
@@ -16,6 +14,9 @@ import net.johnewart.gearman.engine.util.LocalUniqueIdFactory;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 // Sane defaults.
 public class DefaultServerConfiguration extends GearmanServerConfiguration {
 
@@ -25,12 +26,14 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
     private final JobHandleFactory jobHandleFactory;
     private final UniqueIdFactory uniqueIdFactory;
     private final QueueMetrics queueMetrics;
+    private final MetricRegistry registry;
 
     public DefaultServerConfiguration() {
+        this.registry = new MetricRegistry();
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
         this.uniqueIdFactory = new LocalUniqueIdFactory();
-        this.queueMetrics = new MetricsEngine();
+        this.queueMetrics = new MetricsEngine(registry);
         this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), queueMetrics);
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
     }

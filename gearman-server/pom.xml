@@ -14,10 +14,10 @@
 
     <properties>
         <jetty.version>9.0.0.M0</jetty.version>
-        <jackson.version>2.1.1</jackson.version>
+        <jackson.version>2.4.2</jackson.version>
         <slf4j.version>1.7.2</slf4j.version>
         <logback.version>1.0.7</logback.version>
-        <metrics.version>2.1.2</metrics.version>
+        <metrics.version>3.1.2</metrics.version>
         <netty.version>4.0.7.Final</netty.version>
     </properties>
 
@@ -69,22 +69,27 @@
             <version>${jetty.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-logback</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-servlet</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-servlets</artifactId>
+            <version>${metrics.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-annotation</artifactId>
             <version>${metrics.version}</version>
         </dependency>

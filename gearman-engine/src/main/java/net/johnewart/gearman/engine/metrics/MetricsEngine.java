@@ -1,31 +1,43 @@
 package net.johnewart.gearman.engine.metrics;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Meter;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
 import org.joda.time.DateTime;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 public class MetricsEngine implements QueueMetrics {
-    private final Counter pendingJobsCounter = Metrics.newCounter(MetricsEngine.class, "pending-jobs");
-    private final Counter queuedJobsCounter = Metrics.newCounter(MetricsEngine.class, "queued-jobs");
-    private final Counter completedJobsCounter = Metrics.newCounter(MetricsEngine.class, "completed-jobs");
-    private final Counter failedJobsCounter = Metrics.newCounter(MetricsEngine.class, "failed-jobs");
-    private final Counter activeJobsCounter = Metrics.newCounter(MetricsEngine.class, "active-jobs");
-    private final Counter jobExceptionsCounter = Metrics.newCounter(MetricsEngine.class, "job-exceptions");
-    private final Meter jobMeter = Metrics.newMeter(MetricsEngine.class, "queued-jobs-meter", "enqueued", TimeUnit.SECONDS);
-    private final Counter activeWorkersCounter = Metrics.newCounter(MetricsEngine.class, "active-workers");
     private final ConcurrentHashMap<String, CounterGroup> queueCounters = new ConcurrentHashMap<>();
+
+    private final MetricRegistry registry;
+    private final Counter pendingJobsCounter;
+    private final Counter queuedJobsCounter;
+    private final Counter completedJobsCounter;
+    private final Counter failedJobsCounter;
+    private final Counter activeJobsCounter;
+    private final Counter jobExceptionsCounter;
+    private final Meter jobMeter;
+    private final Counter activeWorkersCounter;
 
     private final DateTime startTime;
 
-    public MetricsEngine() {
+    public MetricsEngine(MetricRegistry registry) {
         this.startTime = DateTime.now();
+        this.registry = registry;
+        pendingJobsCounter = registry.counter(name(MetricsEngine.class, "pending-jobs"));
+        queuedJobsCounter = registry.counter(name(MetricsEngine.class, "queued-jobs"));
+        completedJobsCounter = registry.counter(name(MetricsEngine.class, "completed-jobs"));
+        failedJobsCounter = registry.counter(name(MetricsEngine.class, "failed-jobs"));
+        activeJobsCounter = registry.counter(name(MetricsEngine.class, "active-jobs"));
+        jobExceptionsCounter = registry.counter(name(MetricsEngine.class, "job-exceptions"));
+        jobMeter = registry.meter(name(MetricsEngine.class, "queued-jobs-meter", "enqueued"));
+        activeWorkersCounter = registry.counter(name(MetricsEngine.class, "active-workers"));
     }
 
     @Override
@@ -73,22 +85,22 @@ public class MetricsEngine implements QueueMetrics {
 
     @Override
     public long getActiveJobCount() {
-        return activeJobsCounter.count();
+        return activeJobsCounter.getCount();
     }
 
     @Override
     public long getActiveJobCount(String queueName) {
-        return countersForQueue(queueName).active.count();
+        return countersForQueue(queueName).active.getCount();
     }
 
     @Override
     public long getEnqueuedJobCount() {
-        return queuedJobsCounter.count();
+        return queuedJobsCounter.getCount();
     }
 
     @Override
     public long getEnqueuedJobCount(String queueName) {
-        return countersForQueue(queueName).queued.count();
+        return countersForQueue(queueName).queued.getCount();
     }
 
     @Override
@@ -106,69 +118,69 @@ public class MetricsEngine implements QueueMetrics {
 
     @Override
     public long getCompletedJobCount() {
-        return completedJobsCounter.count();
+        return completedJobsCounter.getCount();
     }
 
     @Override
     public long getCompletedJobCount(String queueName) {
-        return countersForQueue(queueName).completed.count();
+        return countersForQueue(queueName).completed.getCount();
     }
 
     @Override
     public long getFailedJobCount() {
-        return failedJobsCounter.count();
+        return failedJobsCounter.getCount();
     }
 
     @Override
     public long getFailedJobCount(String queueName) {
-        return countersForQueue(queueName).failed.count();
+        return countersForQueue(queueName).failed.getCount();
     }
 
     @Override
     public long getExceptionCount() {
-        return jobExceptionsCounter.count();
+        return jobExceptionsCounter.getCount();
     }
 
     @Override
     public long getExceptionCount(String queueName) {
-        return countersForQueue(queueName).exceptions.count();
+        return countersForQueue(queueName).exceptions.getCount();
     }
 
     @Override
     public long getRunningJobsCount() {
-        return activeJobsCounter.count();
+        return activeJobsCounter.getCount();
     }
 
     @Override
     public long getRunningJobsCount(String queueName) {
-        return countersForQueue(queueName).active.count();
+        return countersForQueue(queueName).active.getCount();
     }
 
     @Override
     public long getPendingJobsCount() {
-        return pendingJobsCounter.count();
+        return pendingJobsCounter.getCount();
     }
 
     @Override
     public long getPendingJobsCount(String queueName) {
-        return countersForQueue(queueName).low.count() +
-               countersForQueue(queueName).mid.count() +
-               countersForQueue(queueName).high.count();
+        return countersForQueue(queueName).low.getCount() +
+               countersForQueue(queueName).mid.getCount() +
+               countersForQueue(queueName).high.getCount();
     }
 
     @Override
     public long getHighPriorityJobsCount(String queueName) {
-        return countersForQueue(queueName).high.count();
+        return countersForQueue(queueName).high.getCount();
     }
 
     @Override
     public long getMidPriorityJobsCount(String queueName) {
-        return countersForQueue(queueName).mid.count();
+        return countersForQueue(queueName).mid.getCount();
     }
 
     @Override
     public long getLowPriorityJobsCount(String queueName) {
-        return countersForQueue(queueName).low.count();
+        return countersForQueue(queueName).low.getCount();
     }
 
     @Override
@@ -178,12 +190,12 @@ public class MetricsEngine implements QueueMetrics {
 
     @Override
     public long getActiveWorkers() {
-        return activeWorkersCounter.count();
+        return activeWorkersCounter.getCount();
     }
 
     @Override
     public long getActiveWorkers(String queueName) {
-        return countersForQueue(queueName).workers.count();
+        return countersForQueue(queueName).workers.getCount();
     }
 
     private void decrementActive(Job job) {
@@ -230,7 +242,7 @@ public class MetricsEngine implements QueueMetrics {
 
     private CounterGroup countersForQueue(String queueName) {
         if(!queueCounters.containsKey(queueName)) {
-            queueCounters.put(queueName, new CounterGroup(queueName));
+            queueCounters.put(queueName, new CounterGroup(queueName, registry));
         }
 
         return queueCounters.get(queueName);
@@ -247,16 +259,16 @@ public class MetricsEngine implements QueueMetrics {
         public final Counter high;
         public final Counter workers;
 
-        public CounterGroup(String queueName) {
-            low = Metrics.newCounter(MetricsEngine.class, queueName, "pending.low");
-            mid = Metrics.newCounter(MetricsEngine.class, queueName, "pending.mid");
-            high = Metrics.newCounter(MetricsEngine.class, queueName, "pending.high");
-            queued = Metrics.newCounter(MetricsEngine.class, queueName, "queued");
-            completed = Metrics.newCounter(MetricsEngine.class, queueName, "completed");
-            failed = Metrics.newCounter(MetricsEngine.class, queueName, "failed");
-            active = Metrics.newCounter(MetricsEngine.class, queueName, "active");
-            exceptions = Metrics.newCounter(MetricsEngine.class, queueName, "exceptions");
-            workers = Metrics.newCounter(MetricsEngine.class, queueName, "workers");
+        public CounterGroup(String queueName, MetricRegistry registry) {
+            low = registry.counter(name(MetricsEngine.class, queueName, "pending.low"));
+            mid = registry.counter(name(MetricsEngine.class, queueName, "pending.mid"));
+            high = registry.counter(name(MetricsEngine.class, queueName, "pending.high"));
+            queued = registry.counter(name(MetricsEngine.class, queueName, "queued"));
+            completed = registry.counter(name(MetricsEngine.class, queueName, "completed"));
+            failed = registry.counter(name(MetricsEngine.class, queueName, "failed"));
+            active = registry.counter(name(MetricsEngine.class, queueName, "active"));
+            exceptions = registry.counter(name(MetricsEngine.class, queueName, "exceptions"));
+            workers = registry.counter(name(MetricsEngine.class, queueName, "workers"));
         }
     }
 }

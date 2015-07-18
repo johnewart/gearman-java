@@ -2,9 +2,6 @@ package net.johnewart.gearman.server.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.shuzai.Frequency;
 import net.johnewart.shuzai.SampleMethod;
@@ -39,15 +36,7 @@ public class SnapshottingJobQueueMonitor implements JobQueueMonitor {
 
         Runnable snapshotTask = new Runnable() {
             public void run() {
-                final Timer timer = Metrics.newTimer(SnapshottingJobQueueMonitor.class, "snapshots", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
-
-                final TimerContext context = timer.time();
-
-                try {
-                    snapshotJobQueues();
-                } finally {
-                    context.stop();
-                }
+                snapshotJobQueues();
             }
         };
 

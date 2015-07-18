@@ -13,7 +13,7 @@
 
     <properties>
         <jetty.version>9.0.0.M0</jetty.version>
-        <metrics.version>2.1.2</metrics.version>
+        <metrics.version>3.1.2</metrics.version>
         <bonecp.version>0.7.1.RELEASE</bonecp.version>
         <postgres.version>9.1-901.jdbc4</postgres.version>
         <jedis.version>2.1.0</jedis.version>
@@ -80,23 +80,28 @@
             <version>13.0.1</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-logback</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-servlet</artifactId>
             <version>${metrics.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-annotation</artifactId>
+            <version>${metrics.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-healthchecks</artifactId>
             <version>${metrics.version}</version>
         </dependency>
     </dependencies>

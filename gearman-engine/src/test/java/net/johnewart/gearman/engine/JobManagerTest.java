@@ -1,29 +1,28 @@
 package net.johnewart.gearman.engine;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
+import com.codahale.metrics.MetricRegistry;
+import com.google.common.collect.ImmutableSet;
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.common.JobStatus;
+import net.johnewart.gearman.common.interfaces.EngineClient;
+import net.johnewart.gearman.common.interfaces.EngineWorker;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.factories.JobFactory;
+import net.johnewart.gearman.engine.factories.TestJobHandleFactory;
+import net.johnewart.gearman.engine.factories.TestUniqueIdFactory;
 import net.johnewart.gearman.engine.metrics.MetricsEngine;
+import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableSet;
-
-import net.johnewart.gearman.common.Job;
-import net.johnewart.gearman.common.JobStatus;
-import net.johnewart.gearman.common.interfaces.EngineClient;
-import net.johnewart.gearman.common.interfaces.EngineWorker;
-import net.johnewart.gearman.engine.core.JobManager;
-import net.johnewart.gearman.engine.core.UniqueIdFactory;
-import net.johnewart.gearman.engine.factories.JobFactory;
-import net.johnewart.gearman.engine.factories.TestJobHandleFactory;
-import net.johnewart.gearman.engine.factories.TestUniqueIdFactory;
-import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JobManagerTest {
     private JobManager jobManager;
@@ -34,14 +33,15 @@ public class JobManagerTest {
 
     public JobManagerTest()
     {
-        jobHandleFactory = new TestJobHandleFactory();
-        uniqueIdFactory = new TestUniqueIdFactory();
     }
 
     @Before
     public void initialize() {
-        metricsEngine = new MetricsEngine();
+        metricsEngine = new MetricsEngine(new MetricRegistry());
+        jobHandleFactory = new TestJobHandleFactory();
+        uniqueIdFactory = new TestUniqueIdFactory();
         jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), metricsEngine);
+
         final ImmutableSet<String> abilities = ImmutableSet.of("reverseString", "computeBigStuff");
         worker = mock(EngineWorker.class);
         when(worker.getAbilities()).thenReturn(abilities);

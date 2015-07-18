@@ -1,13 +1,13 @@
 package net.johnewart.gearman.engine.healthchecks;
 
-import com.yammer.metrics.core.HealthCheck;
+import com.codahale.metrics.health.HealthCheck;
 import redis.clients.jedis.Jedis;
 
-public class RedisHealthCheck extends HealthCheck {
+public class RedisHealthCheck extends HealthCheck
+{
     private final Jedis redisClient;
 
     public RedisHealthCheck(Jedis redisClient) {
-        super("redis");
         this.redisClient = redisClient;
     }
 

@@ -1,8 +1,8 @@
 package net.johnewart.gearman.server.net;
 
+import com.codahale.metrics.annotation.Metered;
+import com.codahale.metrics.annotation.Timed;
 import com.google.common.collect.ImmutableList;
-import com.yammer.metrics.annotation.Metered;
-import com.yammer.metrics.annotation.Timed;
 import io.netty.channel.Channel;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobStatus;

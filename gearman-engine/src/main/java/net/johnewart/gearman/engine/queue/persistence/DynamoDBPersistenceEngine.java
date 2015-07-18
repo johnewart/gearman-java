@@ -5,13 +5,22 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.document.*;
-import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
+import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.annotation.Timed;
-import com.yammer.metrics.core.*;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
@@ -19,10 +28,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.sql.*;
-import java.util.*;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class DynamoDBPersistenceEngine implements PersistenceEngine {
     private static Logger LOG = LoggerFactory.getLogger(DynamoDBPersistenceEngine.class);
@@ -31,7 +42,6 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
     private final DynamoDB dynamoDB;
     private final AmazonDynamoDBClient client;
     private final DynamoDBMapper mapper;
-    private final com.yammer.metrics.core.Timer writeTimer;
 
     public DynamoDBPersistenceEngine(final String endpoint,
                                      final String accessKey,
@@ -49,7 +59,6 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         this.dynamoDB = new DynamoDB(client);
         this.tableName = tableName;
         mapper = new DynamoDBMapper(client);
-        writeTimer = Metrics.newTimer(DynamoDBPersistenceEngine.class, "dynamodb", "writes");
 
         if (!validateOrCreateTable(readUnits, writeUnits)) {
             throw new SQLException("Unable to validate or create jobs table '" + tableName + "'. Check credentials.");
@@ -153,7 +162,6 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
     @Timed(name = "dynamodb.write")
     @Override
     public boolean write(Job job) {
-        long startTime = new Date().getTime();
         ObjectMapper objectMapper = new ObjectMapper();
         Table table = dynamoDB.getTable(tableName);
 
@@ -171,8 +179,6 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
                     .withString("JSON", jobJSON);
 
             table.putItem(item);
-            long timeDiff = new Date().getTime() - startTime;
-            writeTimer.update(timeDiff, TimeUnit.MILLISECONDS);
             return true;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
