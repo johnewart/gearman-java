@@ -41,7 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   Netty - CODEC - PacketHandler - NetworkManager - JobManager
  *
  */
-public class NetworkManager {
+public class NetworkManager
+{
     private final JobManager jobManager;
     private final ConcurrentHashMap<Channel, NetworkEngineWorker> workers;
     private final ConcurrentHashMap<Channel, NetworkEngineClient> clients;
@@ -56,12 +57,14 @@ public class NetworkManager {
 
     public synchronized void channelDisconnected(Channel channel)
     {
-        if(workers.containsKey(channel))
+        if (workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
             jobManager.unregisterWorker(worker);
             workers.remove(channel);
-        } else if (clients.containsKey(channel)) {
+        }
+        else if (clients.containsKey(channel))
+        {
             EngineClient client = clients.get(channel);
             jobManager.unregisterClient(client);
             clients.remove(channel);
@@ -71,21 +74,23 @@ public class NetworkManager {
     public void sleepingWorker(Channel channel)
     {
         // Remove from any worker lists
-        if(workers.containsKey(channel))
+        if (workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
             jobManager.markWorkerAsAsleep(worker);
         }
     }
 
-    public void registerAbility(String functionName, Channel channel) {
+    public void registerAbility(String functionName, Channel channel)
+    {
         NetworkEngineWorker worker = findOrCreateWorker(channel);
         worker.addAbility(functionName);
         jobManager.registerWorkerAbility(functionName, worker);
     }
 
-    public void unregisterAbility(String functionName, Channel channel) {
-        if(workers.containsKey(channel))
+    public void unregisterAbility(String functionName, Channel channel)
+    {
+        if (workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
             worker.removeAbility(functionName);
@@ -93,34 +98,45 @@ public class NetworkManager {
         }
     }
 
-    public void nextJobForWorker(Channel channel, boolean uniqueID) {
-        if(workers.containsKey(channel))
+    public void nextJobForWorker(Channel channel, boolean uniqueID)
+    {
+        if (workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
             Job nextJob = jobManager.nextJobForWorker(worker);
 
-            if(nextJob != null)
+            if (nextJob != null)
             {
                 Packet packet;
 
-                if(uniqueID)
+                if (uniqueID)
                 {
                     packet = createJobAssignUniqPacket(nextJob);
-                } else {
+                }
+                else
+                {
                     packet = createJobAssignPacket(nextJob);
                 }
 
-                try {
+                try
+                {
                     worker.send(packet);
-                } catch (Exception e) {
+                }
+                catch (Exception e)
+                {
                     LOG.error("Unable to write to worker. Re-enqueing job.");
-                    try {
+                    try
+                    {
                         jobManager.reEnqueueJob(nextJob);
-                    } catch (IllegalJobStateTransitionException ee) {
+                    }
+                    catch (IllegalJobStateTransitionException ee)
+                    {
                         LOG.error("Error re-enqueing after failed transmission: ", ee);
                     }
                 }
-            } else {
+            }
+            else
+            {
                 worker.send(new NoJob());
             }
         }
@@ -129,7 +145,8 @@ public class NetworkManager {
 
     @Timed
     @Metered
-    public void createJob(SubmitJob packet, Channel channel) {
+    public void createJob(SubmitJob packet, Channel channel)
+    {
         EngineClient client = findOrCreateClient(channel);
         String funcName = packet.getFunctionName();
         String uniqueID = packet.getUniqueId();
@@ -138,7 +155,7 @@ public class NetworkManager {
         boolean isBackground = packet.isBackground();
         long timeToRun = -1;
 
-        if(packet.getType() == PacketType.SUBMIT_JOB_EPOCH)
+        if (packet.getType() == PacketType.SUBMIT_JOB_EPOCH)
         {
             timeToRun = packet.getEpoch();
         }
@@ -146,24 +163,28 @@ public class NetworkManager {
         // This could return an existing job, or the newly generated one
         Job storedJob = jobManager.storeJobForClient(new Job(funcName, uniqueID, data, priority, isBackground, timeToRun), client);
 
-        if(storedJob != null)
+        if (storedJob != null)
         {
             client.setCurrentJob(storedJob);
             client.send(createJobCreatedPacket(storedJob));
-        } else {
+        }
+        else
+        {
             // TODO: send a failure/error packet?
         }
     }
 
-    public void checkJobStatus(GetStatus getStatus, Channel channel) {
+    public void checkJobStatus(GetStatus getStatus, Channel channel)
+    {
         EngineClient client = findOrCreateClient(channel);
-        JobStatus jobStatus =  jobManager.checkJobStatus(getStatus.jobHandle.get());
+        JobStatus jobStatus = jobManager.checkJobStatus(getStatus.jobHandle.get());
 
         StatusRes result = new StatusRes(jobStatus);
         client.send(result);
     }
 
-    public void updateJobStatus(WorkStatus workStatus) {
+    public void updateJobStatus(WorkStatus workStatus)
+    {
         String jobHandle = workStatus.getJobHandle();
         int completeNumerator = workStatus.getCompleteNumerator();
         int completeDenominator = workStatus.getCompleteDenominator();
@@ -174,10 +195,12 @@ public class NetworkManager {
     {
         NetworkEngineClient client;
 
-        if(clients.containsKey(channel))
+        if (clients.containsKey(channel))
         {
             client = clients.get(channel);
-        } else {
+        }
+        else
+        {
             client = new NetworkEngineClient(channel);
             clients.put(channel, client);
         }
@@ -189,10 +212,12 @@ public class NetworkManager {
     {
         NetworkEngineWorker worker;
 
-        if(workers.containsKey(channel))
+        if (workers.containsKey(channel))
         {
             worker = workers.get(channel);
-        } else {
+        }
+        else
+        {
             worker = new NetworkEngineWorker(channel);
             workers.put(channel, worker);
         }
@@ -200,14 +225,16 @@ public class NetworkManager {
         return worker;
     }
 
-    public void workResponse(WorkResponse response, Channel channel) {
-        if(workers.containsKey(channel))
+    public void workResponse(WorkResponse response, Channel channel)
+    {
+        if (workers.containsKey(channel))
         {
             NetworkEngineWorker worker = workers.get(channel);
             Job currentJob = jobManager.getJobByJobHandle(response.getJobHandle());
 
-            if (currentJob != null) {
-                switch(response.getType())
+            if (currentJob != null)
+            {
+                switch (response.getType())
                 {
                     case WORK_COMPLETE:
                         jobManager.handleWorkCompletion(currentJob, ((WorkCompleteResponse) response).getData());
@@ -236,33 +263,40 @@ public class NetworkManager {
         }
     }
 
-    public JobManager getJobManager() {
+    public JobManager getJobManager()
+    {
         return jobManager;
     }
 
-    public final Packet createJobAssignPacket(Job job) {
-        return  new JobAssign(job.getJobHandle(), job.getFunctionName(), job.getData());
+    public final Packet createJobAssignPacket(Job job)
+    {
+        return new JobAssign(job.getJobHandle(), job.getFunctionName(), job.getData());
     }
 
-    public final Packet createJobAssignUniqPacket(Job job) {
+    public final Packet createJobAssignUniqPacket(Job job)
+    {
         return new JobAssignUniq(job.getJobHandle(), job.getFunctionName(), job.getUniqueID(), job.getData());
     }
-    public final Packet createJobCreatedPacket(Job job) {
+
+    public final Packet createJobCreatedPacket(Job job)
+    {
         return new JobCreated(job.getJobHandle());
     }
 
-    public final Packet createWorkStatusPacket(Job job) {
+    public final Packet createWorkStatusPacket(Job job)
+    {
         return new WorkStatus(job.getJobHandle(), job.getNumerator(), job.getDenominator());
     }
 
-    public final Packet createStatusResponsePacket(Job job) {
+    public final Packet createStatusResponsePacket(Job job)
+    {
         boolean isRunning = job.isRunning();
         boolean knownState = true;
         int numerator = job.getNumerator();
         int denominator = job.getDenominator();
         String jobHandle = job.getJobHandle();
 
-        if(numerator == 0 && denominator == 0)
+        if (numerator == 0 && denominator == 0)
         {
             knownState = false;
         }
@@ -281,29 +315,23 @@ public class NetworkManager {
         return ImmutableList.copyOf(workers.values());
     }
 
-    public void handleEchoRequest(EchoRequest request, Channel channel) {
+    public void handleEchoRequest(EchoRequest request, Channel channel)
+    {
         EchoResponse response = new EchoResponse(request);
         channel.write(response);
     }
 
-    public void resetWorkerAbilities(Channel channel) {
+    public void resetWorkerAbilities(Channel channel)
+    {
         NetworkEngineWorker worker = findOrCreateWorker(channel);
         jobManager.resetWorkerAbilities(worker);
     }
 
-    public void handleOptionRequest(OptionRequest packet, Channel channel) {
+    public void handleOptionRequest(OptionRequest packet, Channel channel)
+    {
         //TODO: mark that the client wants exceptions (why would it not want them?)
         OptionResponse response = new OptionResponse(packet.getOption());
         channel.write(response);
     }
-
-    // TODO: address this; temporary fix to support PHP worker - the C++ daemon has deviated from the spec some
-    public void allJobsForWorker(Channel channel)
-    {
-        if(workers.containsKey(channel))
-        {
-            NetworkEngineWorker worker = workers.get(channel);
-            worker.send(new NoJob());
-        }
-    }
 }
+

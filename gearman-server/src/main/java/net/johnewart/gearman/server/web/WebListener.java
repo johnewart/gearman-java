@@ -30,7 +30,7 @@ public class WebListener {
         final MetricsServlet metricsServlet = new MetricsServlet(serverConfiguration.getMetricRegistry());
 
         final HealthCheckServlet healthCheckServlet =
-                new HealthCheckServlet();
+                new HealthCheckServlet(serverConfiguration.getHealthCheckRegistry());
         final GearmanServlet gearmanServlet =
                 new GearmanServlet(serverConfiguration.getJobQueueMonitor(),
                                    serverConfiguration.getJobManager());

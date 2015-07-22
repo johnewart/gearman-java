@@ -111,7 +111,8 @@ public class PacketHandler extends SimpleChannelInboundHandler<Object> {
                 networkManager.nextJobForWorker(channel, true);
                 return;
             case GRAB_JOB_ALL:
-                networkManager.allJobsForWorker(channel);
+                // TODO: Consider support for partitioning and reducing here
+                networkManager.nextJobForWorker(channel, true);
                 return;
             case SUBMIT_JOB:
             case SUBMIT_JOB_BG:

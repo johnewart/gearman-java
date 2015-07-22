@@ -7,4 +7,4 @@ persistenceEngine:
   engine: redis
   redis:
     host: localhost
-    port: 6379
+    port: 8005

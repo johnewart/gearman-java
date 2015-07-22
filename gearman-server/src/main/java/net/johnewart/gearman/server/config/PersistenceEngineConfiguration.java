@@ -1,10 +1,17 @@
 package net.johnewart.gearman.server.config;
 
+import com.codahale.metrics.health.HealthCheck;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
-import net.johnewart.gearman.engine.queue.factories.*;
+import net.johnewart.gearman.engine.healthchecks.RedisHealthCheck;
+import net.johnewart.gearman.engine.queue.factories.DynamoDBPersistedJobQueueFactory;
+import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
+import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
+import net.johnewart.gearman.engine.queue.factories.PostgreSQLPersistedJobQueueFactory;
+import net.johnewart.gearman.engine.queue.factories.RedisPersistedJobQueueFactory;
 import net.johnewart.gearman.server.config.persistence.DynamoDBConfiguration;
 import net.johnewart.gearman.server.config.persistence.PostgreSQLConfiguration;
 import net.johnewart.gearman.server.config.persistence.RedisConfiguration;
+import redis.clients.jedis.Jedis;
 
 public class PersistenceEngineConfiguration {
 
@@ -98,5 +105,15 @@ public class PersistenceEngineConfiguration {
         }
 
         return jobQueueFactory;
+    }
+
+    public HealthCheck getHealthCheck()
+    {
+        switch(getEngine()) {
+            case ENGINE_REDIS:
+                return new RedisHealthCheck(new Jedis(redis.getHost(), redis.getPort()));
+            default:
+                return null;
+        }
     }
 }

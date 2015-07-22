@@ -3,6 +3,8 @@ package net.johnewart.gearman.server.config;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheck;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
@@ -40,6 +42,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private UniqueIdFactory uniqueIdFactory;
     private MetricRegistry metricRegistry;
     private QueueMetrics queueMetrics;
+    private HealthCheckRegistry healthCheckRegistry;
 
     public void setPort(int port) {
         this.port = port;
@@ -218,5 +221,19 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         this.uniqueIdFactory = new HazelcastUniqueIdFactory(clusterConfiguration.getHazelcastInstance());
         this.jobManager = new ClusterJobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, clusterConfiguration.getHazelcastInstance(), queueMetrics);
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
+    }
+
+    public HealthCheckRegistry getHealthCheckRegistry()
+    {
+        if (healthCheckRegistry == null)
+        {
+            healthCheckRegistry = new HealthCheckRegistry();
+            HealthCheck dataStoreHealthcheck = persistenceEngine.getHealthCheck();
+            if (dataStoreHealthcheck != null)
+            {
+                healthCheckRegistry.register(persistenceEngine.getEngine(), dataStoreHealthcheck);
+            }
+        }
+        return healthCheckRegistry;
     }
 }
