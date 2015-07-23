@@ -44,7 +44,7 @@ public class ExceptionsServlet extends HttpServlet {
             final OutputStream output = resp.getOutputStream();
             OutputStreamWriter wr = new OutputStreamWriter(output);
 
-            if(exceptionStorageEngine.getClass() != NoopExceptionStorageEngine.class) {
+            if(exceptionStorageEngine != null && exceptionStorageEngine.getClass() != NoopExceptionStorageEngine.class) {
                 cfg.getTemplate("exceptions.ftl").process(new ExceptionsView(exceptionStorageEngine, pageSize, pageNum), wr);
             } else {
                 cfg.getTemplate("noexceptions.ftl").process(null, wr);

@@ -1,4 +1,4 @@
-<#-- @ftlvariable name="" type="net.johnewart.gearman.server.web.SystemStatusView" -->
+<#-- @ftlvariable name="" type="net.johnewart.gearman.server.web.StatusView" -->
 
 <#include "layout.ftl">
 <@layout>

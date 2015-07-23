@@ -66,9 +66,11 @@
         return numberWithCommas(round(x));
     }
 
-    function drawGraph(snapshots, selector) {
+    function drawGraph(data, selector) {
 
         var color = d3.scale.category20b();
+        var snapshots = data.snapshots;
+        var latest = data.latest;
 
         // Set the dimensions of the canvas / graph
         var	margin = {top: 10, right: 40, bottom: 30, left: 40},
@@ -115,8 +117,11 @@
 
         snapshots.forEach(function(d) {
             d.date = new Date(d.timestamp);
-            d.currentJobs = +d.totalQueued;
         });
+
+        if(snapshots.length > 0) {
+            snapshots[snapshots.length-1].totalQueued = latest.totalQueued;
+        }
 
         // Scale the range of the data
         x.domain(d3.extent(snapshots, function(d) { return d.timestamp; }));

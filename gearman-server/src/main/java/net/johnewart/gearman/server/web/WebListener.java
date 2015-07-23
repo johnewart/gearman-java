@@ -33,7 +33,8 @@ public class WebListener {
                 new HealthCheckServlet(serverConfiguration.getHealthCheckRegistry());
         final GearmanServlet gearmanServlet =
                 new GearmanServlet(serverConfiguration.getJobQueueMonitor(),
-                                   serverConfiguration.getJobManager());
+                                   serverConfiguration.getJobManager(),
+                                   serverConfiguration.getQueueMetrics());
         final DashboardServlet dashboardServlet =
                 new DashboardServlet(serverConfiguration.getJobQueueMonitor(),
                                      serverConfiguration.getQueueMetrics());

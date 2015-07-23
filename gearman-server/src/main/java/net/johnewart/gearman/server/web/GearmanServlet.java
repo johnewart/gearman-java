@@ -8,6 +8,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.QueuedJob;
+import net.johnewart.gearman.engine.metrics.MetricsEngine;
+import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
@@ -35,15 +37,18 @@ import java.util.concurrent.TimeUnit;
 
 public class GearmanServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json";
-    private JobQueueMonitor jobQueueMonitor;
-    private JobManager jobManager;
     private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
     private final Logger LOG = LoggerFactory.getLogger(GearmanServlet.class);
 
-    public GearmanServlet(JobQueueMonitor jobQueueMonitor, JobManager jobManager)
+    private final JobQueueMonitor jobQueueMonitor;
+    private final JobManager jobManager;
+    private final QueueMetrics jobQueueMetrics;
+
+    public GearmanServlet(JobQueueMonitor jobQueueMonitor, JobManager jobManager, QueueMetrics jobQueueMetrics)
     {
         this.jobQueueMonitor = jobQueueMonitor;
         this.jobManager = jobManager;
+        this.jobQueueMetrics = jobQueueMetrics;
     }
 
     @Override
@@ -109,22 +114,33 @@ public class GearmanServlet extends HttpServlet {
         if (jobQueueMonitor != null) {
             snapshots.addAll(jobQueueMonitor.getSystemSnapshots());
         }
-        json.writeStartArray();
-        for(SystemSnapshot snapshot : snapshots)
+        json.writeStartObject();
         {
+            json.writeFieldName("snapshots");
+            json.writeStartArray();
+            for (SystemSnapshot snapshot : snapshots) {
+                json.writeStartObject();
+                {
+                    json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
+                    json.writeNumberField("totalQueued", snapshot.getTotalJobsQueued());
+                    json.writeNumberField("totalProcessed", snapshot.getTotalJobsProcessed());
+                    json.writeNumberField("diffQueued", snapshot.getJobsQueuedSinceLastSnapshot());
+                    json.writeNumberField("diffProcessed", snapshot.getJobsProcessedSinceLastSnapshot());
+                    json.writeNumberField("heapUsed", snapshot.getHeapUsed());
+                    json.writeNumberField("heapSize", snapshot.getHeapSize());
+                }
+                json.writeEndObject();
+            }
+            json.writeEndArray();
+            json.writeFieldName("latest");
             json.writeStartObject();
             {
-                json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                json.writeNumberField("totalQueued", snapshot.getTotalJobsQueued());
-                json.writeNumberField("totalProcessed", snapshot.getTotalJobsProcessed());
-                json.writeNumberField("diffQueued", snapshot.getJobsQueuedSinceLastSnapshot());
-                json.writeNumberField("diffProcessed", snapshot.getJobsProcessedSinceLastSnapshot());
-                json.writeNumberField("heapUsed", snapshot.getHeapUsed());
-                json.writeNumberField("heapSize", snapshot.getHeapSize());
+                json.writeNumberField("totalQueued", jobQueueMetrics.getEnqueuedJobCount());
+                json.writeNumberField("totalProcessed", jobQueueMetrics.getCompletedJobCount());
             }
             json.writeEndObject();
         }
-        json.writeEndArray();
+        json.writeEndObject();
     }
 
     public void writeAllJobQueueStats(JsonGenerator json) throws IOException {

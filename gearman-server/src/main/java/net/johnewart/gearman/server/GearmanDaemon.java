@@ -2,7 +2,6 @@ package net.johnewart.gearman.server;
 
 import net.johnewart.gearman.server.config.DefaultServerConfiguration;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
-import net.johnewart.gearman.server.config.ServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
 import net.johnewart.gearman.server.web.WebListener;
 import org.slf4j.LoggerFactory;

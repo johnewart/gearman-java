@@ -3,12 +3,9 @@ package net.johnewart.gearman.server.web;
 import java.net.UnknownHostException;
 import java.util.*;
 
-import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
-import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.JobQueueSnapshot;
 import net.johnewart.gearman.server.util.SystemSnapshot;
 
 public class StatusView {

@@ -1,12 +1,8 @@
 package net.johnewart.gearman.server.web;
 
-import java.util.List;
-
-import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
-import net.johnewart.gearman.server.util.JobQueueSnapshot;
 
 public class JobQueueStatusView extends StatusView {
     private final String jobQueueName;

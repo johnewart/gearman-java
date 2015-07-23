@@ -3,7 +3,6 @@ package net.johnewart.gearman.server.web;
 import com.fasterxml.jackson.core.JsonFactory;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateException;
-import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.server.util.JobQueueMonitor;
 import org.slf4j.Logger;

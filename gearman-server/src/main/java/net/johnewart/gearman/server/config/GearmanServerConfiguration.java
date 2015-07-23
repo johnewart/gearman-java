@@ -43,6 +43,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private MetricRegistry metricRegistry;
     private QueueMetrics queueMetrics;
     private HealthCheckRegistry healthCheckRegistry;
+    private Object configLock = new Object();
 
     public void setPort(int port) {
         this.port = port;
@@ -194,9 +195,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
 
 
     public QueueMetrics getQueueMetrics() {
-        if (queueMetrics == null)
-        {
-            queueMetrics = new MetricsEngine(getMetricRegistry());
+        synchronized (configLock) {
+            if (queueMetrics == null) {
+                queueMetrics = new MetricsEngine(getMetricRegistry());
+            }
         }
         return queueMetrics;
     }
@@ -228,10 +230,11 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         if (healthCheckRegistry == null)
         {
             healthCheckRegistry = new HealthCheckRegistry();
-            HealthCheck dataStoreHealthcheck = persistenceEngine.getHealthCheck();
-            if (dataStoreHealthcheck != null)
-            {
-                healthCheckRegistry.register(persistenceEngine.getEngine(), dataStoreHealthcheck);
+            if (persistenceEngine != null) {
+                HealthCheck dataStoreHealthcheck = persistenceEngine.getHealthCheck();
+                if (dataStoreHealthcheck != null) {
+                    healthCheckRegistry.register(persistenceEngine.getEngine(), dataStoreHealthcheck);
+                }
             }
         }
         return healthCheckRegistry;

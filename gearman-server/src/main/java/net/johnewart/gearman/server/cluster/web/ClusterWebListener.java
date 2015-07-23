@@ -1,10 +1,6 @@
 package net.johnewart.gearman.server.cluster.web;
 
-import net.johnewart.gearman.server.cluster.config.ClusterConfiguration;
 import net.johnewart.gearman.server.web.WebListener;
-
-import javax.servlet.http.HttpServlet;
-import java.util.Map;
 
 /**
  * Created with IntelliJ IDEA.

@@ -1,6 +1,5 @@
 package net.johnewart.gearman.server.web;
 
-import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.server.util.SnapshottingJobQueueMonitor;
 

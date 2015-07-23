@@ -25,7 +25,6 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
     private final JobQueueMonitor jobQueueMonitor;
     private final JobHandleFactory jobHandleFactory;
     private final UniqueIdFactory uniqueIdFactory;
-    private final QueueMetrics queueMetrics;
     private final MetricRegistry registry;
 
     public DefaultServerConfiguration() {
@@ -33,9 +32,8 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
         this.jobQueueFactory = new MemoryJobQueueFactory();
         this.uniqueIdFactory = new LocalUniqueIdFactory();
-        this.queueMetrics = new MetricsEngine(registry);
-        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), queueMetrics);
-        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(queueMetrics);
+        this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), getQueueMetrics());
+        this.jobQueueMonitor = new SnapshottingJobQueueMonitor(getQueueMetrics());
     }
 
     @Override
