@@ -17,7 +17,7 @@ public interface JobQueue {
      */
     void enqueue(Job job) throws QueueFullException, PersistenceException;
 
-    int size(JobPriority priority);
+    long size(JobPriority priority);
 
     /**
      * Remove a job from the queue - simply deleting it
@@ -48,7 +48,7 @@ public interface JobQueue {
 
     String getName();
 
-    int size();
+    long size();
 
     // Data
     Collection<QueuedJob> getAllJobs();

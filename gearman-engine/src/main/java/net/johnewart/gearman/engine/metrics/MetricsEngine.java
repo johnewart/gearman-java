@@ -78,7 +78,8 @@ public class MetricsEngine implements QueueMetrics {
     public void handleWorkerRemoval(EngineWorker worker) {
         activeWorkersCounter.dec();
         for(String jobQueue : worker.getAbilities()) {
-            workerCounters.get(jobQueue).dec();
+            if (workerCounters.get(jobQueue) != null)
+                workerCounters.get(jobQueue).dec();
         }
     }
 
@@ -236,10 +237,10 @@ public class MetricsEngine implements QueueMetrics {
         public final Counter failed;
         public final Counter active;
         public final Counter exceptions;
-        public final Gauge<Integer> low;
-        public final Gauge<Integer> mid;
-        public final Gauge<Integer> high;
-        public final Gauge<Integer> total;
+        public final Gauge<Long> low;
+        public final Gauge<Long> mid;
+        public final Gauge<Long> high;
+        public final Gauge<Long> total;
         private final JobQueue jobQueue;
 
         public CounterGroup(JobQueue jobQueue, MetricRegistry registry) {

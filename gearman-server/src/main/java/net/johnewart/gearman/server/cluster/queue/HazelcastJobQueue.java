@@ -56,7 +56,7 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public int size(JobPriority priority)
+    public long size(JobPriority priority)
     {
         switch(priority) {
             case HIGH:
@@ -92,7 +92,7 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public int size() {
+    public long size() {
         return highQueue.size() + midQueue.size() + lowQueue.size();
     }
 

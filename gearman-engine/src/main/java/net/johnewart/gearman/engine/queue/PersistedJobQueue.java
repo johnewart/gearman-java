@@ -223,22 +223,22 @@ public class PersistedJobQueue implements JobQueue {
     }
 
     @Override
-    public int size()
+    public long size()
     {
-        return (int) totalCounter.getCount();
+        return totalCounter.getCount();
     }
 
     @Override
-    public int size(JobPriority priority)
+    public long size(JobPriority priority)
     {
         switch(priority)
         {
             case LOW:
-                return (int) lowCounter.getCount();
+                return lowCounter.getCount();
             case NORMAL:
-                return (int) midCounter.getCount();
+                return midCounter.getCount();
             case HIGH:
-                return (int) highCounter.getCount();
+                return highCounter.getCount();
             default:
                 return -1;
         }
