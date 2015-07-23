@@ -149,14 +149,13 @@
 
     <repositories>
         <repository>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <id>bonecp-repo</id>
-            <name>BoneCP Repository</name>
-            <url>http://jolbox.com/bonecp/downloads/maven</url>
+            <id>snapshots-repo</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
         </repository>
     </repositories>
+
 
     <build>
         <plugins>
