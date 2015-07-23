@@ -36,7 +36,16 @@ Web Interface
 
 Some of the issues that I've run into in the past have been related to visibility into job queues. To address this, I've added a web management console that lets you see the state of the system. For small installations this is a nice option because it doesn't require you to setup or have any external monitoring systems. Some screenshots here:
 
+### Main Dashboard
+
 ![Web dashboard](https://github.com/johnewart/gearman-java/raw/master/misc/dashboard.jpg)
+
+
+### All Queues
+
+![All Queues](https://github.com/johnewart/gearman-java/raw/master/misc/queues.jpg)
+
+### Per-Queue Status
 
 ![Queue overview](https://github.com/johnewart/gearman-java/raw/master/misc/queue.jpg)
 
