@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.QueuedJob;
-import net.johnewart.gearman.engine.metrics.MetricsEngine;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.server.util.JobQueueMetrics;
@@ -122,7 +121,7 @@ public class GearmanServlet extends HttpServlet {
                 json.writeStartObject();
                 {
                     json.writeNumberField("timestamp", snapshot.getTimestamp().getTime());
-                    json.writeNumberField("totalQueued", snapshot.getTotalJobsQueued());
+                    json.writeNumberField("totalPending", snapshot.getTotalJobsPending());
                     json.writeNumberField("totalProcessed", snapshot.getTotalJobsProcessed());
                     json.writeNumberField("diffQueued", snapshot.getJobsQueuedSinceLastSnapshot());
                     json.writeNumberField("diffProcessed", snapshot.getJobsProcessedSinceLastSnapshot());
@@ -135,7 +134,7 @@ public class GearmanServlet extends HttpServlet {
             json.writeFieldName("latest");
             json.writeStartObject();
             {
-                json.writeNumberField("totalQueued", jobQueueMetrics.getEnqueuedJobCount());
+                json.writeNumberField("totalPending", jobQueueMetrics.getPendingJobsCount());
                 json.writeNumberField("totalProcessed", jobQueueMetrics.getCompletedJobCount());
             }
             json.writeEndObject();
@@ -152,7 +151,7 @@ public class GearmanServlet extends HttpServlet {
             final JobQueue jobQueue = entry.getValue();
 
             if(jobQueue != null) {
-                json.writeNumberField(jobQueueName, jobQueue.size());
+                json.writeNumberField(jobQueueName, jobQueueMetrics.getPendingJobsCount(jobQueueName));
             }
         }
     }

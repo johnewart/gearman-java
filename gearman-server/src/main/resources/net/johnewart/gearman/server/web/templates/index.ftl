@@ -1,4 +1,4 @@
-<#-- @ftlvariable name="" type="net.johnewart.gearman.server.web.StatusView" -->
+<#-- @ftlvariable name="" type="net.johnewart.gearman.server.web.SystemStatusView" -->
 
 <#include "layout.ftl">
 <@layout>
@@ -96,12 +96,12 @@
         // Define the line
         var	valueline = d3.svg.line()
             .x(function(d) { return x(d.date); })
-            .y(function(d) { return y(d.totalQueued - d.totalProcessed); });
+            .y(function(d) { return y(d.total); });
 
         var area = d3.svg.area()
                 .x(function(d) { return x(d.date); })
                 .y0(height)
-                .y1(function(d) { return y(d.totalQueued - d.totalProcessed); });
+                .y1(function(d) { return y(d.totalPending); });
 
         // Adds the svg canvas
         var graph = d3.select("#" + selector);
@@ -120,7 +120,7 @@
         });
 
         if(snapshots.length > 0) {
-            snapshots[snapshots.length-1].totalQueued = latest.totalQueued;
+            snapshots[snapshots.length-1].totalPending = latest.totalPending;
         }
 
         // Scale the range of the data
@@ -130,8 +130,8 @@
         // Draw!
 
 
-        var yMax = d3.max(snapshots, function(d) { return d.totalQueued; });
-        var yMin = d3.min(snapshots, function(d) { return d.totalQueued; });
+        var yMax = d3.max(snapshots, function(d) { return d.totalPending; });
+        var yMin = d3.min(snapshots, function(d) { return d.totalPending; });
 
         y.domain([0, yMax]);
 
@@ -183,18 +183,16 @@
             .attr("class", "y axis")
             .call(yAxis);
 
-        var totalQueued = snapshots[snapshots.length-1].totalQueued;
-            var totalProcessed = snapshots[snapshots.length-1].totalProcessed;
-            var totalInQueues = totalQueued - totalProcessed;
+        var totalPending = snapshots[snapshots.length-1].totalPending;
+        var totalProcessed = snapshots[snapshots.length-1].totalProcessed;
 
-            svg.append("text")
-                     .attr("x", width - 5)
-                     .attr("y", height - 17)
-                     .attr("dy", ".71em")
-                     .attr("style","font-size:20px; font-weight: 400;")
-                     .style("text-anchor", "end")
-                     .text(totalInQueues);
-
+        svg.append("text")
+             .attr("x", width - 5)
+             .attr("y", height - 17)
+             .attr("dy", ".71em")
+             .attr("style","font-size:20px; font-weight: 400;")
+             .style("text-anchor", "end")
+             .text(totalPending);
     }
 
     </script>
@@ -202,6 +200,7 @@
             <div class="tinygraph" id="queuemetrics">
             </div>
             <script type="text/javascript">
+            function updateMetrics() {
                 var snapshots = $.parseJSON(
                     $.ajax({
                         dataType: "json",
@@ -214,6 +213,10 @@
                 );
 
                 drawGraph(snapshots, "queuemetrics");
+            }
+
+            updateMetrics();
+            //setInterval(updateMetrics, 10000);
             </script>
         </div>
     </div>

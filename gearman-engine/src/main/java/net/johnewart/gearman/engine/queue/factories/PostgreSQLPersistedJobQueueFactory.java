@@ -1,5 +1,6 @@
 package net.johnewart.gearman.engine.queue.factories;
 
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
@@ -15,15 +16,18 @@ public class PostgreSQLPersistedJobQueueFactory implements JobQueueFactory {
     private static Logger LOG = LoggerFactory.getLogger(PostgreSQLPersistedJobQueueFactory.class);
 
     private final PostgresPersistenceEngine postgresQueue;
+    private final MetricRegistry metricRegistry;
 
     public PostgreSQLPersistedJobQueueFactory(String hostname,
                                               int port,
                                               String database,
                                               String user,
                                               String password,
-                                              String tableName) throws JobQueueFactoryException {
+                                              String tableName,
+                                              MetricRegistry metricRegistry) throws JobQueueFactoryException {
         try {
-            this.postgresQueue = new PostgresPersistenceEngine(hostname, port, database, user, password, tableName);
+            this.metricRegistry = metricRegistry;
+            this.postgresQueue = new PostgresPersistenceEngine(hostname, port, database, user, password, tableName, metricRegistry);
         } catch (SQLException e) {
             LOG.error("Unable to create PostgreSQL persistence engine: ", e);
             throw new JobQueueFactoryException("Could not create the PostgreSQL persistence engine!");
@@ -32,7 +36,7 @@ public class PostgreSQLPersistedJobQueueFactory implements JobQueueFactory {
 
     @Override
     public JobQueue build(String name) throws JobQueueFactoryException {
-        return new PersistedJobQueue(name, postgresQueue);
+        return new PersistedJobQueue(name, postgresQueue, metricRegistry);
     }
 
     @Override

@@ -7,12 +7,16 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.QueuedJob;
+import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.server.config.ServerConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ServerListener {
     private final Logger LOG = LoggerFactory.getLogger(ServerListener.class);
@@ -36,12 +40,19 @@ public class ServerListener {
 
         if(jobQueueFactory != null) {
             Collection<QueuedJob> queuedJobs =  jobQueueFactory.loadPersistedJobs();
+            Set<String> queueNames =
+                    queuedJobs.parallelStream().map(p -> p.functionName).collect(Collectors.toSet());
 
             int imported = 0;
-            for(QueuedJob queuedJob : queuedJobs) {
-                boolean added = jobManager.getJobQueue(queuedJob.functionName).add(queuedJob);
-                if(added) {
-                    imported += 1;
+            for(String functionName : queueNames) {
+                try
+                {
+                    JobQueue queue = jobManager.getOrCreateJobQueue(functionName);
+                    imported += queue.size();
+                }
+                catch (JobQueueFactoryException e)
+                {
+                    e.printStackTrace();
                 }
             }
             LOG.info("Imported " + imported + " persisted jobs.");

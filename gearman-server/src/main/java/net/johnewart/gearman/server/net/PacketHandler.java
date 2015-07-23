@@ -13,10 +13,11 @@ import net.johnewart.gearman.common.packets.request.OptionRequest;
 import net.johnewart.gearman.common.packets.request.SubmitJob;
 import net.johnewart.gearman.common.packets.response.WorkResponse;
 import net.johnewart.gearman.common.packets.response.WorkStatus;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
+import java.util.Map;
 
 public class PacketHandler extends SimpleChannelInboundHandler<Object> {
 
@@ -62,12 +63,13 @@ public class PacketHandler extends SimpleChannelInboundHandler<Object> {
         switch(message.toLowerCase()) {
             case "status":
                 String header = "FUNCTION\tTOTAL\tRUNNING\tAVAILABLE_WORKERS\n";
-                Set<String> jobQueueNames = networkManager.getJobManager().getJobQueues().keySet();
+                Map<String, JobQueue> jobQueues = networkManager.getJobManager().getJobQueues();
                 channel.writeAndFlush(header);
 
-                for(String jobQueueName : jobQueueNames)
+                for(String jobQueueName : jobQueues.keySet())
                 {
-                    channel.writeAndFlush(String.format("%s\t%s\t%s\t%s\n", jobQueueName, networkManager.getJobManager().getJobQueue(jobQueueName).size(), 0, 0));
+                    JobQueue queue = jobQueues.get(jobQueueName);
+                    channel.writeAndFlush(String.format("%s\t%s\t%s\t%s\n", jobQueueName, queue.size(), 0, 0));
                 }
 
                 channel.writeAndFlush(".\n");

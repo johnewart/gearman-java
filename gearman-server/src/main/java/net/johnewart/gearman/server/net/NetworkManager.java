@@ -28,7 +28,7 @@ import net.johnewart.gearman.common.packets.response.WorkWarningResponse;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.constants.PacketType;
 import net.johnewart.gearman.engine.core.JobManager;
-import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +129,7 @@ public class NetworkManager
                     {
                         jobManager.reEnqueueJob(nextJob);
                     }
-                    catch (IllegalJobStateTransitionException ee)
+                    catch (EnqueueException ee)
                     {
                         LOG.error("Error re-enqueing after failed transmission: ", ee);
                     }
@@ -161,16 +161,22 @@ public class NetworkManager
         }
 
         // This could return an existing job, or the newly generated one
-        Job storedJob = jobManager.storeJobForClient(new Job(funcName, uniqueID, data, priority, isBackground, timeToRun), client);
+        final Job inputJob = new Job(funcName, uniqueID, data, priority, isBackground, timeToRun);
+        try
+        {
+            Job storedJob = jobManager.storeJobForClient(inputJob, client);
 
-        if (storedJob != null)
-        {
-            client.setCurrentJob(storedJob);
-            client.send(createJobCreatedPacket(storedJob));
-        }
-        else
-        {
-            // TODO: send a failure/error packet?
+            if (storedJob != null)
+            {
+                client.setCurrentJob(storedJob);
+                client.send(createJobCreatedPacket(storedJob));
+            }
+            else
+            {
+                // TODO: send a failure/error packet?
+            }
+        } catch (EnqueueException e) {
+            // TODO: Send a failure / error packet?
         }
     }
 

@@ -10,7 +10,9 @@ import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.constants.PacketType;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
 import org.slf4j.Logger;
@@ -19,7 +21,6 @@ import org.slf4j.LoggerFactory;
 public class ClusterJobManager extends JobManager implements MessageListener<WorkMessage> {
     private static Logger LOG = LoggerFactory.getLogger(ClusterJobManager.class);
 
-    private final HazelcastInstance hazelcast;
     private final ITopic<WorkMessage> workMessageTopic;
     private final static String WORK_TOPIC = "work";
 
@@ -29,8 +30,7 @@ public class ClusterJobManager extends JobManager implements MessageListener<Wor
                              HazelcastInstance hazelcast,
                              QueueMetrics queueMetrics) {
         super(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), queueMetrics);
-        this.hazelcast = hazelcast;
-        workMessageTopic = this.hazelcast.getTopic (WORK_TOPIC);
+        workMessageTopic = hazelcast.getTopic(WORK_TOPIC);
         workMessageTopic.addMessageListener(this);
     }
 
@@ -46,22 +46,39 @@ public class ClusterJobManager extends JobManager implements MessageListener<Wor
 
     @Override
     public synchronized Job storeJobForClient(Job job, EngineClient client) {
-        Job storedJob = super.storeJobForClient(job, client);
-        WorkMessage newJobMessage =
-                new WorkMessage(storedJob.getUniqueID(), storedJob.getFunctionName(), PacketType.SUBMIT_JOB, new byte[0]);
-        workMessageTopic.publish(newJobMessage);
-        return storedJob;
+        try
+        {
+            Job storedJob = super.storeJobForClient(job, client);
+            WorkMessage newJobMessage =
+                    new WorkMessage(storedJob.getUniqueID(), storedJob.getFunctionName(), PacketType.SUBMIT_JOB, new byte[0]);
+            workMessageTopic.publish(newJobMessage);
+            return storedJob;
+        }
+        catch (EnqueueException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
     public void onMessage(Message<WorkMessage> message) {
         final WorkMessage workMessage = message.getMessageObject();
+        final JobQueue queue = getJobQueue(workMessage.functionName);
+
+        // Nothing to do, we don't know about that queue
+        // TODO: If this happens, we're likely split-brain, handle this better?
+        if (queue == null) {
+            LOG.error("Queue (" + workMessage.functionName + ") for work-message doesn't exist!");
+            return;
+        }
 
         switch (workMessage.type) {
             case WORK_COMPLETE:
                 LOG.debug("Work " + workMessage.uniqueId + " completed in " + workMessage.functionName);
-                Job currentJob = getJobQueue(workMessage.functionName).findJobByUniqueId(workMessage.uniqueId);
-                if (currentJob != null) {
+                Job currentJob = queue.findJobByUniqueId(workMessage.uniqueId);
+                if (currentJob != null)
+                {
                     LOG.debug("Notifying any pending clients that  " + workMessage.uniqueId + " is complete.");
                     super.notifyClientsOfCompletion(currentJob, workMessage.data);
                 }
@@ -74,7 +91,7 @@ public class ClusterJobManager extends JobManager implements MessageListener<Wor
                 break;
             case WORK_DATA:
                 LOG.debug("Data for " + workMessage.uniqueId + " in  " + workMessage.functionName);
-                Job dataJob = getJobQueue(workMessage.functionName).findJobByUniqueId(workMessage.uniqueId);
+                Job dataJob = queue.findJobByUniqueId(workMessage.uniqueId);
                 if (dataJob != null) {
                     LOG.debug("Notifying any pending clients of updated data  " + workMessage.uniqueId + " is complete.");
                     super.notifyClientsOfCompletion(dataJob, workMessage.data);

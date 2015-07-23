@@ -37,10 +37,11 @@ public class JobManagerTest {
 
     @Before
     public void initialize() {
-        metricsEngine = new MetricsEngine(new MetricRegistry());
+        MetricRegistry metricRegistry = new MetricRegistry();
+        metricsEngine = new MetricsEngine(metricRegistry);
         jobHandleFactory = new TestJobHandleFactory();
         uniqueIdFactory = new TestUniqueIdFactory();
-        jobManager = new JobManager(new MemoryJobQueueFactory(), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), metricsEngine);
+        jobManager = new JobManager(new MemoryJobQueueFactory(metricRegistry), jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), metricsEngine);
 
         final ImmutableSet<String> abilities = ImmutableSet.of("reverseString", "computeBigStuff");
         worker = mock(EngineWorker.class);
@@ -107,14 +108,14 @@ public class JobManagerTest {
         jobManager.nextJobForWorker(worker);
 
         Assert.assertThat("Job queue has no jobs",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(0L));
 
         // Simulate abort before completion
         jobManager.unregisterWorker(worker);
 
         Assert.assertThat("Job queue has one job",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(1L));
 
         // Re-fetch the job, make sure it's the same one
@@ -136,14 +137,14 @@ public class JobManagerTest {
         jobManager.nextJobForWorker(worker);
 
         Assert.assertThat("Job queue has no jobs",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(0L));
 
         // Simulate abort before completion
         jobManager.unregisterWorker(worker);
 
         Assert.assertThat("Job queue has one job",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(1L));
 
         // Re-fetch the job, make sure it's the same one
@@ -163,14 +164,14 @@ public class JobManagerTest {
         jobManager.nextJobForWorker(worker);
 
         Assert.assertThat("Job queue has no jobs",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(0L));
 
         // Simulate abort before completion
         jobManager.unregisterWorker(worker);
 
         Assert.assertThat("Job queue has no jobs",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(0L));
 
     }
@@ -272,7 +273,7 @@ public class JobManagerTest {
         jobManager.storeJobForClient(jobTwo, mockClientTwo);
 
         Assert.assertThat("Job queue has one job because they had the same unique id",
-                jobManager.getJobQueue("reverseString").size(),
+                jobManager.getOrCreateJobQueue("reverseString").size(),
                 Is.is(1L));
 
         Assert.assertThat("There is 1 job pending in the job store",

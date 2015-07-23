@@ -3,11 +3,11 @@ package net.johnewart.gearman.server.cluster.queue;
 import com.google.common.collect.ImmutableMap;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IAtomicLong;
-import net.johnewart.gearman.server.cluster.core.HazelcastJob;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.queue.JobQueue;
+import net.johnewart.gearman.server.cluster.core.HazelcastJob;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -39,19 +39,34 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public boolean enqueue(Job job) {
+    public void enqueue(Job job) {
         localJobs.put(job.getUniqueID(), job);
         uniqueIds.add(job.getUniqueID());
 
         switch(job.getPriority()) {
             case HIGH:
-                return highQueue.add(new HazelcastJob(job));
+                highQueue.add(new HazelcastJob(job));
             case NORMAL:
-                return midQueue.add(new HazelcastJob(job));
+                midQueue.add(new HazelcastJob(job));
             case LOW:
-                return lowQueue.add(new HazelcastJob(job));
+                lowQueue.add(new HazelcastJob(job));
             default:
-                return false;
+                break;
+        }
+    }
+
+    @Override
+    public int size(JobPriority priority)
+    {
+        switch(priority) {
+            case HIGH:
+                return highQueue.size();
+            case NORMAL:
+                return midQueue.size();
+            case LOW:
+                return lowQueue.size();
+            default:
+                return -1;
         }
     }
 
@@ -77,23 +92,8 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public long size() {
+    public int size() {
         return highQueue.size() + midQueue.size() + lowQueue.size();
-    }
-
-    @Override
-    public long size(JobPriority jobPriority) {
-        switch(jobPriority) {
-            case HIGH:
-                return highQueue.size();
-            case NORMAL:
-                return midQueue.size();
-            case LOW:
-                return lowQueue.size();
-            default:
-                return -1;
-        }
-
     }
 
     @Override
@@ -107,7 +107,7 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public void setMaxSize(int size) {
+    public void setCapacity(int size) {
         maxQueueSize.set(size);
     }
 
@@ -134,12 +134,6 @@ public class HazelcastJobQueue implements JobQueue {
     }
 
     @Override
-    public String metricName() {
-        return this.queueName.replaceAll(":", ".");
-    }
-
-
-    @Override
     public Collection<QueuedJob> getAllJobs() {
         return new HashSet<>();
     }
@@ -154,8 +148,4 @@ public class HazelcastJobQueue implements JobQueue {
         return ImmutableMap.of();
     }
 
-    @Override
-    public boolean add(QueuedJob queuedJob) {
-        return false;
-    }
 }

@@ -8,8 +8,11 @@ import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
 import net.johnewart.gearman.engine.exceptions.IllegalJobStateTransitionException;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
+import net.johnewart.gearman.engine.exceptions.PersistenceException;
+import net.johnewart.gearman.engine.exceptions.QueueFullException;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.JobQueue;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
@@ -47,7 +50,6 @@ public class JobManager {
     private final JobHandleFactory jobHandleFactory;
     private final UniqueIdFactory uniqueIdFactory;
     private final ExceptionStorageEngine exceptionStorageEngine;
-
 
     private final QueueMetrics metrics;
 
@@ -107,7 +109,9 @@ public class JobManager {
                 case REENQUEUE:
                     try {
                         reEnqueueJob(job);
-                    } catch (IllegalJobStateTransitionException e) {
+                    } catch (EnqueueException e) {
+                        // Drop the job to the floor if something happens
+                        // TODO: This may not be the best solution
                         LOG.error("Unable to re-enqueue job: " + e.toString());
                     }
                     break;
@@ -134,7 +138,7 @@ public class JobManager {
         for(String jobQueueName : worker.getAbilities()) {
             getWorkerPool(jobQueueName).markSleeping(worker);
 
-            if(getJobQueue(jobQueueName).size() > 0) {
+            if (queueExists(jobQueueName) && getJobQueue(jobQueueName).size() > 0) {
                 workWaiting = true;
             }
         }
@@ -151,21 +155,24 @@ public class JobManager {
     {
         for(String functionName : worker.getAbilities())
         {
-            final JobQueue jobQueue = getJobQueue(functionName);
-            final Job job = jobQueue.poll();
-
-            if (job != null)
+            if (queueExists(functionName))
             {
-                final WorkerPool workerPool = getWorkerPool(job.getFunctionName());
-                workerPool.markAwake(worker);
+                final JobQueue jobQueue = getJobQueue(functionName);
+                final Job job = jobQueue.poll();
 
-                activeJobHandles.put(job.getJobHandle(), job);
-                activeUniqueIds.put(job.getUniqueID(), job);
-                workerJobs.put(worker, job);
-                jobWorker.put(job, worker);
-                metrics.handleJobStarted(job);
-                job.markInProgress();
-                return job;
+                if (job != null)
+                {
+                    final WorkerPool workerPool = getWorkerPool(job.getFunctionName());
+                    workerPool.markAwake(worker);
+
+                    activeJobHandles.put(job.getJobHandle(), job);
+                    activeUniqueIds.put(job.getUniqueID(), job);
+                    workerJobs.put(worker, job);
+                    jobWorker.put(job, worker);
+                    metrics.handleJobStarted(job);
+                    job.markInProgress();
+                    return job;
+                }
             }
         }
 
@@ -176,6 +183,7 @@ public class JobManager {
     public synchronized void removeJob(Job job)
     {
         // Remove it from the job queue
+
         getJobQueue(job.getFunctionName()).remove(job);
 
         // Remove it from our local tracking maps
@@ -191,17 +199,22 @@ public class JobManager {
 
     public String generateUniqueID(String functionName)
     {
-        String uniqueID;
-        JobQueue jobQueue = getJobQueue(functionName);
+        String uniqueId;
+        final JobQueue jobQueue = getJobQueue(functionName);
 
-        do {
-            uniqueID = uniqueIdFactory.generateUniqueId();
-        } while(jobQueue.uniqueIdInUse(uniqueID));
+        if(jobQueue == null) {
+            uniqueId = uniqueIdFactory.generateUniqueId();
+        } else {
+            do
+            {
+                uniqueId = uniqueIdFactory.generateUniqueId();
+            } while (jobQueue.uniqueIdInUse(uniqueId));
+        }
 
-        return uniqueID;
+        return uniqueId;
     }
 
-    public Job storeJobForClient(Job job, EngineClient client)
+    public Job storeJobForClient(Job job, EngineClient client) throws EnqueueException
     {
         if(!job.isBackground()) {
             addClientForUniqueId(job.getUniqueID(), client);
@@ -209,61 +222,74 @@ public class JobManager {
         return storeJob(job);
     }
 
-    public Job storeJob(Job job)
+    public Job storeJob(Job job) throws EnqueueException
     {
-        final String functionName = job.getFunctionName();
-        final String uniqueID;
-        final JobQueue jobQueue = getJobQueue(functionName);
+        try
+        {
+            final String functionName = job.getFunctionName();
+            final String uniqueID;
+            final JobQueue jobQueue = getOrCreateJobQueue(functionName);
 
-        if(job.getUniqueID().isEmpty()) {
-            uniqueID = generateUniqueID(functionName);
-        } else {
-            uniqueID = job.getUniqueID();
-        }
-
-        // Make sure only one thread attempts to add a job with this unique id
-        final Integer key = uniqueID.hashCode();
-        this.lock.lock(key);
-        try {
-
-            if(activeUniqueIds.containsKey(uniqueID))
+            if (job.getUniqueID().isEmpty())
             {
-                // If the job is already being processed, pull from active jobs
-                return activeUniqueIds.get(uniqueID);
-            } else if (jobQueue.uniqueIdInUse(uniqueID)) {
-                // If the job is queued but not active, pull it from storage
-                return jobQueue.findJobByUniqueId(uniqueID);
-            } else {
-                // New job, store it in the queue and storage
-                if(job.getJobHandle() == null || job.getJobHandle().isEmpty())
-                {
-                    job.setJobHandle(new String(jobHandleFactory.getNextJobHandle()));
-                }
+                uniqueID = generateUniqueID(functionName);
+            }
+            else
+            {
+                uniqueID = job.getUniqueID();
+            }
 
-                if(!jobQueue.enqueue(job))
+            // Make sure only one thread attempts to add a job with this unique id
+            final Integer key = uniqueID.hashCode();
+            this.lock.lock(key);
+            try
+            {
+
+                if (activeUniqueIds.containsKey(uniqueID))
                 {
-                    LOG.error("Unable to enqueue job");
-                    return null;
-                } else {
+                    // If the job is already being processed, pull from active jobs
+                    return activeUniqueIds.get(uniqueID);
+                }
+                else if (jobQueue.uniqueIdInUse(uniqueID))
+                {
+                    // If the job is queued but not active, pull it from storage
+                    return jobQueue.findJobByUniqueId(uniqueID);
+                }
+                else
+                {
+                    // New job, store it in the queue and storage
+                    if (job.getJobHandle() == null || job.getJobHandle().isEmpty())
+                    {
+                        job.setJobHandle(new String(jobHandleFactory.getNextJobHandle()));
+                    }
+
+                    jobQueue.enqueue(job);
 
                     // Notify any workers if this job is ready to run so it
                     // gets picked up quickly
-                    if(job.isReady()) {
-                        getWorkerPool(job.getFunctionName())
-                                .wakeupWorkers();
+                    if (job.isReady())
+                    {
+                        getWorkerPool(job.getFunctionName()).wakeupWorkers();
                     }
 
                     metrics.handleJobEnqueued(job);
                     return job;
                 }
             }
-        } finally {
-            // Always unlock lock
-            this.lock.unlock(key);
+            finally
+            {
+                // Always unlock lock
+                this.lock.unlock(key);
+            }
         }
+        catch (JobQueueFactoryException | QueueFullException | PersistenceException e)
+        {
+            throw new EnqueueException(e);
+        }
+
     }
 
-    public final void reEnqueueJob(Job job) throws IllegalJobStateTransitionException
+    public final void reEnqueueJob(Job job) throws EnqueueException
     {
         JobState previousState = job.getState();
         job.setState(JobState.QUEUED);
@@ -277,7 +303,7 @@ public class JobManager {
                 storeJob(job);
                 break;
             case COMPLETE:
-                throw new IllegalJobStateTransitionException("Jobs should not transition from complete to queued.");
+                throw new EnqueueException(new IllegalJobStateTransitionException("Jobs should not transition from complete to queued."));
                 // should never go from COMPLETE to QUEUED
         }
 
@@ -415,7 +441,17 @@ public class JobManager {
         }
     }
 
-    public final JobQueue getJobQueue(String name)
+    protected JobQueue getJobQueue(String name)
+    {
+        return jobQueues.get(name);
+    }
+
+    protected boolean queueExists(final String name)
+    {
+        return jobQueues.containsKey(name);
+    }
+
+    public final JobQueue getOrCreateJobQueue(String name) throws JobQueueFactoryException
     {
         Integer key = name.hashCode();
         try {
@@ -425,12 +461,9 @@ public class JobManager {
 
             if(jobQueue == null)
             {
-                try {
-                    jobQueue = jobQueueFactory.build(name);
-                    this.jobQueues.put(name, jobQueue);
-                } catch (JobQueueFactoryException jfe) {
-                    return null;
-                }
+                jobQueue = jobQueueFactory.build(name);
+                metrics.registerJobQueue(jobQueue);
+                this.jobQueues.put(name, jobQueue);
             }
 
             return jobQueue;

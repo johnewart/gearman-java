@@ -3,9 +3,8 @@ package net.johnewart.gearman.engine.metrics;
 import com.google.common.collect.ImmutableList;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.interfaces.EngineWorker;
+import net.johnewart.gearman.engine.queue.JobQueue;
 import org.joda.time.DateTime;
-
-import java.util.Collection;
 
 public interface QueueMetrics {
     public void handleJobCompleted(Job job);
@@ -48,4 +47,5 @@ public interface QueueMetrics {
     public long getActiveWorkers();
     public long getActiveWorkers(String queueName);
 
+    void registerJobQueue(JobQueue jobQueue);
 }

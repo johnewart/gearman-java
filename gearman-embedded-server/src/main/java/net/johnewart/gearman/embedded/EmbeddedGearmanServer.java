@@ -6,6 +6,7 @@ import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
 import net.johnewart.gearman.engine.metrics.MetricsEngine;
 import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
@@ -27,7 +28,7 @@ public class EmbeddedGearmanServer {
 
     public EmbeddedGearmanServer() {
         MetricRegistry registry = new MetricRegistry();
-        JobQueueFactory jobQueueFactory = new MemoryJobQueueFactory();
+        JobQueueFactory jobQueueFactory = new MemoryJobQueueFactory(registry);
         jobHandleFactory = new LocalJobHandleFactory("embedded");
         uniqueIdFactory = new LocalUniqueIdFactory();
         ExceptionStorageEngine exceptionStore = new NoopExceptionStorageEngine();
@@ -35,7 +36,8 @@ public class EmbeddedGearmanServer {
         jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, exceptionStore, queueMetrics);
     }
 
-    public Job submitJob(final Job job, final EngineClient client) {
+    public Job submitJob(final Job job, final EngineClient client) throws EnqueueException
+    {
         LOG.debug("Submitting job for client...");
         return jobManager.storeJobForClient(job, client);
     }

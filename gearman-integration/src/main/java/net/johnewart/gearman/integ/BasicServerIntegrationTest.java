@@ -42,7 +42,7 @@ public class BasicServerIntegrationTest {
         GearmanServerConfiguration primaryConfig = new GearmanServerConfiguration();
         primaryConfig.setHostName(hostname);
         primaryConfig.setPort(port);
-        primaryConfig.setJobQueueFactory(new MemoryJobQueueFactory());
+        primaryConfig.setJobQueueFactory(new MemoryJobQueueFactory(primaryConfig.getMetricRegistry()));
 
         ServerRunner runner = new ServerRunner(primaryConfig);
         Thread t1 = new Thread(runner);

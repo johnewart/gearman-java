@@ -1,10 +1,14 @@
 package net.johnewart.gearman.engine.queue;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.constants.JobPriority;
 import net.johnewart.gearman.engine.core.QueuedJob;
+import net.johnewart.gearman.engine.exceptions.PersistenceException;
+import net.johnewart.gearman.engine.exceptions.QueueFullException;
 import net.johnewart.gearman.engine.queue.persistence.PersistenceEngine;
 import org.eclipse.jetty.util.ConcurrentHashSet;
 import org.joda.time.DateTime;
@@ -20,13 +24,14 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+
+import static com.codahale.metrics.MetricRegistry.name;
 
 public class PersistedJobQueue implements JobQueue {
     private final Logger LOG = LoggerFactory.getLogger(PersistedJobQueue.class);
 
     private final PersistenceEngine persistenceEngine;
-    private final String name;
+    private final String functionName;
 
     private final BlockingDeque<QueuedJob> low		= new LinkedBlockingDeque<>();
     private final BlockingDeque<QueuedJob> mid		= new LinkedBlockingDeque<>();
@@ -37,30 +42,31 @@ public class PersistedJobQueue implements JobQueue {
     private final ConcurrentHashSet<String> allJobs = new ConcurrentHashSet<>();
 
     private final AtomicInteger maxQueueSize;
+    private final Counter highCounter, midCounter, lowCounter, totalCounter;
 
-    // Make size() a cheaper operation.
-    private final AtomicLong lowPriorityCount;
-    private final AtomicLong midPriorityCount;
-    private final AtomicLong highPriorityCount;
-
-    public PersistedJobQueue(final String name, final PersistenceEngine persistenceEngine) {
-        this.name = name;
+    public PersistedJobQueue(final String functionName,
+                             final PersistenceEngine persistenceEngine,
+                             final MetricRegistry metricRegistry)
+    {
+        this.functionName = functionName;
         this.persistenceEngine = persistenceEngine;
-        lowPriorityCount = new AtomicLong();
-        midPriorityCount = new AtomicLong();
-        highPriorityCount = new AtomicLong();
-        maxQueueSize = new AtomicInteger(0);
+        this.maxQueueSize = new AtomicInteger(Integer.MAX_VALUE);
+
+        this.highCounter = metricRegistry.counter(name("queue", metricName(), "high"));
+        this.midCounter = metricRegistry.counter(name("queue", metricName(), "mid"));
+        this.lowCounter = metricRegistry.counter(name("queue", metricName(), "low"));
+        this.totalCounter = metricRegistry.counter(name("queue", metricName(), "total"));
+
+        if(persistenceEngine != null)
+        {
+            Collection<QueuedJob> jobs = persistenceEngine.getAllForFunction(functionName);
+            jobs.forEach(this::add);
+        }
     }
 
-
-    @Override
-    public boolean add(final QueuedJob queuedJob) {
+    private boolean add(final QueuedJob queuedJob)
+    {
         synchronized (this.allJobs) {
-
-            if(this.maxQueueSize.intValue() > 0 && maxQueueSize.intValue() <= size()) {
-                return false;
-            }
-
             if(allJobs.contains(queuedJob.getUniqueID()))
             {
                 return false;
@@ -88,26 +94,62 @@ public class PersistedJobQueue implements JobQueue {
                 }
 
                 if (enqueued) {
-                    incrementJobCounter(queuedJob.getPriority());
+                    incrementCounters(queuedJob.getPriority());
                 }
-
                 return enqueued;
             }
         }
     }
 
+    private void decrementCounters(JobPriority priority)
+    {
+        totalCounter.dec();
+        switch(priority) {
+            case LOW:
+                lowCounter.dec();
+                break;
+            case NORMAL:
+                midCounter.dec();
+                break;
+            case HIGH:
+                highCounter.dec();
+                break;
+        }
+    }
+
+    private void incrementCounters(JobPriority priority)
+    {
+        totalCounter.inc();
+        switch(priority) {
+            case LOW:
+                lowCounter.inc();
+                break;
+            case NORMAL:
+                midCounter.inc();
+                break;
+            case HIGH:
+                highCounter.inc();
+                break;
+        }
+    }
+
     @Override
-    public final boolean enqueue(final Job job) {
+    public final void enqueue(final Job job) throws QueueFullException, PersistenceException
+    {
         LOG.debug("Enqueueing " + job.toString());
 
         QueuedJob queuedJob = new QueuedJob(job);
 
+        if(this.allJobs.size() >= maxQueueSize.intValue()) {
+            throw new QueueFullException();
+        }
+
         if(persistenceEngine.write(job)) {
-            return add(queuedJob);
+            add(queuedJob);
         } else {
             // ! written to persistent store
             LOG.error("Unable to save job to persistent store");
-            return false;
+            throw new PersistenceException("Unable to save job to persistent store");
         }
 
     }
@@ -151,36 +193,13 @@ public class PersistedJobQueue implements JobQueue {
             );
 
             allJobs.remove(job.getUniqueID());
-            decrementJobCounter(job.getPriority());
+
+            decrementCounters(job.getPriority());
 
             return job;
         }
 
         return null;
-    }
-
-    /**
-     * Returns the total number of jobs in this queue
-     * @return
-     * 		The total number of jobs in all priorities
-     */
-    @Override
-    public final long size() {
-        return lowPriorityCount.longValue() + midPriorityCount.longValue() + highPriorityCount.longValue();
-    }
-
-    @Override
-    public long size(final JobPriority jobPriority) {
-        switch(jobPriority) {
-            case LOW:
-                return lowPriorityCount.longValue();
-            case NORMAL:
-                return midPriorityCount.longValue();
-            case HIGH:
-                return highPriorityCount.longValue();
-            default:
-                return -1;
-        }
     }
 
     @Override
@@ -194,13 +213,35 @@ public class PersistedJobQueue implements JobQueue {
     }
 
     @Override
-    public void setMaxSize(final int size) {
+    public void setCapacity(final int size) {
         maxQueueSize.set(size);
     }
 
     @Override
     public final String getName() {
-        return this.name;
+        return this.functionName;
+    }
+
+    @Override
+    public int size()
+    {
+        return (int) totalCounter.getCount();
+    }
+
+    @Override
+    public int size(JobPriority priority)
+    {
+        switch(priority)
+        {
+            case LOW:
+                return (int) lowCounter.getCount();
+            case NORMAL:
+                return (int) midCounter.getCount();
+            case HIGH:
+                return (int) highCounter.getCount();
+            default:
+                return -1;
+        }
     }
 
     @Override
@@ -230,18 +271,13 @@ public class PersistedJobQueue implements JobQueue {
 
             // Remove from persistence engine
             persistenceEngine.delete(job);
+        }
 
-            if (removed) {
-                decrementJobCounter(job.getPriority());
-            }
+        if (removed) {
+            decrementCounters(job.getPriority());
         }
 
         return removed;
-    }
-
-    @Override
-    public String metricName() {
-        return this.name.replaceAll(":", ".");
     }
 
     @Override
@@ -268,7 +304,7 @@ public class PersistedJobQueue implements JobQueue {
 
     @Override
     public Job findJobByUniqueId(String uniqueID) {
-        return persistenceEngine.findJob(this.name, uniqueID);
+        return persistenceEngine.findJob(this.functionName, uniqueID);
     }
 
     @Override
@@ -304,33 +340,8 @@ public class PersistedJobQueue implements JobQueue {
         return ImmutableMap.copyOf(hourCounts);
     }
 
-
-
-    private void decrementJobCounter(final JobPriority jobPriority) {
-        switch(jobPriority) {
-            case LOW:
-                lowPriorityCount.decrementAndGet();
-                break;
-            case HIGH:
-                highPriorityCount.decrementAndGet();
-                break;
-            case NORMAL:
-                midPriorityCount.decrementAndGet();
-                break;
-        }
+    private String metricName() {
+        return this.functionName.replaceAll(":", ".");
     }
 
-    private void incrementJobCounter(final JobPriority jobPriority) {
-        switch(jobPriority) {
-            case LOW:
-                lowPriorityCount.incrementAndGet();
-                break;
-            case HIGH:
-                highPriorityCount.incrementAndGet();
-                break;
-            case NORMAL:
-                midPriorityCount.incrementAndGet();
-                break;
-        }
-    }
 }

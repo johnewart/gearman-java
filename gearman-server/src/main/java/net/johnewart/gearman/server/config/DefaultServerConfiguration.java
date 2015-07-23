@@ -4,8 +4,6 @@ import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.interfaces.JobHandleFactory;
 import net.johnewart.gearman.engine.core.JobManager;
 import net.johnewart.gearman.engine.core.UniqueIdFactory;
-import net.johnewart.gearman.engine.metrics.MetricsEngine;
-import net.johnewart.gearman.engine.metrics.QueueMetrics;
 import net.johnewart.gearman.engine.queue.factories.JobQueueFactory;
 import net.johnewart.gearman.engine.queue.factories.MemoryJobQueueFactory;
 import net.johnewart.gearman.engine.storage.NoopExceptionStorageEngine;
@@ -30,7 +28,7 @@ public class DefaultServerConfiguration extends GearmanServerConfiguration {
     public DefaultServerConfiguration() {
         this.registry = new MetricRegistry();
         this.jobHandleFactory = new LocalJobHandleFactory(getHostName());
-        this.jobQueueFactory = new MemoryJobQueueFactory();
+        this.jobQueueFactory = new MemoryJobQueueFactory(registry);
         this.uniqueIdFactory = new LocalUniqueIdFactory();
         this.jobManager = new JobManager(jobQueueFactory, jobHandleFactory, uniqueIdFactory, new NoopExceptionStorageEngine(), getQueueMetrics());
         this.jobQueueMonitor = new SnapshottingJobQueueMonitor(getQueueMetrics());

@@ -1,39 +1,47 @@
 package net.johnewart.gearman.engine.queue.persistence;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.engine.core.QueuedJob;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import net.johnewart.gearman.common.Job;
-import net.johnewart.gearman.engine.core.QueuedJob;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
+import static com.codahale.metrics.MetricRegistry.name;
 
 
 public class RedisPersistenceEngine implements PersistenceEngine {
 
     private final ObjectMapper mapper;
     private final JedisPool jedisPool;
-    private final ConcurrentHashMap<String, QueuedJob> jobHandleToQueuedJobMap;
     private final String hostname;
     private final int port;
+    private final Counter writtenCounter, failedCounter, deletedCounter;
+    private final Timer writeTimer, readTimer;
 
     private static Logger LOG = LoggerFactory.getLogger(RedisPersistenceEngine.class);
 
-    public RedisPersistenceEngine(String hostname, int port)
+    public RedisPersistenceEngine(String hostname, int port, MetricRegistry metricRegistry)
     {
         this.hostname = hostname;
         this.port = port;
+        this.deletedCounter = metricRegistry.counter(name("redis", "deleted"));
+        this.writtenCounter = metricRegistry.counter(name("redis", "jobs", "written"));
+        this.failedCounter = metricRegistry.counter(name("redis", "jobs", "failed"));
+        this.writeTimer = metricRegistry.timer(name("redis", "write"));
+        this.readTimer = metricRegistry.timer(name("redis", "read"));
+
         mapper = new ObjectMapper();
-        jobHandleToQueuedJobMap = new ConcurrentHashMap<>();
         LOG.debug(String.format("RedisQueue connecting on %s:%s", hostname, port));
         jedisPool = new JedisPool(new JedisPoolConfig(), this.hostname, this.port);
     }
@@ -45,21 +53,23 @@ public class RedisPersistenceEngine implements PersistenceEngine {
 
     public boolean write(Job job)
     {
+        Timer.Context context = writeTimer.time();
         Jedis redisClient = jedisPool.getResource();
         try {
             String json = mapper.writeValueAsString(job);
             String bucket = "gm:" + job.getFunctionName();
             String key = job.getUniqueID();
-            QueuedJob queuedJob = new QueuedJob(job);
-            jobHandleToQueuedJobMap.put(job.getJobHandle(), queuedJob);
             redisClient.hset(bucket, key, json);
             LOG.debug("Storing in redis " + bucket + "-" + key + ": " + job.getUniqueID() + "/" + job.getJobHandle());
+            writtenCounter.inc();
             return true;
         } catch (IOException e) {
+            failedCounter.inc();
             e.printStackTrace();
             return false;
         } finally {
             jedisPool.returnResource(redisClient);
+            context.stop();
         }
     }
 
@@ -73,27 +83,23 @@ public class RedisPersistenceEngine implements PersistenceEngine {
     {
         Jedis redisClient = jedisPool.getResource();
         String bucket = "gm:" + functionName;
-
-        //jobHandleToQueuedJobMap.remove(job.getJobHandle());
         LOG.debug("Removing from redis " + bucket + ": " + uniqueID);
         redisClient.hdel(bucket, uniqueID);
         jedisPool.returnResource(redisClient);
+        deletedCounter.inc();
     }
 
     public void deleteAll()
     {
         Jedis redisClient = jedisPool.getResource();
-        for(String key : redisClient.keys("gm:*"))
-        {
-            redisClient.del(key);
-        }
-        jobHandleToQueuedJobMap.clear();
+        redisClient.keys("gm:*").forEach(redisClient::del);
         jedisPool.returnResource(redisClient);
     }
 
     @Override
     public Job findJob(String functionName, String uniqueID)
     {
+        Timer.Context timer = readTimer.time();
         Jedis redisClient = jedisPool.getResource();
         Job job = null;
         try {
@@ -104,6 +110,7 @@ public class RedisPersistenceEngine implements PersistenceEngine {
             e.printStackTrace();
         } finally {
             jedisPool.returnResource(redisClient);
+            timer.stop();
         }
 
         return job;
@@ -127,7 +134,6 @@ public class RedisPersistenceEngine implements PersistenceEngine {
                     LOG.debug("JSON: " + jobJSON);
                     currentJob = mapper.readValue(jobJSON, Job.class);
                     QueuedJob queuedJob = new QueuedJob(currentJob);
-                    jobHandleToQueuedJobMap.put(currentJob.getJobHandle(), queuedJob);
                     jobs.add(queuedJob);
                 } catch (IOException e) {
                     LOG.debug("Error deserializing job: " + e.toString());
@@ -164,8 +170,4 @@ public class RedisPersistenceEngine implements PersistenceEngine {
         return jobs;
     }
 
-    public Job findJobByHandle(String jobHandle) {
-        QueuedJob runnableJob = jobHandleToQueuedJobMap.get(jobHandle);
-        return findJob(runnableJob.getFunctionName(), runnableJob.getUniqueID());
-    }
 }

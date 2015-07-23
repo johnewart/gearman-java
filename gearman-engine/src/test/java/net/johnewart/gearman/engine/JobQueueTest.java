@@ -1,5 +1,6 @@
 package net.johnewart.gearman.engine;
 
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
@@ -20,10 +21,12 @@ public class JobQueueTest {
     private JobQueue jobQueue;
     private final String queueName = "delayedJobs";
     private final MemoryJobQueueFactory memoryJobQueueFactory;
+    private final MetricRegistry metricRegistry;
 
     public JobQueueTest()
     {
-        memoryJobQueueFactory = new MemoryJobQueueFactory();
+        metricRegistry = new MetricRegistry();
+        memoryJobQueueFactory = new MemoryJobQueueFactory(metricRegistry);
     }
 
     @Before

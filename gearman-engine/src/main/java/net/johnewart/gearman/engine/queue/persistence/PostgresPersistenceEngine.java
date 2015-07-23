@@ -1,5 +1,8 @@
 package net.johnewart.gearman.engine.queue.persistence;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jolbox.bonecp.BoneCP;
 import com.jolbox.bonecp.BoneCPConfig;
@@ -10,7 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.LinkedList;
 
@@ -29,14 +37,24 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
     private final String countQuery;
     private final String findAllJobsForFunctionQuery;
     private final String findJobByHandleQuery;
+    private final MetricRegistry metricRegistry;
+    private final Timer writeTimer, readTimer;
+    private final Counter deleteCounter, writeCounter, pendingCounter;
 
     public PostgresPersistenceEngine(final String hostname,
                                      final int port,
                                      final String database,
                                      final String user,
                                      final String password,
-                                     final String tableName) throws SQLException
+                                     final String tableName,
+                                     final MetricRegistry metricRegistry) throws SQLException
     {
+        this.metricRegistry = metricRegistry;
+        this.pendingCounter = metricRegistry.counter("postgresql.pending");
+        this.writeTimer = metricRegistry.timer("postgresql.write");
+        this.readTimer = metricRegistry.timer("postgresql.read");
+        this.writeCounter = metricRegistry.counter("postgresql.write");
+        this.deleteCounter = metricRegistry.counter("postgresql.delete");
 
         this.url = "jdbc:postgresql://" + hostname + ":" + port + "/" + database;
         this.tableName = tableName;
@@ -89,6 +107,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
 
     @Override
     public boolean write(final Job job) {
+        Timer.Context context = writeTimer.time();
         PreparedStatement st = null;
         Connection conn = null;
         ObjectMapper mapper = new ObjectMapper();
@@ -124,6 +143,8 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                 }
             }
 
+            writeCounter.inc();
+            pendingCounter.inc();
             return true;
         } catch (SQLException se) {
             LOG.error("SQL Error writing job: " , se);
@@ -132,6 +153,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
             LOG.error("I/O Error writing job: " , e);
             return false;
         } finally {
+            context.stop();
             try {
                 if(st != null)
                     st.close();
@@ -165,6 +187,8 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
                 int deleted = st.executeUpdate();
                 LOG.debug("Deleted " + deleted + " records for " + functionName + "/" +uniqueID);
             }
+            deleteCounter.inc();
+            pendingCounter.dec();
         } catch (SQLException se) {
             LOG.error("SQL Error deleting job: " , se);
         } finally {
@@ -215,7 +239,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
         PreparedStatement st = null;
         ResultSet rs = null;
         Connection conn = null;
-
+        Timer.Context timer = readTimer.time();
         Job job = null;
 
         try {
@@ -242,6 +266,7 @@ public class PostgresPersistenceEngine implements PersistenceEngine {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
+            timer.stop();
             try {
                 if(rs != null)
                     rs.close();

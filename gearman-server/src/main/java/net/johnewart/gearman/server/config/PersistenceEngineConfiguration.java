@@ -1,5 +1,6 @@
 package net.johnewart.gearman.server.config;
 
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.healthchecks.RedisHealthCheck;
@@ -55,11 +56,11 @@ public class PersistenceEngineConfiguration {
 
     public void setDynamoDB(DynamoDBConfiguration dynamoDB) { this.dynamoDB = dynamoDB; }
 
-    public JobQueueFactory getJobQueueFactory() {
+    public JobQueueFactory getJobQueueFactory(MetricRegistry metricRegistry) {
         if(jobQueueFactory == null) {
             switch (getEngine()) {
                 case ENGINE_MEMORY:
-                    jobQueueFactory = new MemoryJobQueueFactory();
+                    jobQueueFactory = new MemoryJobQueueFactory(metricRegistry);
                     break;
                 case ENGINE_DYNAMODB:
                     try {
@@ -69,7 +70,8 @@ public class PersistenceEngineConfiguration {
                                 dynamoDB.getSecretKey(),
                                 dynamoDB.getTable(),
                                 dynamoDB.getReadUnits(),
-                                dynamoDB.getWriteUnits()
+                                dynamoDB.getWriteUnits(),
+                                metricRegistry
                         );
                     } catch (JobQueueFactoryException e) {
                         jobQueueFactory = null;
@@ -83,7 +85,8 @@ public class PersistenceEngineConfiguration {
                                 postgreSQL.getDbName(),
                                 postgreSQL.getUser(),
                                 postgreSQL.getPassword(),
-                                postgreSQL.getTable()
+                                postgreSQL.getTable(),
+                                metricRegistry
                         );
                     } catch (JobQueueFactoryException e) {
                         jobQueueFactory = null;
@@ -92,7 +95,8 @@ public class PersistenceEngineConfiguration {
                 case ENGINE_REDIS:
                     jobQueueFactory = new RedisPersistedJobQueueFactory(
                             redis.getHost(),
-                            redis.getPort()
+                            redis.getPort(),
+                            metricRegistry
                     );
                     break;
                 default:

@@ -27,7 +27,8 @@ public class WebListener {
     }
 
     public Map<String, HttpServlet> getServletMappings() {
-        final MetricsServlet metricsServlet = new MetricsServlet(serverConfiguration.getMetricRegistry());
+        final MetricsServlet metricsServlet =
+                new MetricsServlet(serverConfiguration.getMetricRegistry());
 
         final HealthCheckServlet healthCheckServlet =
                 new HealthCheckServlet(serverConfiguration.getHealthCheckRegistry());

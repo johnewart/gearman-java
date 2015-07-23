@@ -1,5 +1,6 @@
 package net.johnewart.gearman.engine.queue.factories;
 
+import com.codahale.metrics.MetricRegistry;
 import net.johnewart.gearman.engine.core.QueuedJob;
 import net.johnewart.gearman.engine.exceptions.JobQueueFactoryException;
 import net.johnewart.gearman.engine.queue.JobQueue;
@@ -15,16 +16,19 @@ public class DynamoDBPersistedJobQueueFactory implements JobQueueFactory {
     private static Logger LOG = LoggerFactory.getLogger(DynamoDBPersistedJobQueueFactory.class);
 
     private final DynamoDBPersistenceEngine dynamoDBPersistenceEngine;
+    private final MetricRegistry metricRegistry;
 
     public DynamoDBPersistedJobQueueFactory(String endpoint,
                                             String user,
                                             String password,
                                             String tableName,
                                             Integer readUnits,
-                                            Integer writeUnits) throws JobQueueFactoryException {
+                                            Integer writeUnits,
+                                            MetricRegistry metricRegistry) throws JobQueueFactoryException {
         try {
+            this.metricRegistry = metricRegistry;
             this.dynamoDBPersistenceEngine =
-                    new DynamoDBPersistenceEngine(endpoint, user, password, tableName, readUnits, writeUnits);
+                    new DynamoDBPersistenceEngine(endpoint, user, password, tableName, readUnits, writeUnits, metricRegistry);
         } catch (SQLException e) {
             LOG.error("Unable to create DynamoDB persistence engine: ", e);
             throw new JobQueueFactoryException("Could not create the DynamoDB persistence engine!");
@@ -33,7 +37,7 @@ public class DynamoDBPersistedJobQueueFactory implements JobQueueFactory {
 
     @Override
     public JobQueue build(String name) throws JobQueueFactoryException {
-        return new PersistedJobQueue(name, dynamoDBPersistenceEngine);
+        return new PersistedJobQueue(name, dynamoDBPersistenceEngine, metricRegistry);
     }
 
     @Override

@@ -1,19 +1,19 @@
 package net.johnewart.gearman.server.web;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import net.johnewart.gearman.common.Job;
+import net.johnewart.gearman.constants.JobPriority;
+import net.johnewart.gearman.engine.core.JobManager;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
+import net.johnewart.gearman.util.ByteArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import net.johnewart.gearman.common.Job;
-import net.johnewart.gearman.constants.JobPriority;
-import net.johnewart.gearman.engine.core.JobManager;
-import net.johnewart.gearman.util.ByteArray;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class JobQueueServlet extends HttpServlet {
     private static final String CONTENT_TYPE = "application/json";
@@ -47,16 +47,17 @@ public class JobQueueServlet extends HttpServlet {
                           .build();
 
 
-        final Job created = jobManager.storeJob(job);
-
-        if (created != null) {
+        final Job created;
+        try
+        {
+            created = jobManager.storeJob(job);
             resp.setStatus(HttpServletResponse.SC_OK);
             resp.setContentType(CONTENT_TYPE);
 
             final OutputStream output = resp.getOutputStream();
             output.write(new ByteArray(created.getJobHandle()).getBytes());
-        } else {
-            resp.sendError(500, "Could not create job");
+        } catch (EnqueueException e) {
+            resp.sendError(500, e.getMessage());
         }
     }
 

@@ -7,6 +7,7 @@ import net.johnewart.gearman.common.events.GearmanClientEventListener;
 import net.johnewart.gearman.common.interfaces.EngineClient;
 import net.johnewart.gearman.common.packets.Packet;
 import net.johnewart.gearman.constants.JobPriority;
+import net.johnewart.gearman.engine.exceptions.EnqueueException;
 import net.johnewart.gearman.exceptions.JobSubmissionException;
 import net.johnewart.gearman.exceptions.WorkException;
 import org.slf4j.Logger;
@@ -56,15 +57,24 @@ public class EmbeddedGearmanClient extends AbstractGearmanClient implements Engi
                 .functionName(callback)
                 .build();
 
-        server.submitJob(job, this);
+        try
+        {
+            server.submitJob(job, this);
 
-        synchronized (activeJobLock) {
-            try {
-                activeJobLock.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return null;
+            synchronized (activeJobLock)
+            {
+                try
+                {
+                    activeJobLock.wait();
+                }
+                catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                    return null;
+                }
             }
+        } catch (EnqueueException e) {
+            throw new JobSubmissionException();
         }
 
         return results.get(job.getJobHandle());
@@ -149,8 +159,14 @@ public class EmbeddedGearmanClient extends AbstractGearmanClient implements Engi
                                    JobPriority priority,
                                    boolean isBackground,
                                    long timeToRun) throws JobSubmissionException {
-        Job requestedJob = new Job(callback, uniqueID, data, priority, isBackground, timeToRun);
-        return server.submitJob(requestedJob, this);
+        try
+        {
+            final Job requestedJob = new Job(callback, uniqueID, data, priority, isBackground, timeToRun);
+            return server.submitJob(requestedJob, this);
+        } catch (EnqueueException e)
+        {
+            throw new JobSubmissionException();
+        }
     }
 
 

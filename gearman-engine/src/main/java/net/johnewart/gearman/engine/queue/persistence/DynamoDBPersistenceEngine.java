@@ -18,7 +18,8 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
-import com.codahale.metrics.annotation.Timed;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.johnewart.gearman.common.Job;
@@ -42,15 +43,19 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
     private final DynamoDB dynamoDB;
     private final AmazonDynamoDBClient client;
     private final DynamoDBMapper mapper;
+    private final MetricRegistry metricRegistry;
+    private final Timer writeTimer;
 
     public DynamoDBPersistenceEngine(final String endpoint,
                                      final String accessKey,
                                      final String secretKey,
                                      final String tableName,
                                      final Integer readUnits,
-                                     final Integer writeUnits) throws SQLException
+                                     final Integer writeUnits,
+                                     final MetricRegistry metricRegistry) throws SQLException
     {
-
+        this.metricRegistry = metricRegistry;
+        this.writeTimer = metricRegistry.timer("dynamodb.write");
         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
         ClientConfiguration clientConfig = new ClientConfiguration();
         client = new AmazonDynamoDBClient(credentials);
@@ -159,9 +164,9 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
         return null;
     }
 
-    @Timed(name = "dynamodb.write")
     @Override
     public boolean write(Job job) {
+        Timer.Context context = writeTimer.time();
         ObjectMapper objectMapper = new ObjectMapper();
         Table table = dynamoDB.getTable(tableName);
 
@@ -182,6 +187,8 @@ public class DynamoDBPersistenceEngine implements PersistenceEngine {
             return true;
         } catch (JsonProcessingException e) {
             e.printStackTrace();
+        } finally {
+            context.stop();
         }
 
         return false;

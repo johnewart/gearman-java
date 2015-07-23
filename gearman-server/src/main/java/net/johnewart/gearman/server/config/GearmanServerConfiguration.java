@@ -137,7 +137,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     @Override
     public JobQueueFactory getJobQueueFactory() {
         if (jobQueueFactory == null && getPersistenceEngine() != null) {
-            jobQueueFactory = getPersistenceEngine().getJobQueueFactory();
+            jobQueueFactory = getPersistenceEngine().getJobQueueFactory(getMetricRegistry());
         }
 
         return jobQueueFactory;
