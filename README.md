@@ -40,7 +40,6 @@ Some of the issues that I've run into in the past have been related to visibilit
 
 ![Web dashboard](https://github.com/johnewart/gearman-java/raw/master/misc/dashboard.jpg)
 
-
 ### All Queues
 
 ![All Queues](https://github.com/johnewart/gearman-java/raw/master/misc/queues.jpg)
