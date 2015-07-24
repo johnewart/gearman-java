@@ -20,7 +20,7 @@ public class MetricsEngine implements QueueMetrics {
     private final ConcurrentHashMap<String, Counter> workerCounters = new ConcurrentHashMap<>();
 
     private final MetricRegistry registry;
-    private final Counter pendingJobsCounter;
+    private final Gauge<Long> pendingJobsGauge;
     private final Counter queuedJobsCounter;
     private final Counter completedJobsCounter;
     private final Counter failedJobsCounter;
@@ -34,7 +34,7 @@ public class MetricsEngine implements QueueMetrics {
     public MetricsEngine(MetricRegistry registry) {
         this.startTime = DateTime.now();
         this.registry = registry;
-        pendingJobsCounter = registry.counter(name("queues", "pending-jobs"));
+        pendingJobsGauge = registry.register(name("queues", "pending-jobs"), (Gauge<Long>) MetricsEngine.this::getPendingJobsCount);
         queuedJobsCounter = registry.counter(name("queues", "queued-jobs"));
         completedJobsCounter = registry.counter(name("queues", "completed-jobs"));
         failedJobsCounter = registry.counter(name("queues", "failed-jobs"));
@@ -51,6 +51,7 @@ public class MetricsEngine implements QueueMetrics {
         decrementActive(job);
     }
 
+
     @Override
     public void handleJobFailed(Job job) {
         failedJobsCounter.inc();
@@ -63,7 +64,6 @@ public class MetricsEngine implements QueueMetrics {
         jobMeter.mark();
         queuedJobsCounter.inc();
         queueCounters.get(job.getFunctionName()).queued.inc();
-        incrementPending();
     }
 
     @Override
@@ -110,9 +110,7 @@ public class MetricsEngine implements QueueMetrics {
 
     @Override
     public void handleJobStarted(Job job) {
-        decrementPending();
         incrementActive(job);
-        queueCounters.get(job.getFunctionName()).active.inc();
     }
 
     @Override
@@ -213,22 +211,22 @@ public class MetricsEngine implements QueueMetrics {
         queueCounters.put(jobQueue.getName(), new CounterGroup(jobQueue, registry));
     }
 
+    private void decrementEnqueued(Job job)
+    {
+        queueCounters.get(job.getFunctionName()).queued.dec();
+        queuedJobsCounter.dec();
+    }
+
     private void decrementActive(Job job) {
         activeJobsCounter.dec();
-        queueCounters.get(job.getFunctionName()).active.dec();
+        CounterGroup counter = queueCounters.get(job.getFunctionName());
+        counter.active.dec();
     }
 
     private void incrementActive(Job job) {
         activeJobsCounter.inc();
-        queueCounters.get(job.getFunctionName()).active.inc();
-    }
-
-    private void decrementPending() {
-        pendingJobsCounter.dec();
-    }
-
-    private void incrementPending() {
-        pendingJobsCounter.inc();
+        CounterGroup counter =  queueCounters.get(job.getFunctionName());
+        counter.active.inc();
     }
 
     class CounterGroup {
