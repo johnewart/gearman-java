@@ -22,7 +22,7 @@ public class CantDo extends RequestPacket {
 
     public CantDo(String function)
     {
-        this.type = PacketType.CAN_DO;
+        this.type = PacketType.CANT_DO;
         this.functionName = new AtomicReference<>(function);
     }
 
