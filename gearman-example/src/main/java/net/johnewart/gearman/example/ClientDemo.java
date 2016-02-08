@@ -43,7 +43,8 @@ public class ClientDemo {
             while(true)
             {
                 try {
-                    client.submitJob("sleep", data, JobPriority.NORMAL);
+                    byte[] result = client.submitJob("reverse", data, JobPriority.NORMAL);
+                    System.err.println("Result: " + new String(result));
                 } catch (WorkException e) {
                     if(e instanceof WorkFailException)
                         System.err.println("Job " + e.getJobHandle() + " failed.");
