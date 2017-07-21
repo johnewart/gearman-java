@@ -43,7 +43,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private MetricRegistry metricRegistry;
     private QueueMetrics queueMetrics;
     private HealthCheckRegistry healthCheckRegistry;
-    private Object configLock = new Object();
+    private final Object configLock = new Object();
     private String logLevel = "ERROR";
 
     public void setPort(int port) {
@@ -64,8 +64,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
 
     public void setLogLevel(String logLevel){
         this.logLevel = logLevel;
-        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.toLevel(this.logLevel));
+        if(!debugging) {
+            Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            root.setLevel(Level.toLevel(this.logLevel));
+        }
     }
 
     public void setDebugging(boolean debugging) {
