@@ -44,10 +44,8 @@ public class GearmanDaemon {
 
             serverConfiguration
                     = yaml.loadAs(in, GearmanServerConfiguration.class);
-
-            System.out.println(serverConfiguration.toString());
-
             LOG.info("Starting Gearman Server with settings from " + configFile + "...");
+            LOG.info("Serveer settings: " + serverConfiguration.toString());
 
         } catch (Exception e) {
             LOG.error("Can't load " + configFile + ": ", e);
