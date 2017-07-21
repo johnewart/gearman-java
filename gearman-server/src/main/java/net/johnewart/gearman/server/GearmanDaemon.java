@@ -1,11 +1,14 @@
 package net.johnewart.gearman.server;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.ParameterException;
 import net.johnewart.gearman.server.config.DefaultServerConfiguration;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
 import net.johnewart.gearman.server.web.WebListener;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
+import com.beust.jcommander.Parameter;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -14,18 +17,37 @@ import java.nio.file.Paths;
 public class GearmanDaemon {
 	private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(GearmanDaemon.class);
 
+	private static class CommandLineOptions {
+        @Parameter(names = {"--debug", "-d"}, description = "Turn on debug mode, resulting in a more verbose log output")
+        boolean debug = false;
+
+        @Parameter(names = {"--config", "-c"}, description = "Specify file to load configuration")
+        String configFile;
+
+        @Parameter(names = {"--help", "-h"}, description = "Prints usage", help = true)
+        boolean help;
+    }
+
     public static void main(String... args)
     {
-        final String configFile;
+        CommandLineOptions options = new CommandLineOptions();
+        JCommander cmd = new JCommander(options);
+        cmd.setProgramName("Gearman Server");
 
-        if (args.length != 1) {
-            configFile = "config.yml";
-        } else {
-            configFile = args[0];
+        try {
+            cmd.parse(args);
+            if(options.help) {
+                cmd.usage();
+                System.exit(0);
+            }
+
+        } catch (ParameterException e) {
+            cmd.usage();
+            System.exit(0);
         }
 
-
-        final GearmanServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(configFile);
+        final GearmanServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(options.configFile);
+        serverConfiguration.setDebugging(options.debug);
         final ServerListener serverListener = new ServerListener(serverConfiguration);
         final WebListener webListener = new WebListener(serverConfiguration);
 
