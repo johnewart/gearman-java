@@ -1,6 +1,9 @@
 .idea
 *.class
 *.iml
+*.classpath
+*.project
+*.settings
 gearman-client/target
 gearman-common/target
 gearman-example/target
