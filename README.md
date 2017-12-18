@@ -57,7 +57,7 @@ Feel free to fork and submit pull requests, or test and submit bug reports.
 Author
 -------
 
-John Ewart [@soysamurai](https://twitter.com/soysamurai), [http://johnewart.net](http://johnewart.net)
+John Ewart [http://johnewart.net](http://johnewart.net)
 
 Contributors
 ------------
