@@ -12,7 +12,7 @@
     <artifactId>gearman-engine</artifactId>
 
     <properties>
-        <jetty.version>9.0.0.M0</jetty.version>
+        <jetty.version>9.3.24.v20180605</jetty.version>
         <metrics.version>3.1.2</metrics.version>
         <bonecp.version>0.7.1.RELEASE</bonecp.version>
         <postgres.version>9.1-901.jdbc4</postgres.version>

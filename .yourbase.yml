@@ -6,8 +6,5 @@ dependencies:
     - java:11.0.2
     - maven:3.3.3
 build:
-  container:
-    image: maven:3.3.3
   commands:
-    - ls /
     - mvn package
