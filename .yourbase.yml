@@ -1,9 +1,9 @@
 dependencies:
   runtime:
-    - java:11.0.2
+    - java:8.202.08
     - maven:3.3.3
   build:
-    - java:11.0.2
+    - java:8.202.08
     - maven:3.3.3
 build:
   commands:
