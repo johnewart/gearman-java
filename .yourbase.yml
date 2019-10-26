@@ -3,6 +3,12 @@ dependencies:
     - java:8.202.08
     - maven:3.3.3
 build_targets:
+ - name: darwin
+   tags:
+     os: darwin
+   commands:
+     - mvn package
+     
  - name: tests
    commands:
      - mvn package
@@ -11,3 +17,5 @@ ci:
   builds:
     - name: unit_tests
       build_target: tests
+    - name: darwin
+      build_target: darwin
