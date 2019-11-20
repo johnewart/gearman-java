@@ -6,6 +6,7 @@ dependencies:
 build_targets:
  - name: tests
    commands:
+     - echo "HEY THERE"
      - mvn package
 
 ci:
