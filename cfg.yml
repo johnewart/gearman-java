@@ -1,0 +1,10 @@
+port: 4730
+httpPort: 8888
+enableSSL: false
+debugging: false
+hostName: gearman
+persistenceEngine:
+  engine: memory
+exceptionStore:
+  engine: memory
+logLevel: WARN

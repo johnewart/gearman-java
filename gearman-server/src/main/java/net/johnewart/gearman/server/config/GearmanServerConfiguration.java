@@ -43,7 +43,8 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private MetricRegistry metricRegistry;
     private QueueMetrics queueMetrics;
     private HealthCheckRegistry healthCheckRegistry;
-    private Object configLock = new Object();
+    private final Object configLock = new Object();
+    private String logLevel = "ERROR";
 
     public void setPort(int port) {
         this.port = port;
@@ -61,15 +62,20 @@ public class GearmanServerConfiguration implements ServerConfiguration {
         this.enableSSL = enableSSL;
     }
 
+    public void setLogLevel(String logLevel){
+        this.logLevel = logLevel;
+        if(!debugging) {
+            Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            root.setLevel(Level.toLevel(this.logLevel));
+        }
+    }
+
     public void setDebugging(boolean debugging) {
         this.debugging = debugging;
 
         Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        if(debugging)
-        {
+        if(debugging) {
             root.setLevel(Level.DEBUG);
-        } else {
-            root.setLevel(Level.ERROR);
         }
     }
 
@@ -147,10 +153,10 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     public JobManager getJobManager() {
         if(jobManager == null) {
             jobManager = new JobManager(getJobQueueFactory(),
-                                        getJobHandleFactory(),
-                                        getUniqueIdFactory(),
-                                        getExceptionStorageEngine(),
-                                        getQueueMetrics());
+                getJobHandleFactory(),
+                getUniqueIdFactory(),
+                getExceptionStorageEngine(),
+                getQueueMetrics());
         }
 
         return jobManager;

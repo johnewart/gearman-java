@@ -24,11 +24,12 @@ Getting Started
 Quick start:
 
 1. Download the [latest pre-built SNAPSHOT release](https://oss.sonatype.org/content/repositories/snapshots/net/johnewart/gearman/gearman-server/) from the Sonatype snapshots repository
-2. Run java -jar gearman-server-VERSION.jar
+2. Run `java -jar gearman-server-VERSION.jar`
 3. This will default to port 4730 and memory-only persistence, with snapshotting and the web interface listening on port 8080
+4. To list avaliable options run `java -jar gearman-server-VERSION.jar --help`
 
-If you want to use more advanced features, see the example config.yml
-files in [the gearman-server sub-project](https://github.com/johnewart/gearman-java/tree/master/gearman-server)
+If you want to use more advanced features, run server with config file `java -jar gearman-server-VERSION.jar -c path_to_config_file`.
+For details check example configuration files in [the gearman-server sub-project](https://github.com/johnewart/gearman-java/tree/master/gearman-server)
 
 
 Web Interface
