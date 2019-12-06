@@ -1,5 +1,6 @@
 package net.johnewart.gearman.server;
 
+import net.johnewart.gearman.server.net.GearmanGraphiteReporter;
 import net.johnewart.gearman.server.config.DefaultServerConfiguration;
 import net.johnewart.gearman.server.config.GearmanServerConfiguration;
 import net.johnewart.gearman.server.net.ServerListener;
@@ -18,19 +19,21 @@ public class GearmanDaemon {
     {
         final String configFile;
 
-        if (args.length != 1) {
+        if (args.length < 1) {
             configFile = "config.yml";
         } else {
-            configFile = args[0];
+            configFile = args[args.length - 1];
         }
 
 
         final GearmanServerConfiguration serverConfiguration = loadFromConfigOrGenerateDefaultConfig(configFile);
         final ServerListener serverListener = new ServerListener(serverConfiguration);
         final WebListener webListener = new WebListener(serverConfiguration);
+        final GearmanGraphiteReporter gearmanGraphiteReporter = new GearmanGraphiteReporter(serverConfiguration);
 
         try {
             webListener.start();
+            gearmanGraphiteReporter.start();
             serverListener.start();
         } catch (Exception e) {
             e.printStackTrace();

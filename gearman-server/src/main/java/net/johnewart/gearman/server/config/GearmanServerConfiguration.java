@@ -36,6 +36,7 @@ public class GearmanServerConfiguration implements ServerConfiguration {
     private JobQueueMonitor jobQueueMonitor;
     private ExceptionStorageEngine exceptionStorageEngine;
     private PersistenceEngineConfiguration persistenceEngine;
+    private GearmanGraphiteReporterConfiguration graphite;
     private ClusterConfiguration clusterConfiguration;
     private ExceptionStoreConfiguration exceptionStoreConfiguration;
     private JobHandleFactory jobHandleFactory;
@@ -238,5 +239,13 @@ public class GearmanServerConfiguration implements ServerConfiguration {
             }
         }
         return healthCheckRegistry;
+    }
+
+    public GearmanGraphiteReporterConfiguration getGraphite() {
+        return graphite;
+    }
+
+    public void setGraphite(GearmanGraphiteReporterConfiguration graphite) {
+        this.graphite = graphite;
     }
 }
