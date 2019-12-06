@@ -11,6 +11,7 @@ import net.johnewart.gearman.common.Job;
 import net.johnewart.gearman.common.JobState;
 import net.johnewart.gearman.common.JobStatus;
 import net.johnewart.gearman.common.events.WorkEvent;
+import net.johnewart.gearman.common.packets.request.WorkCompleteRequest;
 import net.johnewart.gearman.common.packets.response.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +97,7 @@ public class NetworkGearmanWorker implements GearmanWorker, Runnable {
                         jobConnectionMap.put(nextJob, c);
                         WorkEvent workEvent = new WorkEvent(nextJob, this);
                         result = callbacks.get(nextJob.getFunctionName()).process(workEvent);
-                        c.sendPacket(new WorkCompleteResponse(nextJob.getJobHandle(), result));
+                        c.sendPacket(new WorkCompleteRequest(nextJob.getJobHandle(), result));
                     }
 
                 } catch (IOException ioe) {
