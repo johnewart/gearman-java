@@ -137,7 +137,7 @@
         <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast</artifactId>
-            <version>3.1.2</version>
+            <version>3.11</version>
         </dependency>
         <dependency>
             <groupId>commons-logging</groupId>
