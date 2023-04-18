@@ -13,7 +13,7 @@
 
 
     <properties>
-        <jetty.version>9.4.41.v20210516</jetty.version>
+        <jetty.version>10.0.14</jetty.version>
         <jackson.version>2.4.2</jackson.version>
         <slf4j.version>1.7.2</slf4j.version>
         <logback.version>1.0.7</logback.version>
